@@ -28,49 +28,49 @@
 </span><span id="line-28"></span><span class="hs-comment">-- for (no reordering, no dropping).</span><span>
 </span><span id="line-29"></span><span class="annot"><a href="Harness.Coalgebra.html#admit"><span class="hs-identifier hs-type">admit</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-type">ToolSpec</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-type">Obs</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
 </span><span id="line-30"></span><span id="admit"><span class="annot"><span class="annottext">admit :: [ToolSpec] -&gt; [Call] -&gt; ([Call], [(Call, Obs)])
-</span><a href="Harness.Coalgebra.html#admit"><span class="hs-identifier hs-var hs-var">admit</span></a></span></span><span> </span><span id="local-6989586621679148462"><span class="annot"><span class="annottext">[ToolSpec]
-</span><a href="#local-6989586621679148462"><span class="hs-identifier hs-var">specs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Call -&gt; ([Call], [(Call, Obs)]) -&gt; ([Call], [(Call, Obs)]))
+</span><a href="Harness.Coalgebra.html#admit"><span class="hs-identifier hs-var hs-var">admit</span></a></span></span><span> </span><span id="local-6989586621679148684"><span class="annot"><span class="annottext">[ToolSpec]
+</span><a href="#local-6989586621679148684"><span class="hs-identifier hs-var">specs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Call -&gt; ([Call], [(Call, Obs)]) -&gt; ([Call], [(Call, Obs)]))
 -&gt; ([Call], [(Call, Obs)]) -&gt; [Call] -&gt; ([Call], [(Call, Obs)])
 forall a b. (a -&gt; b -&gt; b) -&gt; b -&gt; [a] -&gt; b
 forall (t :: * -&gt; *) a b.
 Foldable t =&gt;
 (a -&gt; b -&gt; b) -&gt; b -&gt; t a -&gt; b
 </span><span class="hs-identifier hs-var">foldr</span></span><span> </span><span class="annot"><span class="annottext">Call -&gt; ([Call], [(Call, Obs)]) -&gt; ([Call], [(Call, Obs)])
-</span><a href="#local-6989586621679148464"><span class="hs-identifier hs-var">classify</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679148686"><span class="hs-identifier hs-var">classify</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span>
 </span><span id="line-31"></span><span>  </span><span class="hs-keyword">where</span><span>
-</span><span id="line-32"></span><span>    </span><span id="local-6989586621679148464"><span class="annot"><span class="annottext">classify :: Call -&gt; ([Call], [(Call, Obs)]) -&gt; ([Call], [(Call, Obs)])
-</span><a href="#local-6989586621679148464"><span class="hs-identifier hs-var hs-var">classify</span></a></span></span><span> </span><span id="local-6989586621679148472"><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148472"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679148473"><span class="annot"><span class="annottext">[Call]
-</span><a href="#local-6989586621679148473"><span class="hs-identifier hs-var">ok</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148474"><span class="annot"><span class="annottext">[(Call, Obs)]
-</span><a href="#local-6989586621679148474"><span class="hs-identifier hs-var">bad</span></a></span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>    </span><span id="local-6989586621679148686"><span class="annot"><span class="annottext">classify :: Call -&gt; ([Call], [(Call, Obs)]) -&gt; ([Call], [(Call, Obs)])
+</span><a href="#local-6989586621679148686"><span class="hs-identifier hs-var hs-var">classify</span></a></span></span><span> </span><span id="local-6989586621679148694"><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679148694"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679148695"><span class="annot"><span class="annottext">[Call]
+</span><a href="#local-6989586621679148695"><span class="hs-identifier hs-var">ok</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148696"><span class="annot"><span class="annottext">[(Call, Obs)]
+</span><a href="#local-6989586621679148696"><span class="hs-identifier hs-var">bad</span></a></span></span><span class="hs-special">)</span><span>
 </span><span id="line-33"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Call -&gt; [Char]
 </span><a href="Harness.Alphabet.html#tool"><span class="hs-identifier hs-var">tool</span></a></span><span> </span><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148472"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [[Char]] -&gt; Bool
+</span><a href="#local-6989586621679148694"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [[Char]] -&gt; Bool
 forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
 forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
 </span><span class="hs-operator hs-var">`elem`</span></span><span> </span><span class="annot"><span class="annottext">(ToolSpec -&gt; [Char]) -&gt; [ToolSpec] -&gt; [[Char]]
 forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
 </span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="annot"><span class="annottext">ToolSpec -&gt; [Char]
 </span><a href="Harness.Alphabet.html#specName"><span class="hs-identifier hs-var">specName</span></a></span><span> </span><span class="annot"><span class="annottext">[ToolSpec]
-</span><a href="#local-6989586621679148462"><span class="hs-identifier hs-var">specs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148472"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Call -&gt; [Call] -&gt; [Call]
+</span><a href="#local-6989586621679148684"><span class="hs-identifier hs-var">specs</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679148694"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Call -&gt; [Call] -&gt; [Call]
 forall a. a -&gt; [a] -&gt; [a]
 </span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[Call]
-</span><a href="#local-6989586621679148473"><span class="hs-identifier hs-var">ok</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[(Call, Obs)]
-</span><a href="#local-6989586621679148474"><span class="hs-identifier hs-var">bad</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679148695"><span class="hs-identifier hs-var">ok</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[(Call, Obs)]
+</span><a href="#local-6989586621679148696"><span class="hs-identifier hs-var">bad</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-34"></span><span>      </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
 </span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Call]
-</span><a href="#local-6989586621679148473"><span class="hs-identifier hs-var">ok</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148472"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Obs
+</span><a href="#local-6989586621679148695"><span class="hs-identifier hs-var">ok</span></a></span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679148694"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Obs
 </span><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-var">Obs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char]
 </span><span class="hs-string">&quot;error: tool not afforded: &quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Call -&gt; [Char]
 </span><a href="Harness.Alphabet.html#tool"><span class="hs-identifier hs-var">tool</span></a></span><span> </span><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148472"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Call, Obs) -&gt; [(Call, Obs)] -&gt; [(Call, Obs)]
+</span><a href="#local-6989586621679148694"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">(Call, Obs) -&gt; [(Call, Obs)] -&gt; [(Call, Obs)]
 forall a. a -&gt; [a] -&gt; [a]
 </span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[(Call, Obs)]
-</span><a href="#local-6989586621679148474"><span class="hs-identifier hs-var">bad</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679148696"><span class="hs-identifier hs-var">bad</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-35"></span><span>
 </span><span id="line-36"></span><span class="hs-comment">-- | @step@ is deterministic: it always knows what it does next. What it does</span><span>
 </span><span id="line-37"></span><span class="hs-comment">-- not know is what comes back, which is why the successor is a /function/ of</span><span>
@@ -93,11 +93,11 @@ forall a. a -&gt; [a] -&gt; [a]
 </span><span id="line-54"></span><span class="hs-comment">-- flipped to 'Summarising' while any call is still pending. [established]</span><span>
 </span><span id="line-55"></span><span class="annot"><a href="Harness.Coalgebra.html#step"><span class="hs-identifier hs-type">step</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier hs-type">HarnessF</span></a></span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span>
 </span><span id="line-56"></span><span id="step"><span class="annot"><span class="annottext">step :: S -&gt; HarnessF S
-</span><a href="Harness.Coalgebra.html#step"><span class="hs-identifier hs-var hs-var">step</span></a></span></span><span> </span><span id="local-6989586621679148484"><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148484"><span class="hs-identifier hs-var">s</span></a></span></span><span>
+</span><a href="Harness.Coalgebra.html#step"><span class="hs-identifier hs-var hs-var">step</span></a></span></span><span> </span><span id="local-6989586621679148706"><span class="annot"><span class="annottext">S
+</span><a href="#local-6989586621679148706"><span class="hs-identifier hs-var">s</span></a></span></span><span>
 </span><span id="line-57"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">S -&gt; Int
 </span><a href="Harness.State.html#budget"><span class="hs-identifier hs-var">budget</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148484"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
+</span><a href="#local-6989586621679148706"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Bool
 forall a. Ord a =&gt; a -&gt; a -&gt; Bool
 </span><span class="hs-operator hs-var">&lt;=</span></span><span> </span><span class="annot"><span class="annottext">Int
 </span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Outcome -&gt; HarnessF S
@@ -108,14 +108,14 @@ forall x. Outcome -&gt; HarnessF x
 </span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[ToolSpec] -&gt; [Call] -&gt; ([Call], [(Call, Obs)])
 </span><a href="Harness.Coalgebra.html#admit"><span class="hs-identifier hs-var">admit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; [ToolSpec]
 </span><a href="Harness.State.html#afford"><span class="hs-identifier hs-var">afford</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148484"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; [Call]
+</span><a href="#local-6989586621679148706"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; [Call]
 </span><a href="Harness.State.html#pending"><span class="hs-identifier hs-var">pending</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148484"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><a href="#local-6989586621679148706"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
 </span><span id="line-59"></span><span>      </span><span class="hs-comment">-- Some pending calls are unafforded: repair them into synthetic</span><span>
 </span><span id="line-60"></span><span>      </span><span class="hs-comment">-- observations and re-enter with the afforded calls only.</span><span>
-</span><span id="line-61"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679148490"><span class="annot"><span class="annottext">[Call]
-</span><a href="#local-6989586621679148490"><span class="hs-identifier hs-var">ok</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148491"><span class="annot"><span class="annottext">bad :: [(Call, Obs)]
-</span><a href="#local-6989586621679148491"><span class="hs-identifier hs-var">bad</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Call, Obs)
+</span><span id="line-61"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679148712"><span class="annot"><span class="annottext">[Call]
+</span><a href="#local-6989586621679148712"><span class="hs-identifier hs-var">ok</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148713"><span class="annot"><span class="annottext">bad :: [(Call, Obs)]
+</span><a href="#local-6989586621679148713"><span class="hs-identifier hs-var">bad</span></a></span></span><span class="hs-glyph">@</span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Call, Obs)
 </span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span class="annot"><span class="annottext">[(Call, Obs)]
 </span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
 </span><span id="line-62"></span><span>        </span><span class="annot"><span class="annottext">S -&gt; HarnessF S
@@ -123,7 +123,7 @@ forall x. Outcome -&gt; HarnessF x
 forall a b. (a -&gt; b) -&gt; a -&gt; b
 </span><span class="hs-operator hs-var">$</span></span><span>
 </span><span id="line-63"></span><span>          </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148484"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
+</span><a href="#local-6989586621679148706"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
 forall a b. a -&gt; (a -&gt; b) -&gt; b
 </span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">forall (name :: Symbol) s t a b.
 GField name s t a b =&gt;
@@ -136,8 +136,8 @@ Optic k is s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
 forall {t :: * -&gt; *}.
 Foldable t =&gt;
 t (Call, Obs) -&gt; [Turn] -&gt; [Turn]
-</span><a href="#local-6989586621679148492"><span class="hs-identifier hs-var">recordAll</span></a></span><span> </span><span class="annot"><span class="annottext">[(Call, Obs)]
-</span><a href="#local-6989586621679148491"><span class="hs-identifier hs-var">bad</span></a></span><span>
+</span><a href="#local-6989586621679148714"><span class="hs-identifier hs-var">recordAll</span></a></span><span> </span><span class="annot"><span class="annottext">[(Call, Obs)]
+</span><a href="#local-6989586621679148713"><span class="hs-identifier hs-var">bad</span></a></span><span>
 </span><span id="line-64"></span><span>            </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
 forall a b. a -&gt; (a -&gt; b) -&gt; b
 </span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">forall (name :: Symbol) s t a b.
@@ -148,23 +148,23 @@ forall k (is :: IxList) s t a b.
 Is k A_Setter =&gt;
 Optic k is s t a b -&gt; b -&gt; s -&gt; t
 </span><a href="file:///nix/store/cx293dr7nc9lw94ksh76g3lrgxjbjny5-optics-core-0.4.2-doc/share/doc/optics-core-0.4.2/html/src/Optics.Operators.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">[Call]
-</span><a href="#local-6989586621679148490"><span class="hs-identifier hs-var">ok</span></a></span><span>
+</span><a href="#local-6989586621679148712"><span class="hs-identifier hs-var">ok</span></a></span><span>
 </span><span id="line-65"></span><span>      </span><span class="hs-comment">-- All pending calls (if any) are afforded: proceed as before.</span><span>
-</span><span id="line-66"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679148493"><span class="annot"><span class="annottext">[Call]
-</span><a href="#local-6989586621679148493"><span class="hs-identifier hs-var">ok</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[Call]
-</span><a href="#local-6989586621679148493"><span class="hs-identifier hs-var">ok</span></a></span><span> </span><span class="hs-keyword">of</span><span>
-</span><span id="line-67"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679148494"><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148494"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679148495"><span class="annot"><span class="annottext">[Call]
-</span><a href="#local-6989586621679148495"><span class="hs-identifier hs-var">cs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-66"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621679148715"><span class="annot"><span class="annottext">[Call]
+</span><a href="#local-6989586621679148715"><span class="hs-identifier hs-var">ok</span></a></span></span><span class="hs-special">,</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">[Call]
+</span><a href="#local-6989586621679148715"><span class="hs-identifier hs-var">ok</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-67"></span><span>        </span><span class="hs-special">(</span><span id="local-6989586621679148716"><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679148716"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679148717"><span class="annot"><span class="annottext">[Call]
+</span><a href="#local-6989586621679148717"><span class="hs-identifier hs-var">cs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
 </span><span id="line-68"></span><span>          </span><span class="annot"><span class="annottext">Call -&gt; (Obs -&gt; S) -&gt; HarnessF S
 forall x. Call -&gt; (Obs -&gt; x) -&gt; HarnessF x
 </span><a href="Harness.Alphabet.html#Perform"><span class="hs-identifier hs-var">Perform</span></a></span><span> </span><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148494"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">((Obs -&gt; S) -&gt; HarnessF S) -&gt; (Obs -&gt; S) -&gt; HarnessF S
+</span><a href="#local-6989586621679148716"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">((Obs -&gt; S) -&gt; HarnessF S) -&gt; (Obs -&gt; S) -&gt; HarnessF S
 forall a b. (a -&gt; b) -&gt; a -&gt; b
-</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679148496"><span class="annot"><span class="annottext">Obs
-</span><a href="#local-6989586621679148496"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span class="hs-operator hs-var">$</span></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679148718"><span class="annot"><span class="annottext">Obs
+</span><a href="#local-6989586621679148718"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
 </span><span id="line-69"></span><span>            </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148484"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
+</span><a href="#local-6989586621679148706"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
 forall a b. a -&gt; (a -&gt; b) -&gt; b
 </span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">forall (name :: Symbol) s t a b.
 GField name s t a b =&gt;
@@ -174,9 +174,9 @@ forall k (is :: IxList) s t a b.
 Is k A_Setter =&gt;
 Optic k is s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
 </span><a href="file:///nix/store/cx293dr7nc9lw94ksh76g3lrgxjbjny5-optics-core-0.4.2-doc/share/doc/optics-core-0.4.2/html/src/Optics.Operators.html#%25~"><span class="hs-operator hs-var">%~</span></a></span><span> </span><span class="annot"><span class="annottext">Call -&gt; Obs -&gt; [Turn] -&gt; [Turn]
-</span><a href="#local-6989586621679148497"><span class="hs-identifier hs-var">record</span></a></span><span> </span><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148494"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Obs
-</span><a href="#local-6989586621679148496"><span class="hs-identifier hs-var">o</span></a></span><span>
+</span><a href="#local-6989586621679148719"><span class="hs-identifier hs-var">record</span></a></span><span> </span><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679148716"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Obs
+</span><a href="#local-6989586621679148718"><span class="hs-identifier hs-var">o</span></a></span><span>
 </span><span id="line-70"></span><span>              </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
 forall a b. a -&gt; (a -&gt; b) -&gt; b
 </span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">forall (name :: Symbol) s t a b.
@@ -187,102 +187,102 @@ forall k (is :: IxList) s t a b.
 Is k A_Setter =&gt;
 Optic k is s t a b -&gt; b -&gt; s -&gt; t
 </span><a href="file:///nix/store/cx293dr7nc9lw94ksh76g3lrgxjbjny5-optics-core-0.4.2-doc/share/doc/optics-core-0.4.2/html/src/Optics.Operators.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">[Call]
-</span><a href="#local-6989586621679148495"><span class="hs-identifier hs-var">cs</span></a></span><span>
+</span><a href="#local-6989586621679148717"><span class="hs-identifier hs-var">cs</span></a></span><span>
 </span><span id="line-71"></span><span>        </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; Mode
 </span><a href="Harness.State.html#mode"><span class="hs-identifier hs-var">mode</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148484"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">S -&gt; [Turn]
+</span><a href="#local-6989586621679148706"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">S -&gt; [Turn]
 </span><a href="Harness.State.html#transcript"><span class="hs-identifier hs-var">transcript</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148484"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
+</span><a href="#local-6989586621679148706"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">of</span><span>
 </span><span id="line-72"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Mode
-</span><a href="Harness.State.html#Working"><span class="hs-identifier hs-var">Working</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#Assistant"><span class="hs-identifier hs-type">Assistant</span></a></span><span> </span><span id="local-6989586621679148500"><span class="annot"><span class="annottext">Response
-</span><a href="#local-6989586621679148500"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span class="annot"><span class="annottext">[Turn]
+</span><a href="Harness.State.html#Working"><span class="hs-identifier hs-var">Working</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#Assistant"><span class="hs-identifier hs-type">Assistant</span></a></span><span> </span><span id="local-6989586621679148722"><span class="annot"><span class="annottext">Response
+</span><a href="#local-6989586621679148722"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span class="annot"><span class="annottext">[Turn]
 </span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>
 </span><span id="line-73"></span><span>            </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">[Call] -&gt; Bool
 forall a. [a] -&gt; Bool
 forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
 </span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Response -&gt; [Call]
 </span><a href="Harness.Alphabet.html#calls"><span class="hs-identifier hs-var">calls</span></a></span><span> </span><span class="annot"><span class="annottext">Response
-</span><a href="#local-6989586621679148500"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Outcome -&gt; HarnessF S
+</span><a href="#local-6989586621679148722"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Outcome -&gt; HarnessF S
 forall x. Outcome -&gt; HarnessF x
 </span><a href="Harness.Alphabet.html#Halt"><span class="hs-identifier hs-var">Halt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; Outcome
 </span><a href="Harness.Alphabet.html#Done"><span class="hs-identifier hs-var">Done</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Response -&gt; [Char]
 </span><a href="Harness.Alphabet.html#say"><span class="hs-identifier hs-var">say</span></a></span><span> </span><span class="annot"><span class="annottext">Response
-</span><a href="#local-6989586621679148500"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679148722"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
 </span><span id="line-74"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Mode
 </span><a href="Harness.State.html#Working"><span class="hs-identifier hs-var">Working</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Turn]
 </span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>     </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Request -&gt; (Either Refusal Response -&gt; S) -&gt; HarnessF S
 forall x. Request -&gt; (Either Refusal Response -&gt; x) -&gt; HarnessF x
 </span><a href="Harness.Alphabet.html#Render"><span class="hs-identifier hs-var">Render</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; Request
 </span><a href="Harness.State.html#request"><span class="hs-identifier hs-var">request</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148484"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; Either Refusal Response -&gt; S
+</span><a href="#local-6989586621679148706"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; Either Refusal Response -&gt; S
 </span><a href="Harness.Coalgebra.html#working"><span class="hs-identifier hs-var">working</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148484"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679148706"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-75"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Mode
 </span><a href="Harness.State.html#Summarising"><span class="hs-identifier hs-var">Summarising</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">[Turn]
 </span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Request -&gt; (Either Refusal Response -&gt; S) -&gt; HarnessF S
 forall x. Request -&gt; (Either Refusal Response -&gt; x) -&gt; HarnessF x
 </span><a href="Harness.Alphabet.html#Render"><span class="hs-identifier hs-var">Render</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; Request
 </span><a href="Harness.State.html#request"><span class="hs-identifier hs-var">request</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148484"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; Either Refusal Response -&gt; S
+</span><a href="#local-6989586621679148706"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; Either Refusal Response -&gt; S
 </span><a href="Harness.Coalgebra.html#summarising"><span class="hs-identifier hs-var">summarising</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148484"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679148706"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-76"></span><span>  </span><span class="hs-keyword">where</span><span>
-</span><span id="line-77"></span><span>    </span><span id="local-6989586621679148497"><span class="annot"><span class="annottext">record :: Call -&gt; Obs -&gt; [Turn] -&gt; [Turn]
-</span><a href="#local-6989586621679148497"><span class="hs-identifier hs-var hs-var">record</span></a></span></span><span> </span><span id="local-6989586621679148507"><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148507"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679148508"><span class="annot"><span class="annottext">Obs
-</span><a href="#local-6989586621679148508"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.State.html#User"><span class="hs-identifier hs-type">User</span></a></span><span> </span><span id="local-6989586621679148509"><span class="annot"><span class="annottext">[(Call, Obs)]
-</span><a href="#local-6989586621679148509"><span class="hs-identifier hs-var">rs</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679148510"><span class="annot"><span class="annottext">[Turn]
-</span><a href="#local-6989586621679148510"><span class="hs-identifier hs-var">ts</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Call, Obs)] -&gt; Turn
+</span><span id="line-77"></span><span>    </span><span id="local-6989586621679148719"><span class="annot"><span class="annottext">record :: Call -&gt; Obs -&gt; [Turn] -&gt; [Turn]
+</span><a href="#local-6989586621679148719"><span class="hs-identifier hs-var hs-var">record</span></a></span></span><span> </span><span id="local-6989586621679148729"><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679148729"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679148730"><span class="annot"><span class="annottext">Obs
+</span><a href="#local-6989586621679148730"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.State.html#User"><span class="hs-identifier hs-type">User</span></a></span><span> </span><span id="local-6989586621679148731"><span class="annot"><span class="annottext">[(Call, Obs)]
+</span><a href="#local-6989586621679148731"><span class="hs-identifier hs-var">rs</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span id="local-6989586621679148732"><span class="annot"><span class="annottext">[Turn]
+</span><a href="#local-6989586621679148732"><span class="hs-identifier hs-var">ts</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Call, Obs)] -&gt; Turn
 </span><a href="Harness.State.html#User"><span class="hs-identifier hs-var">User</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[(Call, Obs)]
-</span><a href="#local-6989586621679148509"><span class="hs-identifier hs-var">rs</span></a></span><span> </span><span class="annot"><span class="annottext">[(Call, Obs)] -&gt; [(Call, Obs)] -&gt; [(Call, Obs)]
+</span><a href="#local-6989586621679148731"><span class="hs-identifier hs-var">rs</span></a></span><span> </span><span class="annot"><span class="annottext">[(Call, Obs)] -&gt; [(Call, Obs)] -&gt; [(Call, Obs)]
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148507"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Obs
-</span><a href="#local-6989586621679148508"><span class="hs-identifier hs-var">o</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Turn -&gt; [Turn] -&gt; [Turn]
+</span><a href="#local-6989586621679148729"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Obs
+</span><a href="#local-6989586621679148730"><span class="hs-identifier hs-var">o</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Turn -&gt; [Turn] -&gt; [Turn]
 forall a. a -&gt; [a] -&gt; [a]
 </span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[Turn]
-</span><a href="#local-6989586621679148510"><span class="hs-identifier hs-var">ts</span></a></span><span>
-</span><span id="line-78"></span><span>    </span><span class="annot"><a href="#local-6989586621679148497"><span class="hs-identifier hs-var">record</span></a></span><span> </span><span id="local-6989586621679148511"><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148511"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679148512"><span class="annot"><span class="annottext">Obs
-</span><a href="#local-6989586621679148512"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span id="local-6989586621679148513"><span class="annot"><span class="annottext">[Turn]
-</span><a href="#local-6989586621679148513"><span class="hs-identifier hs-var">ts</span></a></span></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Call, Obs)] -&gt; Turn
+</span><a href="#local-6989586621679148732"><span class="hs-identifier hs-var">ts</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span class="annot"><a href="#local-6989586621679148719"><span class="hs-identifier hs-var">record</span></a></span><span> </span><span id="local-6989586621679148733"><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679148733"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span id="local-6989586621679148734"><span class="annot"><span class="annottext">Obs
+</span><a href="#local-6989586621679148734"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span id="local-6989586621679148735"><span class="annot"><span class="annottext">[Turn]
+</span><a href="#local-6989586621679148735"><span class="hs-identifier hs-var">ts</span></a></span></span><span>             </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[(Call, Obs)] -&gt; Turn
 </span><a href="Harness.State.html#User"><span class="hs-identifier hs-var">User</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148511"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Obs
-</span><a href="#local-6989586621679148512"><span class="hs-identifier hs-var">o</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Turn -&gt; [Turn] -&gt; [Turn]
+</span><a href="#local-6989586621679148733"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Obs
+</span><a href="#local-6989586621679148734"><span class="hs-identifier hs-var">o</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">Turn -&gt; [Turn] -&gt; [Turn]
 forall a. a -&gt; [a] -&gt; [a]
 </span><span class="hs-glyph hs-var">:</span></span><span> </span><span class="annot"><span class="annottext">[Turn]
-</span><a href="#local-6989586621679148513"><span class="hs-identifier hs-var">ts</span></a></span><span>
+</span><a href="#local-6989586621679148735"><span class="hs-identifier hs-var">ts</span></a></span><span>
 </span><span id="line-79"></span><span>    </span><span class="hs-comment">-- Fold the rejected @(Call, Obs)@ pairs into the transcript, reusing the</span><span>
 </span><span id="line-80"></span><span>    </span><span class="hs-comment">-- same 'User'-turn append convention as a performed observation.</span><span>
-</span><span id="line-81"></span><span>    </span><span id="local-6989586621679148492"><span class="annot"><span class="annottext">recordAll :: t (Call, Obs) -&gt; [Turn] -&gt; [Turn]
-</span><a href="#local-6989586621679148492"><span class="hs-identifier hs-var hs-var">recordAll</span></a></span></span><span> </span><span id="local-6989586621679148516"><span class="annot"><span class="annottext">t (Call, Obs)
-</span><a href="#local-6989586621679148516"><span class="hs-identifier hs-var">bad</span></a></span></span><span> </span><span id="local-6989586621679148517"><span class="annot"><span class="annottext">[Turn]
-</span><a href="#local-6989586621679148517"><span class="hs-identifier hs-var">ts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([Turn] -&gt; (Call, Obs) -&gt; [Turn])
+</span><span id="line-81"></span><span>    </span><span id="local-6989586621679148714"><span class="annot"><span class="annottext">recordAll :: t (Call, Obs) -&gt; [Turn] -&gt; [Turn]
+</span><a href="#local-6989586621679148714"><span class="hs-identifier hs-var hs-var">recordAll</span></a></span></span><span> </span><span id="local-6989586621679148738"><span class="annot"><span class="annottext">t (Call, Obs)
+</span><a href="#local-6989586621679148738"><span class="hs-identifier hs-var">bad</span></a></span></span><span> </span><span id="local-6989586621679148739"><span class="annot"><span class="annottext">[Turn]
+</span><a href="#local-6989586621679148739"><span class="hs-identifier hs-var">ts</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">([Turn] -&gt; (Call, Obs) -&gt; [Turn])
 -&gt; [Turn] -&gt; t (Call, Obs) -&gt; [Turn]
 forall b a. (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
 forall (t :: * -&gt; *) b a.
 Foldable t =&gt;
 (b -&gt; a -&gt; b) -&gt; b -&gt; t a -&gt; b
-</span><span class="hs-identifier hs-var">foldl</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679148519"><span class="annot"><span class="annottext">[Turn]
-</span><a href="#local-6989586621679148519"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679148520"><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148520"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148521"><span class="annot"><span class="annottext">Obs
-</span><a href="#local-6989586621679148521"><span class="hs-identifier hs-var">o</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Call -&gt; Obs -&gt; [Turn] -&gt; [Turn]
-</span><a href="#local-6989586621679148497"><span class="hs-identifier hs-var">record</span></a></span><span> </span><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148520"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Obs
-</span><a href="#local-6989586621679148521"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">[Turn]
-</span><a href="#local-6989586621679148519"><span class="hs-identifier hs-var">acc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Turn]
-</span><a href="#local-6989586621679148517"><span class="hs-identifier hs-var">ts</span></a></span><span> </span><span class="annot"><span class="annottext">t (Call, Obs)
-</span><a href="#local-6989586621679148516"><span class="hs-identifier hs-var">bad</span></a></span><span>
+</span><span class="hs-identifier hs-var">foldl</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679148741"><span class="annot"><span class="annottext">[Turn]
+</span><a href="#local-6989586621679148741"><span class="hs-identifier hs-var">acc</span></a></span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679148742"><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679148742"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148743"><span class="annot"><span class="annottext">Obs
+</span><a href="#local-6989586621679148743"><span class="hs-identifier hs-var">o</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Call -&gt; Obs -&gt; [Turn] -&gt; [Turn]
+</span><a href="#local-6989586621679148719"><span class="hs-identifier hs-var">record</span></a></span><span> </span><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679148742"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">Obs
+</span><a href="#local-6989586621679148743"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">[Turn]
+</span><a href="#local-6989586621679148741"><span class="hs-identifier hs-var">acc</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[Turn]
+</span><a href="#local-6989586621679148739"><span class="hs-identifier hs-var">ts</span></a></span><span> </span><span class="annot"><span class="annottext">t (Call, Obs)
+</span><a href="#local-6989586621679148738"><span class="hs-identifier hs-var">bad</span></a></span><span>
 </span><span id="line-82"></span><span>
 </span><span id="line-83"></span><span class="hs-comment">-- | The 'Working'-mode continuation. Overflow flips to 'Summarising' (the only</span><span>
 </span><span id="line-84"></span><span class="hs-comment">-- correct response is a state transition, and the coalgebra is the only thing</span><span>
 </span><span id="line-85"></span><span class="hs-comment">-- that can make one). A malformed refusal is terminal.</span><span>
 </span><span id="line-86"></span><span class="annot"><a href="Harness.Coalgebra.html#working"><span class="hs-identifier hs-type">working</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier hs-type">Refusal</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-type">Response</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span>
 </span><span id="line-87"></span><span id="working"><span class="annot"><span class="annottext">working :: S -&gt; Either Refusal Response -&gt; S
-</span><a href="Harness.Coalgebra.html#working"><span class="hs-identifier hs-var hs-var">working</span></a></span></span><span> </span><span id="local-6989586621679148522"><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148522"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span class="annot"><span class="annottext">Refusal
+</span><a href="Harness.Coalgebra.html#working"><span class="hs-identifier hs-var hs-var">working</span></a></span></span><span> </span><span id="local-6989586621679148744"><span class="annot"><span class="annottext">S
+</span><a href="#local-6989586621679148744"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span class="annot"><span class="annottext">Refusal
 </span><a href="Harness.Alphabet.html#Overflow"><span class="hs-identifier hs-var">Overflow</span></a></span><span class="hs-special">)</span><span>      </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148522"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
+</span><a href="#local-6989586621679148744"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
 forall a b. a -&gt; (a -&gt; b) -&gt; b
 </span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">forall (name :: Symbol) s t a b.
 GField name s t a b =&gt;
@@ -293,11 +293,11 @@ Is k A_Setter =&gt;
 Optic k is s t a b -&gt; b -&gt; s -&gt; t
 </span><a href="file:///nix/store/cx293dr7nc9lw94ksh76g3lrgxjbjny5-optics-core-0.4.2-doc/share/doc/optics-core-0.4.2/html/src/Optics.Operators.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Mode
 </span><a href="Harness.State.html#Summarising"><span class="hs-identifier hs-var">Summarising</span></a></span><span>
-</span><span id="line-88"></span><span class="annot"><a href="Harness.Coalgebra.html#working"><span class="hs-identifier hs-var">working</span></a></span><span> </span><span id="local-6989586621679148524"><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148524"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.Alphabet.html#Malformed"><span class="hs-identifier hs-type">Malformed</span></a></span><span> </span><span id="local-6989586621679148526"><span class="annot"><span class="annottext">[Char]
-</span><a href="#local-6989586621679148526"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-88"></span><span class="annot"><a href="Harness.Coalgebra.html#working"><span class="hs-identifier hs-var">working</span></a></span><span> </span><span id="local-6989586621679148746"><span class="annot"><span class="annottext">S
+</span><a href="#local-6989586621679148746"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.Alphabet.html#Malformed"><span class="hs-identifier hs-type">Malformed</span></a></span><span> </span><span id="local-6989586621679148748"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679148748"><span class="hs-identifier hs-var">m</span></a></span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
 </span><span id="line-89"></span><span>  </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148524"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
+</span><a href="#local-6989586621679148746"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
 forall a b. a -&gt; (a -&gt; b) -&gt; b
 </span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">forall (name :: Symbol) s t a b.
 GField name s t a b =&gt;
@@ -311,7 +311,7 @@ Optic k is s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
 </span><span class="hs-string">&quot;!&quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">[Char]
-</span><a href="#local-6989586621679148526"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Turn -&gt; [Turn] -&gt; [Turn]
+</span><a href="#local-6989586621679148748"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Turn -&gt; [Turn] -&gt; [Turn]
 forall a. a -&gt; [a] -&gt; [a]
 </span><span class="hs-glyph hs-var">:</span></span><span class="hs-special">)</span><span>
 </span><span id="line-90"></span><span>    </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
@@ -325,11 +325,11 @@ Is k A_Setter =&gt;
 Optic k is s t a b -&gt; b -&gt; s -&gt; t
 </span><a href="file:///nix/store/cx293dr7nc9lw94ksh76g3lrgxjbjny5-optics-core-0.4.2-doc/share/doc/optics-core-0.4.2/html/src/Optics.Operators.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Int
 </span><span class="hs-number">0</span></span><span>
-</span><span id="line-91"></span><span class="annot"><a href="Harness.Coalgebra.html#working"><span class="hs-identifier hs-var">working</span></a></span><span> </span><span id="local-6989586621679148528"><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148528"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679148529"><span class="annot"><span class="annottext">Response
-</span><a href="#local-6989586621679148529"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-91"></span><span class="annot"><a href="Harness.Coalgebra.html#working"><span class="hs-identifier hs-var">working</span></a></span><span> </span><span id="local-6989586621679148750"><span class="annot"><span class="annottext">S
+</span><a href="#local-6989586621679148750"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679148751"><span class="annot"><span class="annottext">Response
+</span><a href="#local-6989586621679148751"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
 </span><span id="line-92"></span><span>  </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148528"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
+</span><a href="#local-6989586621679148750"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
 forall a b. a -&gt; (a -&gt; b) -&gt; b
 </span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">forall (name :: Symbol) s t a b.
 GField name s t a b =&gt;
@@ -340,7 +340,7 @@ Is k A_Setter =&gt;
 Optic k is s t a b -&gt; (a -&gt; b) -&gt; s -&gt; t
 </span><a href="file:///nix/store/cx293dr7nc9lw94ksh76g3lrgxjbjny5-optics-core-0.4.2-doc/share/doc/optics-core-0.4.2/html/src/Optics.Operators.html#%25~"><span class="hs-operator hs-var">%~</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Response -&gt; Turn
 </span><a href="Harness.State.html#Assistant"><span class="hs-identifier hs-var">Assistant</span></a></span><span> </span><span class="annot"><span class="annottext">Response
-</span><a href="#local-6989586621679148529"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Turn -&gt; [Turn] -&gt; [Turn]
+</span><a href="#local-6989586621679148751"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">Turn -&gt; [Turn] -&gt; [Turn]
 forall a. a -&gt; [a] -&gt; [a]
 </span><span class="hs-glyph hs-var">:</span></span><span class="hs-special">)</span><span>
 </span><span id="line-93"></span><span>    </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
@@ -354,7 +354,7 @@ Is k A_Setter =&gt;
 Optic k is s t a b -&gt; b -&gt; s -&gt; t
 </span><a href="file:///nix/store/cx293dr7nc9lw94ksh76g3lrgxjbjny5-optics-core-0.4.2-doc/share/doc/optics-core-0.4.2/html/src/Optics.Operators.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Response -&gt; [Call]
 </span><a href="Harness.Alphabet.html#calls"><span class="hs-identifier hs-var">calls</span></a></span><span> </span><span class="annot"><span class="annottext">Response
-</span><a href="#local-6989586621679148529"><span class="hs-identifier hs-var">r</span></a></span><span>
+</span><a href="#local-6989586621679148751"><span class="hs-identifier hs-var">r</span></a></span><span>
 </span><span id="line-94"></span><span>    </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
 forall a b. a -&gt; (a -&gt; b) -&gt; b
 </span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">forall (name :: Symbol) s t a b.
@@ -369,22 +369,22 @@ forall a. Num a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-identifier hs-var">subtract</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Usage -&gt; Int
 </span><a href="Harness.Alphabet.html#inTok"><span class="hs-identifier hs-var">inTok</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Response -&gt; Usage
 </span><a href="Harness.Alphabet.html#usage"><span class="hs-identifier hs-var">usage</span></a></span><span> </span><span class="annot"><span class="annottext">Response
-</span><a href="#local-6989586621679148529"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+</span><a href="#local-6989586621679148751"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
 forall a. Num a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Usage -&gt; Int
 </span><a href="Harness.Alphabet.html#outTok"><span class="hs-identifier hs-var">outTok</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Response -&gt; Usage
 </span><a href="Harness.Alphabet.html#usage"><span class="hs-identifier hs-var">usage</span></a></span><span> </span><span class="annot"><span class="annottext">Response
-</span><a href="#local-6989586621679148529"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679148751"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
 </span><span id="line-95"></span><span>
 </span><span id="line-96"></span><span class="hs-comment">-- | The 'Summarising'-mode continuation. Success collapses the transcript to a</span><span>
 </span><span id="line-97"></span><span class="hs-comment">-- single 'Summary' turn and returns to 'Working'. This is compaction, executed</span><span>
 </span><span id="line-98"></span><span class="hs-comment">-- through the ordinary 'Render' path.</span><span>
 </span><span id="line-99"></span><span class="annot"><a href="Harness.Coalgebra.html#summarising"><span class="hs-identifier hs-type">summarising</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier hs-type">Refusal</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-type">Response</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span>
 </span><span id="line-100"></span><span id="summarising"><span class="annot"><span class="annottext">summarising :: S -&gt; Either Refusal Response -&gt; S
-</span><a href="Harness.Coalgebra.html#summarising"><span class="hs-identifier hs-var hs-var">summarising</span></a></span></span><span> </span><span id="local-6989586621679148535"><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148535"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span class="annot"><span class="annottext">Refusal
+</span><a href="Harness.Coalgebra.html#summarising"><span class="hs-identifier hs-var hs-var">summarising</span></a></span></span><span> </span><span id="local-6989586621679148757"><span class="annot"><span class="annottext">S
+</span><a href="#local-6989586621679148757"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span class="annot"><span class="annottext">Refusal
 </span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148535"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
+</span><a href="#local-6989586621679148757"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
 forall a b. a -&gt; (a -&gt; b) -&gt; b
 </span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">forall (name :: Symbol) s t a b.
 GField name s t a b =&gt;
@@ -395,11 +395,11 @@ Is k A_Setter =&gt;
 Optic k is s t a b -&gt; b -&gt; s -&gt; t
 </span><a href="file:///nix/store/cx293dr7nc9lw94ksh76g3lrgxjbjny5-optics-core-0.4.2-doc/share/doc/optics-core-0.4.2/html/src/Optics.Operators.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Int
 </span><span class="hs-number">0</span></span><span>
-</span><span id="line-101"></span><span class="annot"><a href="Harness.Coalgebra.html#summarising"><span class="hs-identifier hs-var">summarising</span></a></span><span> </span><span id="local-6989586621679148536"><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148536"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679148537"><span class="annot"><span class="annottext">Response
-</span><a href="#local-6989586621679148537"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-101"></span><span class="annot"><a href="Harness.Coalgebra.html#summarising"><span class="hs-identifier hs-var">summarising</span></a></span><span> </span><span id="local-6989586621679148758"><span class="annot"><span class="annottext">S
+</span><a href="#local-6989586621679148758"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679148759"><span class="annot"><span class="annottext">Response
+</span><a href="#local-6989586621679148759"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span>
 </span><span id="line-102"></span><span>  </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148536"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
+</span><a href="#local-6989586621679148758"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
 forall a b. a -&gt; (a -&gt; b) -&gt; b
 </span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">forall (name :: Symbol) s t a b.
 GField name s t a b =&gt;
@@ -411,7 +411,7 @@ Optic k is s t a b -&gt; b -&gt; s -&gt; t
 </span><a href="file:///nix/store/cx293dr7nc9lw94ksh76g3lrgxjbjny5-optics-core-0.4.2-doc/share/doc/optics-core-0.4.2/html/src/Optics.Operators.html#.~"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">[Char] -&gt; Turn
 </span><a href="Harness.State.html#Summary"><span class="hs-identifier hs-var">Summary</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Response -&gt; [Char]
 </span><a href="Harness.Alphabet.html#say"><span class="hs-identifier hs-var">say</span></a></span><span> </span><span class="annot"><span class="annottext">Response
-</span><a href="#local-6989586621679148537"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><a href="#local-6989586621679148759"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
 </span><span id="line-103"></span><span>    </span><span class="annot"><span class="annottext">S -&gt; (S -&gt; S) -&gt; S
 forall a b. a -&gt; (a -&gt; b) -&gt; b
 </span><span class="hs-operator hs-var">&amp;</span></span><span> </span><span class="annot"><span class="annottext">forall (name :: Symbol) s t a b.
@@ -437,12 +437,12 @@ forall a. Num a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-identifier hs-var">subtract</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Usage -&gt; Int
 </span><a href="Harness.Alphabet.html#inTok"><span class="hs-identifier hs-var">inTok</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Response -&gt; Usage
 </span><a href="Harness.Alphabet.html#usage"><span class="hs-identifier hs-var">usage</span></a></span><span> </span><span class="annot"><span class="annottext">Response
-</span><a href="#local-6989586621679148537"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
+</span><a href="#local-6989586621679148759"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Int -&gt; Int
 forall a. Num a =&gt; a -&gt; a -&gt; a
 </span><span class="hs-operator hs-var">+</span></span><span> </span><span class="annot"><span class="annottext">Usage -&gt; Int
 </span><a href="Harness.Alphabet.html#outTok"><span class="hs-identifier hs-var">outTok</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Response -&gt; Usage
 </span><a href="Harness.Alphabet.html#usage"><span class="hs-identifier hs-var">usage</span></a></span><span> </span><span class="annot"><span class="annottext">Response
-</span><a href="#local-6989586621679148537"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679148759"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
 </span><span id="line-105"></span><span>
 </span><span id="line-106"></span><span class="hs-comment">-- | The only constructor for a harness: an annotation and a coalgebra, unfolded.</span><span>
 </span><span id="line-107"></span><span class="hs-comment">-- No @Cofree HarnessF Ctx@ exists that is not generated by some coalgebra.</span><span>
@@ -452,10 +452,10 @@ forall a. Num a =&gt; a -&gt; a -&gt; a
 forall (f :: * -&gt; *) b a.
 Functor f =&gt;
 (b -&gt; (a, f b)) -&gt; b -&gt; Cofree f a
-</span><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html#unfold"><span class="hs-identifier hs-var">unfold</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679148538"><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148538"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; Ctx
+</span><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html#unfold"><span class="hs-identifier hs-var">unfold</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679148760"><span class="annot"><span class="annottext">S
+</span><a href="#local-6989586621679148760"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; Ctx
 </span><a href="Harness.State.html#view"><span class="hs-identifier hs-var">view</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148538"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">S -&gt; HarnessF S
+</span><a href="#local-6989586621679148760"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">S -&gt; HarnessF S
 </span><a href="Harness.Coalgebra.html#step"><span class="hs-identifier hs-var">step</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679148538"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679148760"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
 </span><span id="line-110"></span></pre></body></html>
