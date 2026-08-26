@@ -48,9 +48,22 @@ import System.Timeout (timeout)
 
 import Harness.Alphabet (Call (..), Obs (..))
 
--- | Create the sandbox if absent, make it a git repository (so @commit@ works),
--- and seed it with a copy of @readmeSrc@ as @README.md@ so a @read@ of the
--- README returns real content. Idempotent: safe to call before every run.
+-- | Prepare the sandbox directory so a live run has somewhere real to work.
+--
+-- __What.__ Creates @root@ if absent, makes it a git repository (so the @commit@
+-- tool has something to commit /into/), and seeds it with a copy of @readmeSrc@
+-- as @README.md@ so that a @read@ of the README returns genuine content rather
+-- than an empty file.
+--
+-- __Why a git init here.__ @commit@ is implemented as @git commit@ in this very
+-- directory; without an initialised repo (and a configured user name\/email) the
+-- first commit would fail. Seeding the identity here keeps @commitTool@ free of
+-- setup logic.
+--
+-- __Gotcha.__ Idempotent by design — the repo is only initialised when
+-- @.git@ is absent, so it is safe (and intended) to call before /every/ run. The
+-- README copy, however, is unconditional: a fresh @readmeSrc@ overwrites the
+-- sandbox copy each time. [established]
 prepareSandbox :: FilePath -> FilePath -> IO ()
 prepareSandbox root readmeSrc = do
   createDirectoryIfMissing True root
@@ -65,10 +78,20 @@ prepareSandbox root readmeSrc = do
   haveReadme <- doesFileExist readmeSrc
   if haveReadme then copyFile readmeSrc (root </> "README.md") else pure ()
 
--- | Execute one tool 'Call' inside the sandbox, returning the observation the
--- model sees next turn. Any 'IO' exception is caught and returned as an error
--- 'Obs' rather than thrown, so the world seam preserves the harness's
--- crash-freedom property (E4).
+-- | The live world: execute one tool 'Call' inside the sandbox and return the
+-- 'Obs' the model sees next turn.
+--
+-- __What.__ This is the @act@ half of the provider seam for a real run — the
+-- counterpart to 'Provider.Ollama'\'s oracle. It dispatches on the tool name
+-- (@read@\/@write@\/@bash@\/@commit@) and runs the real effect, confined to
+-- @root@.
+--
+-- __Why catch everything.__ Any @IO@ exception (a permission error, a decode
+-- fault, a git failure) is caught and returned /as/ an error 'Obs' — prefixed
+-- @\"error: \"@ — rather than thrown. A tool failing is normal agent territory
+-- and must not crash the run: preserving that is the harness's crash-freedom
+-- property (E4). The model simply sees the error string and decides what to do
+-- next. [established]
 sandboxAct :: FilePath -> Call -> IO Obs
 sandboxAct root c = do
   result <- try (dispatch root (tool c) (parseArgs (args c)))
@@ -80,6 +103,9 @@ sandboxAct root c = do
 -- Dispatch
 -- ---------------------------------------------------------------------------
 
+-- | Route a call to the tool that runs it, pulling each tool's argument out of
+-- the (loosely-keyed) 'Args' by trying every plausible key name the model might
+-- have used. An unknown tool name is a recoverable error string, not a crash.
 dispatch :: FilePath -> String -> Args -> IO String
 dispatch root tl a = case tl of
   "read"   -> readTool root (arg ["path", "filename", "file", "filepath"] a)
@@ -89,6 +115,8 @@ dispatch root tl a = case tl of
   "commit" -> commitTool root (arg ["msg", "message", "m"] a)
   other    -> pure ("error: unknown tool " ++ other)
 
+-- | @read@: return a clipped view of a file's contents. Path-confined through
+-- @withSafePath@; a missing path or missing file is a plain error string.
 readTool :: FilePath -> Maybe String -> IO String
 readTool _ Nothing = pure "error: read: no path argument"
 readTool root (Just rel) = withSafePath root rel $ \p -> do
@@ -99,6 +127,10 @@ readTool root (Just rel) = withSafePath root rel $ \p -> do
       body <- readFile p
       pure ("read " ++ rel ++ " (" ++ show (length body) ++ " bytes):\n" ++ clip 800 body)
 
+-- | @write@: create or overwrite a file, making any missing parent directories.
+-- Path-confined through @withSafePath@; an absent body is treated as empty. This
+-- is an /irreversible/ tool — the compaction law tracks its use (see
+-- 'Harness.Compaction.bWrites').
 writeTool :: FilePath -> Maybe String -> Maybe String -> IO String
 writeTool _ Nothing _ = pure "error: write: no path argument"
 writeTool root (Just rel) mbody = withSafePath root rel $ \p -> do
@@ -107,6 +139,15 @@ writeTool root (Just rel) mbody = withSafePath root rel $ \p -> do
   writeFile p body
   pure ("wrote " ++ show (length body) ++ " bytes to " ++ rel)
 
+-- | @bash@: run a shell command with the sandbox as its working directory and a
+-- 10-second wall-clock timeout, returning the exit status and clipped
+-- stdout+stderr. A timeout is reported as an error string so a hung command
+-- cannot block the run forever.
+--
+-- __Caveat, not hidden.__ This is @cwd@-confinement, /not/ a security boundary.
+-- The command runs with the harness's own uid and can read outside the sandbox
+-- (@cat \/etc\/passwd@ works). Only @read@\/@write@ are path-confined; @bash@ is
+-- trusted-input territory. [design]
 bashTool :: FilePath -> Maybe String -> IO String
 bashTool _ Nothing = pure "error: bash: no command argument"
 bashTool root (Just cmd)
@@ -119,6 +160,10 @@ bashTool root (Just cmd)
         Just (code, out, err) ->
           pure ("bash " ++ showExit code ++ "\n" ++ clip 800 (out ++ err))
 
+-- | @commit@: stage everything and @git commit@ in the sandbox's /own/
+-- repository (seeded by 'prepareSandbox'). The surrounding project repo is never
+-- touched. An empty or absent message defaults to @\"agent commit\"@. Like
+-- @write@, this is an irreversible tool the compaction law watches. [established]
 commitTool :: FilePath -> Maybe String -> IO String
 commitTool root mmsg = do
   _ <- runGit root ["add", "-A"]
@@ -157,19 +202,28 @@ withSafePath root rel k
 -- Argument parsing
 -- ---------------------------------------------------------------------------
 
--- | A tool call's arguments: either a decoded JSON object, or a raw fallback
--- string when the model did not send an object.
+-- | A tool call's arguments, after best-effort parsing: either a decoded JSON
+-- @Obj@ect (the normal case) or a @Raw@ fallback string for when the model sent
+-- a bare string or something that did not decode. The @Raw@ case is what lets
+-- single-argument tools work even when the model omits the JSON envelope.
 data Args = Obj (KM.KeyMap Value) | Raw String
 
+-- | Parse a raw argument string leniently. A JSON object becomes 'Obj'; a JSON
+-- string becomes 'Raw' of its text; anything else (including malformed JSON)
+-- falls back to 'Raw' of the original string, so a mis-encoded argument still
+-- reaches the tool rather than being dropped.
 parseArgs :: String -> Args
 parseArgs s = case decode (BSLC.pack s) of
   Just (Object o) -> Obj o
   Just (String t) -> Raw (T.unpack t)
   _               -> Raw s
 
--- | Look a value up under the first matching key. For a 'Raw' argument (a bare
--- string) every key resolves to that string — enough for single-argument tools
--- like @read@\/@bash@\/@commit@.
+-- | Look a value up under the first of several candidate keys that matches. The
+-- candidate list exists because qwen3 does not reliably use the schema's
+-- argument names — it emits @{\"filename\":…}@ or @{\"file\":…}@ where the
+-- schema said @path@ — so each tool passes every plausible synonym. For a 'Raw'
+-- argument (a bare string) any key resolves to that string, which is enough for
+-- single-argument tools like @read@\/@bash@\/@commit@. [design]
 arg :: [String] -> Args -> Maybe String
 arg _    (Raw r) = Just r
 arg keys (Obj o) = listToMaybe (mapMaybe fromKey keys)
