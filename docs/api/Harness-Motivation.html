@@ -1,73 +1,130 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Harness.Motivation</title><link href="linuwial.css" rel="stylesheet" type="text/css" title="Linuwial" /><link rel="stylesheet" type="text/css" href="quick-jump.css" /><link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400i,700" /><script src="haddock-bundle.min.js" async="async" type="text/javascript"></script><script type="text/x-mathjax-config">MathJax.Hub.Config({ tex2jax: { processClass: "mathjax", ignoreClass: ".*" } });</script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script></head><body><div id="package-header"><span class="caption">comonadic-harness</span><ul class="links" id="page-menu"><li><a href="src/Harness.Motivation.html">Source</a></li><li><a href="index.html">Contents</a></li><li><a href="doc-index.html">Index</a></li></ul></div><div id="content"><div id="module-header"><table class="info"><tr><th>Safe Haskell</th><td>None</td></tr><tr><th>Language</th><td>GHC2021</td></tr></table><p class="caption">Harness.Motivation</p></div><div id="table-of-contents"><div id="contents-list"><p class="caption" onclick="window.scrollTo(0,0)">Contents</p><ul><li><a href="#g:1">The claim</a></li><li><a href="#g:2">Nondeterminism lives in the directions</a></li><li><a href="#g:3">The minimal definition</a></li><li><a href="#g:4">What the comonad buys: counterfactual annotation</a></li><li><a href="#g:5">Compaction and its correctness condition</a></li><li><a href="#g:6">Where the LLM lives, and why the alphabet does not grow</a></li></ul></div></div><div id="description"><p class="caption">Description</p><div class="doc"><p>Why the harness is a durable polynomial coalgebra over a closed alphabet,
- derived from a single claim in <code>BRIEF.md</code> (&#167;&#167;1, 3, 5, 6). Three small
- illustrations (<code><a href="Harness-Motivation.html#v:exampleStep" title="Harness.Motivation">exampleStep</a></code>, <code><a href="Harness-Motivation.html#v:exampleRun" title="Harness.Motivation">exampleRun</a></code>, <code><a href="Harness-Motivation.html#v:irreversible" title="Harness.Motivation">irreversible</a></code>) are exported and
- compiled under the same strict warnings as the rest of the library, so the
- argument cannot drift from code that builds. A statement proved by code here
- is tagged <code>[established]</code>; a defensible-but-unforced choice is <code>[design]</code>.</p></div></div><div id="synopsis"><details id="syn"><summary>Synopsis</summary><ul class="details-toggle" data-details-id="syn"><li class="src short"><a href="#v:exampleStep">exampleStep</a> :: <a href="Harness-State.html#t:S" title="Harness.State">S</a> -&gt; <a href="Harness-Alphabet.html#t:HarnessF" title="Harness.Alphabet">HarnessF</a> <a href="Harness-State.html#t:S" title="Harness.State">S</a></li><li class="src short"><a href="#v:irreversible">irreversible</a> :: [<a href="Harness-State.html#t:Turn" title="Harness.State">Turn</a>] -&gt; [<a href="${pkgroot}/../../../../2q7b7adbh3clikpzi6pgx0lz7pd8ivih-ghc-9.10.3-doc/share/doc/ghc/html/libraries/base-4.20.2.0-2c9f/Data-String.html#t:String" title="Data.String">String</a>]</li><li class="src short"><a href="#v:exampleRun">exampleRun</a> :: <a href="Harness-State.html#t:S" title="Harness.State">S</a> -&gt; <a href="${pkgroot}/../../../../2q7b7adbh3clikpzi6pgx0lz7pd8ivih-ghc-9.10.3-doc/share/doc/ghc/html/libraries/base-4.20.2.0-2c9f/Data-Either.html#t:Either" title="Data.Either">Either</a> <a href="Harness-Alphabet.html#t:Refusal" title="Harness.Alphabet">Refusal</a> <a href="Harness-Alphabet.html#t:Response" title="Harness.Alphabet">Response</a> -&gt; <a href="Harness-State.html#t:S" title="Harness.State">S</a></li></ul></details></div><div id="interface"><a href="#g:1" id="g:1"><h1>The claim</h1></a><div class="doc"><p>An agentic harness is a <strong>durable polynomial coalgebra over a closed action alphabet, equipped with three lossy quotients and one unreliable oracle boundary</strong> (&#167;1). Everything below unpacks that sentence into types that already
-exist in this library, plus three tiny illustrations that compile.</p><p><code>Cofree <code><a href="Harness-Alphabet.html#t:HarnessF" title="Harness.Alphabet">HarnessF</a></code> <code><a href="Harness-State.html#t:Ctx" title="Harness.State">Ctx</a></code></code> is the <em>denotation</em> of the coalgebra &#8212; the
-lazily-unfolded tree of every reachable state &#8212; not its runtime representation.
-You implement the coalgebra <code><code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code> -&gt; <code><a href="Harness-Alphabet.html#t:HarnessF" title="Harness.Alphabet">HarnessF</a></code> <code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code></code> and reason with the tree.</p></div><a href="#g:2" id="g:2"><h1>Nondeterminism lives in the directions</h1></a><div class="doc"><p>The alphabet is <code><a href="Harness-Alphabet.html#t:HarnessF" title="Harness.Alphabet">HarnessF</a></code>, and the load-bearing decision is where the
-nondeterminism sits. A <code><a href="Harness-Alphabet.html#v:Render" title="Harness.Alphabet">Render</a></code> position is a fixed <code><a href="Harness-Alphabet.html#t:Request" title="Harness.Alphabet">Request</a></code>; its <em>direction</em>
-is a function <code>Either <code><a href="Harness-Alphabet.html#t:Refusal" title="Harness.Alphabet">Refusal</a></code> <code><a href="Harness-Alphabet.html#t:Response" title="Harness.Alphabet">Response</a></code> -&gt; x</code>. The harness always knows what
-it does next (the position). What it does not know is what comes back (the
-direction). <code>[established]</code></p><p>That shaping is what makes <code>duplicate</code> on the unfolded tree pure and lazy: a
-branch is a function of an as-yet-unobserved input, not an effect that must be
-run to be seen. The standard objection &#8212; &quot;an agent must run tools to enumerate
-its futures&quot; &#8212; dissolves, because the tree branches on unobserved <em>inputs</em>, not
-on unperformed <em>effects</em> (&#167;1).</p><p>The whole coalgebra is <code><a href="Harness-Coalgebra.html#v:step" title="Harness.Coalgebra">step</a></code>; <code><a href="Harness-Motivation.html#v:exampleStep" title="Harness.Motivation">exampleStep</a></code> is a deliberately
-smaller one that shows the same move &#8212; a deterministic position (<code><a href="Harness-Alphabet.html#v:Render" title="Harness.Alphabet">Render</a></code>) whose
-successor is a pure function of the oracle's reply:</p><pre><code><a href="Harness-Motivation.html#v:exampleStep" title="Harness.Motivation">exampleStep</a></code> :: <code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code> -&gt; <code><a href="Harness-Alphabet.html#t:HarnessF" title="Harness.Alphabet">HarnessF</a></code> <code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code>
-<code><a href="Harness-Motivation.html#v:exampleStep" title="Harness.Motivation">exampleStep</a></code> s = <code><a href="Harness-Alphabet.html#v:Render" title="Harness.Alphabet">Render</a></code> (<code><a href="Harness-State.html#v:request" title="Harness.State">request</a></code> s) reply
-  where
-    reply (Left _)  = s { <code><a href="Harness-State.html#v:budget" title="Harness.State">budget</a></code> = 0 }
-    reply (Right r) = s { <code><a href="Harness-State.html#v:transcript" title="Harness.State">transcript</a></code> = <code><a href="Harness-State.html#v:Assistant" title="Harness.State">Assistant</a></code> r : <code><a href="Harness-State.html#v:transcript" title="Harness.State">transcript</a></code> s }
-</pre></div><div class="top"><p class="src"><a id="v:exampleStep" class="def">exampleStep</a> :: <a href="Harness-State.html#t:S" title="Harness.State">S</a> -&gt; <a href="Harness-Alphabet.html#t:HarnessF" title="Harness.Alphabet">HarnessF</a> <a href="Harness-State.html#t:S" title="Harness.State">S</a> <a href="src/Harness.Motivation.html#exampleStep" class="link">Source</a> <a href="#v:exampleStep" class="selflink">#</a></p><div class="doc"><p>A minimal coalgebra fragment: emit the request, and on reply either halt by
- spending the budget or record the (unobserved-until-now) response and carry
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Harness.Motivation</title><link href="linuwial.css" rel="stylesheet" type="text/css" title="Linuwial" /><link rel="stylesheet" type="text/css" href="quick-jump.css" /><link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400i,700" /><script src="haddock-bundle.min.js" async="async" type="text/javascript"></script><script type="text/x-mathjax-config">MathJax.Hub.Config({ tex2jax: { processClass: "mathjax", ignoreClass: ".*" } });</script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script></head><body><div id="package-header"><span class="caption">comonadic-harness</span><ul class="links" id="page-menu"><li><a href="src/Harness.Motivation.html">Source</a></li><li><a href="index.html">Contents</a></li><li><a href="doc-index.html">Index</a></li></ul></div><div id="content"><div id="module-header"><table class="info"><tr><th>Safe Haskell</th><td>None</td></tr><tr><th>Language</th><td>GHC2021</td></tr></table><p class="caption">Harness.Motivation</p></div><div id="table-of-contents"><div id="contents-list"><p class="caption" onclick="window.scrollTo(0,0)">Contents</p><ul><li><a href="#g:1">What an agentic harness has to do</a></li><li><a href="#g:2">How the canonical harness does it</a></li><li><a href="#g:3">Two directions on one tree</a></li><li><a href="#g:4">What destruction buys: looking before you leap</a></li><li><a href="#g:5">Creation again, on a computed trigger</a></li><li><a href="#g:6">Why the shape allows it</a></li><li><a href="#g:7">Compaction as bisimulation</a></li><li><a href="#g:8">What it does not buy</a></li></ul></div></div><div id="description"><p class="caption">Description</p><div class="doc"><p>An agentic harness is the program that lets a language model actually read
+ files, run commands, and make edits. Built the usual way it is an imperative
+ loop; built as a coalgebra unfolded into a comonad it becomes something you can
+ interrogate &#8212; you can predict what the agent will do before it does it, and
+ state and check that compacting its history did not change its behaviour.
+ <code><a href="Harness-Motivation.html#v:exampleStep" title="Harness.Motivation">exampleStep</a></code>, <code><a href="Harness-Motivation.html#v:exampleRun" title="Harness.Motivation">exampleRun</a></code> and <code><a href="Harness-Motivation.html#v:irreversible" title="Harness.Motivation">irreversible</a></code> are small, self-contained
+ illustrations; snippets shown in another language are from the
+ <a href="https://pi.dev/">pi</a> agent harness (TypeScript), simplified for illustration.</p></div></div><div id="synopsis"><details id="syn"><summary>Synopsis</summary><ul class="details-toggle" data-details-id="syn"><li class="src short"><a href="#v:exampleStep">exampleStep</a> :: <a href="Harness-State.html#t:S" title="Harness.State">S</a> -&gt; <a href="Harness-Alphabet.html#t:HarnessF" title="Harness.Alphabet">HarnessF</a> <a href="Harness-State.html#t:S" title="Harness.State">S</a></li><li class="src short"><a href="#v:exampleRun">exampleRun</a> :: <a href="Harness-State.html#t:S" title="Harness.State">S</a> -&gt; <a href="${pkgroot}/../../../../2q7b7adbh3clikpzi6pgx0lz7pd8ivih-ghc-9.10.3-doc/share/doc/ghc/html/libraries/base-4.20.2.0-2c9f/Data-Either.html#t:Either" title="Data.Either">Either</a> <a href="Harness-Alphabet.html#t:Refusal" title="Harness.Alphabet">Refusal</a> <a href="Harness-Alphabet.html#t:Response" title="Harness.Alphabet">Response</a> -&gt; <a href="Harness-State.html#t:S" title="Harness.State">S</a></li><li class="src short"><a href="#v:irreversible">irreversible</a> :: [<a href="Harness-State.html#t:Turn" title="Harness.State">Turn</a>] -&gt; [<a href="${pkgroot}/../../../../2q7b7adbh3clikpzi6pgx0lz7pd8ivih-ghc-9.10.3-doc/share/doc/ghc/html/libraries/base-4.20.2.0-2c9f/Data-String.html#t:String" title="Data.String">String</a>]</li></ul></details></div><div id="interface"><a href="#g:1" id="g:1"><h1>What an agentic harness has to do</h1></a><div class="doc"><p>An agentic harness turns something that only emits text into something that
+reads files, runs commands, and makes commits. Strip it to the job and it has
+five obligations &#8212; offer the model a set of tools and a view of the conversation;
+carry out (or refuse) what it asks for; feed the results back and go round again;
+keep the conversation inside the model's context window as it grows; and stop,
+eventually, with an outcome.</p><p>Everything else &#8212; streaming, retries, a UI &#8212; is comfort around those five. The
+interesting question is not how to write the loop (it is a loop) but what you are
+allowed to <em>say</em> about it once written: can you predict what it will do? can you
+show that squeezing the history did not change its behaviour? Most harnesses
+answer &quot;no&quot; to both and ship anyway. One shape &#8212; a coalgebra unfolded into a
+comonad &#8212; turns those &quot;no&quot;s into &quot;yes&quot;.</p></div><a href="#g:2" id="g:2"><h1>How the canonical harness does it</h1></a><div class="doc"><p>The <a href="https://pi.dev/">pi</a> harness is a clean, minimal example of how this is
+normally done, and most others (<a href="https://twotimespi.dev/">tau</a> among them) are the
+same shape. The core is an imperative loop:</p><pre>while (true) {                                    // stop conditions elided
+  const message = await streamAssistantResponse(currentContext, ...);
+  const toolCalls = message.content.filter((c) =&gt; c.type === &quot;toolCall&quot;);
+  if (toolCalls.length &gt; 0) {
+    const results = await executeToolCalls(currentContext, message, ...);
+    for (const result of results) currentContext.messages.push(result);
+  }
+}</pre><p>Ask the model, run the tools it asked for, push the results onto a growing
+messages array, repeat. Much of it agrees with the account below. Tools are
+plain data dispatched by name, and an unknown or malformed call is repaired into
+an error handed back to the model rather than crashed on:</p><pre>const tool = currentContext.tools?.find((t) =&gt; t.name === toolCall.name);
+if (!tool) {
+  return { result: createErrorToolResult(`Tool ${toolCall.name} not found`) };
+}</pre><p>That is exactly the move <code>admit</code> makes here &#8212; an unafforded call becomes a
+synthetic error observation, not an exception. Compaction is there too, fired on
+a token threshold:</p><pre>function shouldCompact(contextTokens, contextWindow, settings) {
+  return contextTokens &gt; contextWindow - settings.reserveTokens;
+}</pre><p>So the coalgebra is not exotic: the practical machinery matches a working agent.</p><p>What differs is what you can <em>say</em> about the loop, and it follows from one
+fact &#8212; the control flow only exists while it runs. The loop <em>is</em> the
+interpreter, and the model and tool calls happen inside it, so there is no value
+standing for &quot;what the agent will do&quot; that you could inspect without executing.
+Three things fall out. You cannot look before you leap: there is no way to ask
+what the agent will do next short of letting it &#8212; a &quot;plan mode&quot; is a
+tool-gating convention, not a forecast. Compaction is best-effort: it fires on a
+threshold and is judged by whether the session still works afterwards, never
+against a statement of what it must preserve. And behaviour is checked by
+anecdote &#8212; canned fake providers and example transcripts &#8212; because there is no
+closed set of actions or shared interpreter to state a property over.</p><p>What turns those three &quot;no&quot;s into &quot;yes&quot; is treating the control flow as a
+value instead of a running process.</p></div><a href="#g:3" id="g:3"><h1>Two directions on one tree</h1></a><div class="doc"><p>Stop writing the loop and start writing the thing the loop walks. Give the
+harness a pure coalgebra <code>step :: <code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code> -&gt; <code><a href="Harness-Alphabet.html#t:HarnessF" title="Harness.Alphabet">HarnessF</a></code> <code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code></code> &#8212; from a state, the
+single next action &#8212; and <code>unfold</code> it into <code>Cofree <code><a href="Harness-Alphabet.html#t:HarnessF" title="Harness.Alphabet">HarnessF</a></code> <code><a href="Harness-State.html#t:Ctx" title="Harness.State">Ctx</a></code></code>, the
+lazily-grown tree of every reachable future. Nothing runs; you have built a
+value.</p><p>That value has two directions on it, and they are John Boyd's pair. <em>Creation</em>
+is the unfold: synthesise the whole branching future from a seed coalgebra, a
+model of what could happen. <em>Destruction</em> is the fold: take that tree apart to
+see what each state's future actually holds. Boyd's argument in /Destruction and
+Creation/ (1976) is that staying adaptive means doing both, forever &#8212; you cannot
+analyse without first pulling a whole into parts, and you cannot act without
+assembling parts into a new whole. A harness that can only run forward &#8212; create,
+never destruct its own futures &#8212; cannot govern itself. The canonical loop is all
+creation: it acts, and never inspects.</p><p>The comonad is the destruction direction made mechanical. You cannot fold an
+infinitely-branching tree directly, so you fold it under a <em>hypothesis</em>: a pure
+stand-in for the oracle and world that collapses each branch to the one path it
+would take. Under a hypothesis the tree is a stream, <code>extract</code> reads the
+annotation at the root, and <code>extend</code> rewrites every node with a function of its
+<em>whole</em> sub-future. Those are the comonad operations, and they are the vocabulary
+of analysis the canonical loop has no words for.</p><p><code>exampleStep</code> is a deliberately smaller coalgebra than the real
+<code><a href="Harness-Coalgebra.html#v:step" title="Harness.Coalgebra">step</a></code>, showing the creation seed: a fixed position whose
+successor is a pure function of the reply.</p></div><div class="top"><p class="src"><a id="v:exampleStep" class="def">exampleStep</a> :: <a href="Harness-State.html#t:S" title="Harness.State">S</a> -&gt; <a href="Harness-Alphabet.html#t:HarnessF" title="Harness.Alphabet">HarnessF</a> <a href="Harness-State.html#t:S" title="Harness.State">S</a> <a href="src/Harness.Motivation.html#exampleStep" class="link">Source</a> <a href="#v:exampleStep" class="selflink">#</a></p><div class="doc"><p>A minimal coalgebra fragment: emit the request, and on reply either halt by
+ spending the budget or record the (until-now unobserved) response and carry
  on. The nondeterminism is entirely in the <code>Either <code><a href="Harness-Alphabet.html#t:Refusal" title="Harness.Alphabet">Refusal</a></code> <code><a href="Harness-Alphabet.html#t:Response" title="Harness.Alphabet">Response</a></code></code>
- argument &#8212; the position <code><a href="Harness-Alphabet.html#v:Render" title="Harness.Alphabet">Render</a></code> is fixed. This is the &#167;1 move in one line.</p></div></div><a href="#g:3" id="g:3"><h1>The minimal definition</h1></a><div class="doc"><p>Section 3 names exactly five things, and each is a value already in scope:</p><ul><li><strong>State <code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code></strong> &#8212; the transcript and the token budget.</li><li><strong>Alphabet with a result family</strong> &#8212; <code><a href="Harness-Alphabet.html#t:HarnessF" title="Harness.Alphabet">HarnessF</a></code>, where each position's
-  direction type <em>is</em> the observation type of that action. That per-action
-  dependence is what makes the interface polynomial, <code>p(X) = &#931;_&#963; X^Obs(&#963;)</code>, and
-  is why a fixed product of handlers cannot type it. <code>[established]</code></li><li><strong>Coalgebra</strong> &#8212; <code>step :: <code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code> -&gt; <code><a href="Harness-Alphabet.html#t:HarnessF" title="Harness.Alphabet">HarnessF</a></code> <code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code></code>.</li><li><strong>Three quotients on <code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code></strong> &#8212; <code><a href="Harness-State.html#v:project" title="Harness.State">project</a></code> (lossy, what the model sees), <code>compact</code>
-  (lossy, what the harness keeps), <code>persist</code> (lossless, what survives a crash).
-  Only <code><a href="Harness-State.html#v:project" title="Harness.State">project</a></code> is exercised here.</li><li><strong>Oracle boundary</strong> &#8212; an external, flaky, adversarial-in-the-limit
-  <code><code><a href="Harness-Alphabet.html#t:Request" title="Harness.Alphabet">Request</a></code> -&gt; m (Either <code><a href="Harness-Alphabet.html#t:Refusal" title="Harness.Alphabet">Refusal</a></code> <code><a href="Harness-Alphabet.html#t:Response" title="Harness.Alphabet">Response</a></code>)</code>, explicitly <em>not</em> part of the
-  harness. The obligation is to behave for an arbitrary oracle.</li></ul><p>That the affordances are mode-dependent &#8212; <code><a href="Harness-State.html#v:afford" title="Harness.State">afford</a></code> is a fold over the
-transcript, not a constant &#8212; is the polynomial structure made concrete: which
-directions are legal depends on the state. <code><a href="Harness-Motivation.html#v:exampleStep" title="Harness.Motivation">exampleStep</a></code> already used <code><a href="Harness-State.html#v:request" title="Harness.State">request</a></code>
-to compute that legal request from the state, purely and without an oracle call.</p></div><a href="#g:4" id="g:4"><h1>What the comonad buys: counterfactual annotation</h1></a><div class="doc"><p>You cannot fold an infinitely-branching tree. You can fold it under a
-<em>hypothesis</em> &#8212; a pure stand-in for the oracle and the world &#8212; which collapses
-the branching to a single path (&#167;5). <code><a href="Harness-Probe.html#v:assess" title="Harness.Probe">assess</a></code> scores one node that
-way; <code>extend (<code><a href="Harness-Probe.html#v:assess" title="Harness.Probe">assess</a></code> h n)</code> then annotates <em>every reachable state</em>
-with a counterfactual assessment of its own future, from a function that
-only knows how to score one position. <code>extract</code> recovers the assessment at the
-current node, which is the pre-action governance gate.</p><p>The forecast is only as good as the hypothesis: in the recorded run it gets the
-shape right and the content wrong (<code>runs/oracle-output.txt</code>). The comonad
-supplies the plumbing to attach forward-looking assessment cheaply; it does not
-supply a model of the oracle. <code>[established]</code></p></div><a href="#g:5" id="g:5"><h1>Compaction and its correctness condition</h1></a><div class="doc"><p>This is the result the design exists for (&#167;6). Compaction <code>compact :: <code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code> -&gt;
-<code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code></code> should be a <strong>coalgebra homomorphism</strong>:</p><pre>step (compact s)  ==  fmap compact (step s)
-</pre><p>Equivalently, <code>s</code> and <code>compact s</code> are bisimilar and <code>unfold</code> factors through
-<code>compact</code>. You cannot check that directly, because <code><code><a href="Harness-Alphabet.html#t:HarnessF" title="Harness.Alphabet">HarnessF</a></code> <code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code></code> contains
-functions; you check its observable shadow. And the shadow is <em>sharper</em> than the
-naive statement: compaction must change the prompt, so the equivalence has to be
-on the <strong>action trace</strong>, never on the rendered context. Hence the governing
-slogan: <em>compaction is correct exactly when it is invisible in what the agent does, not in what it sees.</em> <code>[design]</code></p><p>The one observation that matters most is the multiset of irreversible actions: a
-compaction that manufactures or drops a write has changed behaviour, whatever it
-did to the prompt. <code><a href="Harness-Motivation.html#v:irreversible" title="Harness.Motivation">irreversible</a></code> is that observation as a tiny fold &#8212; the same
-notion <code><a href="Harness-Compaction.html#v:respectsBehaviour" title="Harness.Compaction">respectsBehaviour</a></code> checks at scale.</p><p>The first sample state ever tried returned &quot;respects behaviour? <code>True</code>&quot; by
-coincidence, because compacted and uncompacted happened to sit on the same side
-of the hypothesis threshold. The property is state-dependent; checking it at one
-state proves nothing. It wants a <em>violation rate</em> over states generated through
-public transitions, not a boolean (&#167;6). <code>[established]</code></p></div><div class="top"><p class="src"><a id="v:irreversible" class="def">irreversible</a> :: [<a href="Harness-State.html#t:Turn" title="Harness.State">Turn</a>] -&gt; [<a href="${pkgroot}/../../../../2q7b7adbh3clikpzi6pgx0lz7pd8ivih-ghc-9.10.3-doc/share/doc/ghc/html/libraries/base-4.20.2.0-2c9f/Data-String.html#t:String" title="Data.String">String</a>] <a href="src/Harness.Motivation.html#irreversible" class="link">Source</a> <a href="#v:irreversible" class="selflink">#</a></p><div class="doc"><p>The irreversible actions a transcript performed, as a plain list (read it
+ argument &#8212; the position <code><a href="Harness-Alphabet.html#v:Render" title="Harness.Alphabet">Render</a></code> is fixed, only the reply varies.</p></div></div><a href="#g:4" id="g:4"><h1>What destruction buys: looking before you leap</h1></a><div class="doc"><p>Concretely: write <code>assess</code>, a function that scores one node from its own
+future &#8212; how far ahead it halts, whether it terminates at all, which irreversible
+tools it touches, how many compactions it forces. Then <code>governed = extend (assess h n)</code>
+lifts that one-node score to <em>every</em> reachable node, and <code>extract (governed h n w)</code>
+is the score at the current node: a pre-action gate you can consult before
+letting the agent move.</p><p>That is the first &quot;no&quot; turned to &quot;yes&quot; &#8212; you can look before you leap. And
+because <code>run</code> (the real thing, in <code>IO</code>) and <code>probe</code> (a pure, bounded dry-run)
+walk the same tree through one interpreter, the future the gate shows agrees with
+the run that follows <em>by construction</em>, not by hope. (The comonad operation
+<code>extend</code> is what <code>governed</code> uses; the score at a single node is <code>assess</code>, which
+the next section reuses without lifting it over the tree.)</p></div><a href="#g:5" id="g:5"><h1>Creation again, on a computed trigger</h1></a><div class="doc"><p>Boyd's loop does not stop at analysis &#8212; the point of destruction is to feed a new
+creation. When the forecast says a coalgebra will not terminate, the harness
+swaps it for a weaker one and unfolds again. <code>evolve</code> builds a chosen coalgebra
+from a seed; <code>outerLoop</code> tries successively weaker coalgebras and runs the first
+whose <em>forecast</em> &#8212; an <code>assess</code> of an unfolded-but-unrun tree &#8212; says it halts.
+This is destruction&#8211;creation with a computed trigger rather than a guessed one,
+and the comonad supplies the destruction half that makes the trigger computable.
+(<code>outerLoop</code> reads <code>assess</code> on one tree rather than lifting <code>extend</code> over it; the
+rhythm is Boyd's either way.)</p></div><a href="#g:6" id="g:6"><h1>Why the shape allows it</h1></a><div class="doc"><p>None of this works if analysis is effectful, and that is bought by one decision:
+put the nondeterminism in the <em>directions</em>, not the <em>positions</em>. A <code><a href="Harness-Alphabet.html#v:Render" title="Harness.Alphabet">Render</a></code>
+position is a fixed <code><a href="Harness-Alphabet.html#t:Request" title="Harness.Alphabet">Request</a></code>; what the harness does not control is the reply, so
+the successor is a <em>function</em> of an <code>Either <code><a href="Harness-Alphabet.html#t:Refusal" title="Harness.Alphabet">Refusal</a></code> <code><a href="Harness-Alphabet.html#t:Response" title="Harness.Alphabet">Response</a></code></code> it has not seen.
+Because a branch is a function of an unobserved input rather than an effect that
+must be run, <code>duplicate</code> and <code>extend</code> on the tree are pure and lazy &#8212; you can walk
+futures without touching the world. The standard objection, that an agent must
+run tools to enumerate its futures, dissolves: the tree branches on unobserved
+<em>inputs</em>, not unperformed <em>effects</em>.</p><p><code>exampleRun</code> makes the point without any effect: given a pure reply, <code>exampleStep</code>
+produces a concrete successor state.</p></div><div class="top"><p class="src"><a id="v:exampleRun" class="def">exampleRun</a> :: <a href="Harness-State.html#t:S" title="Harness.State">S</a> -&gt; <a href="${pkgroot}/../../../../2q7b7adbh3clikpzi6pgx0lz7pd8ivih-ghc-9.10.3-doc/share/doc/ghc/html/libraries/base-4.20.2.0-2c9f/Data-Either.html#t:Either" title="Data.Either">Either</a> <a href="Harness-Alphabet.html#t:Refusal" title="Harness.Alphabet">Refusal</a> <a href="Harness-Alphabet.html#t:Response" title="Harness.Alphabet">Response</a> -&gt; <a href="Harness-State.html#t:S" title="Harness.State">S</a> <a href="src/Harness.Motivation.html#exampleRun" class="link">Source</a> <a href="#v:exampleRun" class="selflink">#</a></p><div class="doc"><p>Drive <code><a href="Harness-Motivation.html#v:exampleStep" title="Harness.Motivation">exampleStep</a></code> one step with a supplied (pure) reply. No oracle, no
+ <code>IO</code>: the successor is a function of the reply. The <code>case</code> is exhaustive over
+ all three constructors on purpose &#8212; the action set is closed, and a wildcard
+ would hide the day a fourth is added.</p></div></div><a href="#g:7" id="g:7"><h1>Compaction as bisimulation</h1></a><div class="doc"><p>The second &quot;no&quot; was compaction. Collapsing the transcript to stay inside the
+window should be a <em>coalgebra homomorphism</em>: <code>step (compact s) == fmap compact (step s)</code>.
+Read that as: <code>s</code> and <code>compact s</code> are <em>bisimilar</em> &#8212; they produce the same
+behaviour under the coalgebra, even though <code>compact s</code> shows the model a shorter
+prompt. That is the precise content of the slogan <em>compaction is correct exactly when it is invisible in what the agent does, not in what it sees.</em>
+You cannot check the homomorphism directly (<code><code><a href="Harness-Alphabet.html#t:HarnessF" title="Harness.Alphabet">HarnessF</a></code> <code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code></code> holds functions), so
+you check its behavioural shadow &#8212; and the shadow that matters most is the
+multiset of irreversible actions, since a compaction that manufactures or drops a
+write has changed behaviour whatever it did to the prompt.</p><p>The check is only lawful because the action set is <em>closed</em>. There is exactly one
+interpretation of <code><a href="Harness-Alphabet.html#t:HarnessF" title="Harness.Alphabet">HarnessF</a></code>, shared by execution and analysis, so &quot;same
+behaviour&quot; is a property you can state and test &#8212; not a coincidence hoped for
+across two hand-written loops (the failure mode the canonical harness lives with,
+where &quot;plan mode&quot; and the real run are the same loop under different prompts).
+<code>irreversible</code> is that one shadow as a tiny fold, the same notion
+<code><a href="Harness-Compaction.html#v:respectsBehaviour" title="Harness.Compaction">respectsBehaviour</a></code> checks at scale.</p></div><div class="top"><p class="src"><a id="v:irreversible" class="def">irreversible</a> :: [<a href="Harness-State.html#t:Turn" title="Harness.State">Turn</a>] -&gt; [<a href="${pkgroot}/../../../../2q7b7adbh3clikpzi6pgx0lz7pd8ivih-ghc-9.10.3-doc/share/doc/ghc/html/libraries/base-4.20.2.0-2c9f/Data-String.html#t:String" title="Data.String">String</a>] <a href="src/Harness.Motivation.html#irreversible" class="link">Source</a> <a href="#v:irreversible" class="selflink">#</a></p><div class="doc"><p>The irreversible actions a transcript performed, as a plain list (read it
  as a multiset). A compaction that changes this has changed behaviour, which
- is the divergence <code><a href="Harness-Compaction.html#v:respectsBehaviour" title="Harness.Compaction">respectsBehaviour</a></code> is built to catch.</p></div></div><a href="#g:6" id="g:6"><h1>Where the LLM lives, and why the alphabet does not grow</h1></a><div class="doc"><p>The oracle is one field of the environment, consumed by one line of the
-interpreter. Compaction needs a summarisation call, and it goes through the very
-same <code><a href="Harness-Alphabet.html#v:Render" title="Harness.Alphabet">Render</a></code> constructor: in <code><a href="Harness-State.html#v:Summarising" title="Harness.State">Summarising</a></code> mode <code><a href="Harness-State.html#v:request" title="Harness.State">request</a></code> supplies a
-summarisation prompt and <em>no tools</em>. The alphabet stays at three constructors.</p><p><code><a href="Harness-Motivation.html#v:exampleRun" title="Harness.Motivation">exampleRun</a></code> ties the two halves together without any effect: given a pure
-reply, <code><a href="Harness-Motivation.html#v:exampleStep" title="Harness.Motivation">exampleStep</a></code> produces a concrete successor state, so &quot;position fixed,
-direction pure&quot; is not just prose. Its <code>case</code> is exhaustive over all three
-constructors on purpose &#8212; the alphabet is closed, and a wildcard would hide the
-day a fourth constructor is added (invariant 1). That discipline &#8212; one
-interpretation per alphabet, no escape hatch &#8212; is the whole reason the agreement
-between execution and analysis is a law you can state rather than a coincidence
-you hope for.</p></div><div class="top"><p class="src"><a id="v:exampleRun" class="def">exampleRun</a> :: <a href="Harness-State.html#t:S" title="Harness.State">S</a> -&gt; <a href="${pkgroot}/../../../../2q7b7adbh3clikpzi6pgx0lz7pd8ivih-ghc-9.10.3-doc/share/doc/ghc/html/libraries/base-4.20.2.0-2c9f/Data-Either.html#t:Either" title="Data.Either">Either</a> <a href="Harness-Alphabet.html#t:Refusal" title="Harness.Alphabet">Refusal</a> <a href="Harness-Alphabet.html#t:Response" title="Harness.Alphabet">Response</a> -&gt; <a href="Harness-State.html#t:S" title="Harness.State">S</a> <a href="src/Harness.Motivation.html#exampleRun" class="link">Source</a> <a href="#v:exampleRun" class="selflink">#</a></p><div class="doc"><p>Drive <code><a href="Harness-Motivation.html#v:exampleStep" title="Harness.Motivation">exampleStep</a></code> one step with a supplied (pure) reply. No oracle, no
- <code>IO</code>: the successor is a function of the reply, exactly as &#167;1 requires.</p></div></div></div></div><div id="footer"><p>Produced by <a href="http://www.haskell.org/haddock/">Haddock</a> version 2.31.1</p></div></body></html>
+ is the divergence <code><a href="Harness-Compaction.html#v:respectsBehaviour" title="Harness.Compaction">respectsBehaviour</a></code> is built to catch.</p></div></div><a href="#g:8" id="g:8"><h1>What it does not buy</h1></a><div class="doc"><p>Honesty about the trade. The comonad supplies the plumbing to attach a forecast
+cheaply; it does not supply a model of the oracle, and the forecast is only as
+good as the hypothesis &#8212; against a crude one it gets the shape of the run right
+and the content wrong. The correctness law is real but state-dependent: checked
+at a single state it can report &quot;behaviour preserved?&quot; true by luck, when the
+compacted and uncompacted runs happen to fall the same side of the hypothesis's
+threshold; the honest measure is a violation <em>rate</em> over states reached by
+driving the harness through its own transitions, not a boolean. And the comonad
+structure is genuinely load-bearing in exactly one exported function,
+<code>governed</code> &#8212; the rest builds the tree with <code>unfold</code> and walks its shape.</p><p>The claim was never that the comonad does the work. It is that framing the
+harness this way lets you <em>say</em>, and check, the two things the canonical loop
+cannot: what the agent will do, and that compaction did not change it. The
+canonical harness is the better product; this is the better account of what an
+agent run <em>is</em>.</p></div></div></div><div id="footer"><p>Produced by <a href="http://www.haskell.org/haddock/">Haddock</a> version 2.31.1</p></div></body></html>
