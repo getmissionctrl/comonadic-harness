@@ -21,10 +21,24 @@ spec =
     it "run returns Some outcome (no exception) for >= 100 seeds" $ do
       results <- mapM runSeed [0 .. 149 :: Int]
       let crashed = [ n | (n, Left _) <- zip [0 :: Int ..] results ]
+          outcomes = [ o | Right o <- results ]
+          tally p = length (filter p outcomes)
+      -- Reporting the outcome breakdown is what /establishes/ the Haddock claim
+      -- that a hostile run still terminates: every non-crashed seed lands on a
+      -- terminal 'Outcome', and none exhaust the (finite) budget without halting.
       putStrLn
         ( "hostile oracle: ran " ++ show (length results)
-            ++ " seeds, crashes=" ++ show (length crashed) )
+            ++ " seeds, crashes=" ++ show (length crashed)
+            ++ "; outcomes done=" ++ show (tally isDone)
+            ++ " exhausted=" ++ show (tally (== Exhausted))
+            ++ " stuck=" ++ show (tally isStuck) )
       crashed `shouldBe` []
+      length outcomes `shouldBe` length results   -- every seed terminated
+  where
+    isDone (Done _)  = True
+    isDone _         = False
+    isStuck (Stuck _) = True
+    isStuck _         = False
 
 -- | Run one hostile seed to termination inside a 'try', forcing the 'Outcome' to
 -- WHNF so a lazily-thrown error is caught here rather than escaping.
