@@ -53,16 +53,21 @@ cabal build all              # warning-clean under the strict flag set
 cabal test spec              # 11 examples: comonad, agreement, prefix, affordance,
                              #   compaction-rate, monoidal-scan, hostile-oracle
 cabal run demo               # reproduces runs/oracle-output.txt (pure scripted oracle)
-cabal run demo live          # drives the same harness against Ollama on hq:11434
+cabal run demo live          # same harness, live against Ollama on hq:11434,
+                             #   printing the full annotated trace
+cabal run demo live qwen3:30b 2048   # optional [model] [numCtx] overrides
 ```
 
-Two guided reads inside the library, both rendered by `cabal haddock`:
+Two guided reads inside the library, both rendered by `cabal haddock`. A
+pre-rendered HTML snapshot is committed under **`docs/api/`** (open
+`docs/api/index.html`) so it is available without a local build; regenerate it
+with `cabal haddock lib:comonadic-harness --haddock-hyperlink-source`.
 
 - **`Harness.Tutorial`** — the *how*: a pipes-style walk from the closed
   alphabet through `step`, `unfold`, `run` versus `governed`, `extend`, and the
-  compaction law.
+  compaction law. (`docs/api/Harness-Tutorial.html`)
 - **`Harness.Motivation`** — the *why*: a literate derivation of the design from
-  `BRIEF.md` §§1, 3, 5, 6.
+  `BRIEF.md` §§1, 3, 5, 6. (`docs/api/Harness-Motivation.html`)
 
 ### A note on the demo trace
 

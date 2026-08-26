@@ -1,0 +1,379 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveAnyClass #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | The closed action alphabet. Three constructors, no escape hatch.</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- Positions are what the harness /does/; directions (the function</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- arguments) are what it does /not/ control. The harness is deterministic;</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- all nondeterminism lives in the directions, which is exactly why</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- 'Control.Comonad.Cofree.duplicate' on the unfolded tree is pure and lazy.</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- [established]</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Harness.Alphabet.html"><span class="hs-identifier">Harness.Alphabet</span></a></span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier">Prompt</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier">ToolSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier">Request</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier">Call</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier">Obs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Usage"><span class="hs-identifier">Usage</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier">Response</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier">Refusal</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Outcome"><span class="hs-identifier">Outcome</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier">HarnessF</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="hs-keyword">newtype</span><span> </span><span id="Prompt"><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-var">Prompt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Prompt"><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-var">Prompt</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679144014"><span id="local-6989586621679144019"><span class="annot"><span class="annottext">Prompt -&gt; Prompt -&gt; Bool
+(Prompt -&gt; Prompt -&gt; Bool)
+-&gt; (Prompt -&gt; Prompt -&gt; Bool) -&gt; Eq Prompt
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Prompt -&gt; Prompt -&gt; Bool
+== :: Prompt -&gt; Prompt -&gt; Bool
+$c/= :: Prompt -&gt; Prompt -&gt; Bool
+/= :: Prompt -&gt; Prompt -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144025"><span id="local-6989586621679144032"><span id="local-6989586621679144036"><span class="annot"><span class="annottext">Int -&gt; Prompt -&gt; ShowS
+[Prompt] -&gt; ShowS
+Prompt -&gt; String
+(Int -&gt; Prompt -&gt; ShowS)
+-&gt; (Prompt -&gt; String) -&gt; ([Prompt] -&gt; ShowS) -&gt; Show Prompt
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Prompt -&gt; ShowS
+showsPrec :: Int -&gt; Prompt -&gt; ShowS
+$cshow :: Prompt -&gt; String
+show :: Prompt -&gt; String
+$cshowList :: [Prompt] -&gt; ShowS
+showList :: [Prompt] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144042"><span id="local-6989586621679144044"><span class="annot"><span class="annottext">(forall x. Prompt -&gt; Rep Prompt x)
+-&gt; (forall x. Rep Prompt x -&gt; Prompt) -&gt; Generic Prompt
+forall x. Rep Prompt x -&gt; Prompt
+forall x. Prompt -&gt; Rep Prompt x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Prompt -&gt; Rep Prompt x
+from :: forall x. Prompt -&gt; Rep Prompt x
+$cto :: forall x. Rep Prompt x -&gt; Prompt
+to :: forall x. Rep Prompt x -&gt; Prompt
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- | A tool the provider is told it may call. Carried in the 'Request' so it</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- actually reaches the model &#8212; the amendment 'reference/Harness.hs' lacked.</span><span>
+</span><span id="line-30"></span><span class="hs-keyword">data</span><span> </span><span id="ToolSpec"><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-var">ToolSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ToolSpec"><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-var">ToolSpec</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="specName"><span class="annot"><span class="annottext">ToolSpec -&gt; String
+</span><a href="Harness.Alphabet.html#specName"><span class="hs-identifier hs-var hs-var">specName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span> </span><span id="specSchema"><span class="annot"><span class="annottext">ToolSpec -&gt; String
+</span><a href="Harness.Alphabet.html#specSchema"><span class="hs-identifier hs-var hs-var">specSchema</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679144054"><span id="local-6989586621679144059"><span class="annot"><span class="annottext">ToolSpec -&gt; ToolSpec -&gt; Bool
+(ToolSpec -&gt; ToolSpec -&gt; Bool)
+-&gt; (ToolSpec -&gt; ToolSpec -&gt; Bool) -&gt; Eq ToolSpec
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: ToolSpec -&gt; ToolSpec -&gt; Bool
+== :: ToolSpec -&gt; ToolSpec -&gt; Bool
+$c/= :: ToolSpec -&gt; ToolSpec -&gt; Bool
+/= :: ToolSpec -&gt; ToolSpec -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144063"><span id="local-6989586621679144069"><span id="local-6989586621679144073"><span class="annot"><span class="annottext">Int -&gt; ToolSpec -&gt; ShowS
+[ToolSpec] -&gt; ShowS
+ToolSpec -&gt; String
+(Int -&gt; ToolSpec -&gt; ShowS)
+-&gt; (ToolSpec -&gt; String) -&gt; ([ToolSpec] -&gt; ShowS) -&gt; Show ToolSpec
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; ToolSpec -&gt; ShowS
+showsPrec :: Int -&gt; ToolSpec -&gt; ShowS
+$cshow :: ToolSpec -&gt; String
+show :: ToolSpec -&gt; String
+$cshowList :: [ToolSpec] -&gt; ShowS
+showList :: [ToolSpec] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144076"><span id="local-6989586621679144078"><span class="annot"><span class="annottext">(forall x. ToolSpec -&gt; Rep ToolSpec x)
+-&gt; (forall x. Rep ToolSpec x -&gt; ToolSpec) -&gt; Generic ToolSpec
+forall x. Rep ToolSpec x -&gt; ToolSpec
+forall x. ToolSpec -&gt; Rep ToolSpec x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. ToolSpec -&gt; Rep ToolSpec x
+from :: forall x. ToolSpec -&gt; Rep ToolSpec x
+$cto :: forall x. Rep ToolSpec x -&gt; ToolSpec
+to :: forall x. Rep ToolSpec x -&gt; ToolSpec
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="annot"><span class="hs-comment">-- | What the model sees: the projected prompt plus the mode-dependent tools.</span></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">data</span><span> </span><span id="Request"><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-var">Request</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Request"><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-var">Request</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="reqPrompt"><span class="annot"><span class="annottext">Request -&gt; Prompt
+</span><a href="Harness.Alphabet.html#reqPrompt"><span class="hs-identifier hs-var hs-var">reqPrompt</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-type">Prompt</span></a></span><span class="hs-special">,</span><span> </span><span id="reqTools"><span class="annot"><span class="annottext">Request -&gt; [ToolSpec]
+</span><a href="Harness.Alphabet.html#reqTools"><span class="hs-identifier hs-var hs-var">reqTools</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-type">ToolSpec</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679144083"><span id="local-6989586621679144088"><span class="annot"><span class="annottext">Request -&gt; Request -&gt; Bool
+(Request -&gt; Request -&gt; Bool)
+-&gt; (Request -&gt; Request -&gt; Bool) -&gt; Eq Request
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Request -&gt; Request -&gt; Bool
+== :: Request -&gt; Request -&gt; Bool
+$c/= :: Request -&gt; Request -&gt; Bool
+/= :: Request -&gt; Request -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144092"><span id="local-6989586621679144098"><span id="local-6989586621679144102"><span class="annot"><span class="annottext">Int -&gt; Request -&gt; ShowS
+[Request] -&gt; ShowS
+Request -&gt; String
+(Int -&gt; Request -&gt; ShowS)
+-&gt; (Request -&gt; String) -&gt; ([Request] -&gt; ShowS) -&gt; Show Request
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Request -&gt; ShowS
+showsPrec :: Int -&gt; Request -&gt; ShowS
+$cshow :: Request -&gt; String
+show :: Request -&gt; String
+$cshowList :: [Request] -&gt; ShowS
+showList :: [Request] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144105"><span id="local-6989586621679144107"><span class="annot"><span class="annottext">(forall x. Request -&gt; Rep Request x)
+-&gt; (forall x. Rep Request x -&gt; Request) -&gt; Generic Request
+forall x. Rep Request x -&gt; Request
+forall x. Request -&gt; Rep Request x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Request -&gt; Rep Request x
+from :: forall x. Request -&gt; Rep Request x
+$cto :: forall x. Rep Request x -&gt; Request
+to :: forall x. Rep Request x -&gt; Request
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">data</span><span> </span><span id="Call"><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-var">Call</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Call"><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-var">Call</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="tool"><span class="annot"><span class="annottext">Call -&gt; String
+</span><a href="Harness.Alphabet.html#tool"><span class="hs-identifier hs-var hs-var">tool</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span> </span><span id="args"><span class="annot"><span class="annottext">Call -&gt; String
+</span><a href="Harness.Alphabet.html#args"><span class="hs-identifier hs-var hs-var">args</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679144113"><span id="local-6989586621679144118"><span class="annot"><span class="annottext">Call -&gt; Call -&gt; Bool
+(Call -&gt; Call -&gt; Bool) -&gt; (Call -&gt; Call -&gt; Bool) -&gt; Eq Call
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Call -&gt; Call -&gt; Bool
+== :: Call -&gt; Call -&gt; Bool
+$c/= :: Call -&gt; Call -&gt; Bool
+/= :: Call -&gt; Call -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144122"><span id="local-6989586621679144128"><span id="local-6989586621679144132"><span class="annot"><span class="annottext">Int -&gt; Call -&gt; ShowS
+[Call] -&gt; ShowS
+Call -&gt; String
+(Int -&gt; Call -&gt; ShowS)
+-&gt; (Call -&gt; String) -&gt; ([Call] -&gt; ShowS) -&gt; Show Call
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Call -&gt; ShowS
+showsPrec :: Int -&gt; Call -&gt; ShowS
+$cshow :: Call -&gt; String
+show :: Call -&gt; String
+$cshowList :: [Call] -&gt; ShowS
+showList :: [Call] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144135"><span id="local-6989586621679144137"><span class="annot"><span class="annottext">(forall x. Call -&gt; Rep Call x)
+-&gt; (forall x. Rep Call x -&gt; Call) -&gt; Generic Call
+forall x. Rep Call x -&gt; Call
+forall x. Call -&gt; Rep Call x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Call -&gt; Rep Call x
+from :: forall x. Call -&gt; Rep Call x
+$cto :: forall x. Rep Call x -&gt; Call
+to :: forall x. Rep Call x -&gt; Call
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-keyword">newtype</span><span> </span><span id="Obs"><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-var">Obs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Obs"><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-var">Obs</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679144141"><span id="local-6989586621679144145"><span class="annot"><span class="annottext">Obs -&gt; Obs -&gt; Bool
+(Obs -&gt; Obs -&gt; Bool) -&gt; (Obs -&gt; Obs -&gt; Bool) -&gt; Eq Obs
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Obs -&gt; Obs -&gt; Bool
+== :: Obs -&gt; Obs -&gt; Bool
+$c/= :: Obs -&gt; Obs -&gt; Bool
+/= :: Obs -&gt; Obs -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144149"><span id="local-6989586621679144154"><span id="local-6989586621679144158"><span class="annot"><span class="annottext">Int -&gt; Obs -&gt; ShowS
+[Obs] -&gt; ShowS
+Obs -&gt; String
+(Int -&gt; Obs -&gt; ShowS)
+-&gt; (Obs -&gt; String) -&gt; ([Obs] -&gt; ShowS) -&gt; Show Obs
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Obs -&gt; ShowS
+showsPrec :: Int -&gt; Obs -&gt; ShowS
+$cshow :: Obs -&gt; String
+show :: Obs -&gt; String
+$cshowList :: [Obs] -&gt; ShowS
+showList :: [Obs] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144161"><span id="local-6989586621679144163"><span class="annot"><span class="annottext">(forall x. Obs -&gt; Rep Obs x)
+-&gt; (forall x. Rep Obs x -&gt; Obs) -&gt; Generic Obs
+forall x. Rep Obs x -&gt; Obs
+forall x. Obs -&gt; Rep Obs x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Obs -&gt; Rep Obs x
+from :: forall x. Obs -&gt; Rep Obs x
+$cto :: forall x. Rep Obs x -&gt; Obs
+to :: forall x. Rep Obs x -&gt; Obs
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- | Token usage as reported by the provider. Budget is spent in tokens,</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- not turns. [established]</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">data</span><span> </span><span id="Usage"><span class="annot"><a href="Harness.Alphabet.html#Usage"><span class="hs-identifier hs-var">Usage</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Usage"><span class="annot"><a href="Harness.Alphabet.html#Usage"><span class="hs-identifier hs-var">Usage</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="inTok"><span class="annot"><span class="annottext">Usage -&gt; Int
+</span><a href="Harness.Alphabet.html#inTok"><span class="hs-identifier hs-var hs-var">inTok</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span id="outTok"><span class="annot"><span class="annottext">Usage -&gt; Int
+</span><a href="Harness.Alphabet.html#outTok"><span class="hs-identifier hs-var hs-var">outTok</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-46"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679144169"><span id="local-6989586621679144174"><span class="annot"><span class="annottext">Usage -&gt; Usage -&gt; Bool
+(Usage -&gt; Usage -&gt; Bool) -&gt; (Usage -&gt; Usage -&gt; Bool) -&gt; Eq Usage
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Usage -&gt; Usage -&gt; Bool
+== :: Usage -&gt; Usage -&gt; Bool
+$c/= :: Usage -&gt; Usage -&gt; Bool
+/= :: Usage -&gt; Usage -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144178"><span id="local-6989586621679144184"><span id="local-6989586621679144188"><span class="annot"><span class="annottext">Int -&gt; Usage -&gt; ShowS
+[Usage] -&gt; ShowS
+Usage -&gt; String
+(Int -&gt; Usage -&gt; ShowS)
+-&gt; (Usage -&gt; String) -&gt; ([Usage] -&gt; ShowS) -&gt; Show Usage
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Usage -&gt; ShowS
+showsPrec :: Int -&gt; Usage -&gt; ShowS
+$cshow :: Usage -&gt; String
+show :: Usage -&gt; String
+$cshowList :: [Usage] -&gt; ShowS
+showList :: [Usage] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144191"><span id="local-6989586621679144193"><span class="annot"><span class="annottext">(forall x. Usage -&gt; Rep Usage x)
+-&gt; (forall x. Rep Usage x -&gt; Usage) -&gt; Generic Usage
+forall x. Rep Usage x -&gt; Usage
+forall x. Usage -&gt; Rep Usage x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Usage -&gt; Rep Usage x
+from :: forall x. Usage -&gt; Rep Usage x
+$cto :: forall x. Rep Usage x -&gt; Usage
+to :: forall x. Rep Usage x -&gt; Usage
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span>
+</span><span id="line-48"></span><span class="hs-keyword">data</span><span> </span><span id="Response"><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-var">Response</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Response"><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-var">Response</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="say"><span class="annot"><span class="annottext">Response -&gt; String
+</span><a href="Harness.Alphabet.html#say"><span class="hs-identifier hs-var hs-var">say</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span> </span><span id="calls"><span class="annot"><span class="annottext">Response -&gt; [Call]
+</span><a href="Harness.Alphabet.html#calls"><span class="hs-identifier hs-var hs-var">calls</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span id="usage"><span class="annot"><span class="annottext">Response -&gt; Usage
+</span><a href="Harness.Alphabet.html#usage"><span class="hs-identifier hs-var hs-var">usage</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Usage"><span class="hs-identifier hs-type">Usage</span></a></span><span> </span><span class="hs-special">}</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679144200"><span id="local-6989586621679144207"><span class="annot"><span class="annottext">Response -&gt; Response -&gt; Bool
+(Response -&gt; Response -&gt; Bool)
+-&gt; (Response -&gt; Response -&gt; Bool) -&gt; Eq Response
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Response -&gt; Response -&gt; Bool
+== :: Response -&gt; Response -&gt; Bool
+$c/= :: Response -&gt; Response -&gt; Bool
+/= :: Response -&gt; Response -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144211"><span id="local-6989586621679144219"><span id="local-6989586621679144223"><span class="annot"><span class="annottext">Int -&gt; Response -&gt; ShowS
+[Response] -&gt; ShowS
+Response -&gt; String
+(Int -&gt; Response -&gt; ShowS)
+-&gt; (Response -&gt; String) -&gt; ([Response] -&gt; ShowS) -&gt; Show Response
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Response -&gt; ShowS
+showsPrec :: Int -&gt; Response -&gt; ShowS
+$cshow :: Response -&gt; String
+show :: Response -&gt; String
+$cshowList :: [Response] -&gt; ShowS
+showList :: [Response] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144226"><span id="local-6989586621679144228"><span class="annot"><span class="annottext">(forall x. Response -&gt; Rep Response x)
+-&gt; (forall x. Rep Response x -&gt; Response) -&gt; Generic Response
+forall x. Rep Response x -&gt; Response
+forall x. Response -&gt; Rep Response x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Response -&gt; Rep Response x
+from :: forall x. Response -&gt; Rep Response x
+$cto :: forall x. Rep Response x -&gt; Response
+to :: forall x. Rep Response x -&gt; Response
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- | The only failures the coalgebra may see. Everything transient (429, 5xx,</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- socket timeouts, transient decode noise) is the provider's problem and never</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- gets here (invariant 5).</span><span>
+</span><span id="line-54"></span><span class="hs-keyword">data</span><span> </span><span id="Refusal"><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier hs-var">Refusal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Overflow"><span class="annot"><a href="Harness.Alphabet.html#Overflow"><span class="hs-identifier hs-var">Overflow</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Malformed"><span class="annot"><a href="Harness.Alphabet.html#Malformed"><span class="hs-identifier hs-var">Malformed</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-55"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679144233"><span id="local-6989586621679144240"><span class="annot"><span class="annottext">Refusal -&gt; Refusal -&gt; Bool
+(Refusal -&gt; Refusal -&gt; Bool)
+-&gt; (Refusal -&gt; Refusal -&gt; Bool) -&gt; Eq Refusal
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Refusal -&gt; Refusal -&gt; Bool
+== :: Refusal -&gt; Refusal -&gt; Bool
+$c/= :: Refusal -&gt; Refusal -&gt; Bool
+/= :: Refusal -&gt; Refusal -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144244"><span id="local-6989586621679144249"><span id="local-6989586621679144253"><span class="annot"><span class="annottext">Int -&gt; Refusal -&gt; ShowS
+[Refusal] -&gt; ShowS
+Refusal -&gt; String
+(Int -&gt; Refusal -&gt; ShowS)
+-&gt; (Refusal -&gt; String) -&gt; ([Refusal] -&gt; ShowS) -&gt; Show Refusal
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Refusal -&gt; ShowS
+showsPrec :: Int -&gt; Refusal -&gt; ShowS
+$cshow :: Refusal -&gt; String
+show :: Refusal -&gt; String
+$cshowList :: [Refusal] -&gt; ShowS
+showList :: [Refusal] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144256"><span id="local-6989586621679144258"><span class="annot"><span class="annottext">(forall x. Refusal -&gt; Rep Refusal x)
+-&gt; (forall x. Rep Refusal x -&gt; Refusal) -&gt; Generic Refusal
+forall x. Rep Refusal x -&gt; Refusal
+forall x. Refusal -&gt; Rep Refusal x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Refusal -&gt; Rep Refusal x
+from :: forall x. Refusal -&gt; Rep Refusal x
+$cto :: forall x. Rep Refusal x -&gt; Refusal
+to :: forall x. Rep Refusal x -&gt; Refusal
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span class="hs-keyword">data</span><span> </span><span id="Outcome"><span class="annot"><a href="Harness.Alphabet.html#Outcome"><span class="hs-identifier hs-var">Outcome</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Done"><span class="annot"><a href="Harness.Alphabet.html#Done"><span class="hs-identifier hs-var">Done</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Exhausted"><span class="annot"><a href="Harness.Alphabet.html#Exhausted"><span class="hs-identifier hs-var">Exhausted</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Stuck"><span class="annot"><a href="Harness.Alphabet.html#Stuck"><span class="hs-identifier hs-var">Stuck</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-58"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679144264"><span id="local-6989586621679144271"><span class="annot"><span class="annottext">Outcome -&gt; Outcome -&gt; Bool
+(Outcome -&gt; Outcome -&gt; Bool)
+-&gt; (Outcome -&gt; Outcome -&gt; Bool) -&gt; Eq Outcome
+forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
+$c== :: Outcome -&gt; Outcome -&gt; Bool
+== :: Outcome -&gt; Outcome -&gt; Bool
+$c/= :: Outcome -&gt; Outcome -&gt; Bool
+/= :: Outcome -&gt; Outcome -&gt; Bool
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144275"><span id="local-6989586621679144282"><span id="local-6989586621679144286"><span class="annot"><span class="annottext">Int -&gt; Outcome -&gt; ShowS
+[Outcome] -&gt; ShowS
+Outcome -&gt; String
+(Int -&gt; Outcome -&gt; ShowS)
+-&gt; (Outcome -&gt; String) -&gt; ([Outcome] -&gt; ShowS) -&gt; Show Outcome
+forall a.
+(Int -&gt; a -&gt; ShowS) -&gt; (a -&gt; String) -&gt; ([a] -&gt; ShowS) -&gt; Show a
+$cshowsPrec :: Int -&gt; Outcome -&gt; ShowS
+showsPrec :: Int -&gt; Outcome -&gt; ShowS
+$cshow :: Outcome -&gt; String
+show :: Outcome -&gt; String
+$cshowList :: [Outcome] -&gt; ShowS
+showList :: [Outcome] -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144289"><span id="local-6989586621679144291"><span class="annot"><span class="annottext">(forall x. Outcome -&gt; Rep Outcome x)
+-&gt; (forall x. Rep Outcome x -&gt; Outcome) -&gt; Generic Outcome
+forall x. Rep Outcome x -&gt; Outcome
+forall x. Outcome -&gt; Rep Outcome x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+$cfrom :: forall x. Outcome -&gt; Rep Outcome x
+from :: forall x. Outcome -&gt; Rep Outcome x
+$cto :: forall x. Rep Outcome x -&gt; Outcome
+to :: forall x. Rep Outcome x -&gt; Outcome
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-59"></span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- | The interface functor. Closed. A fourth constructor requires a matching</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- case in 'Harness.Interp.interp' and the law tests, or @-Wincomplete-patterns@</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- will (correctly) fail the build.</span><span>
+</span><span id="line-63"></span><span class="hs-keyword">data</span><span> </span><span id="HarnessF"><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier hs-var">HarnessF</span></a></span></span><span> </span><span id="local-6989586621679144293"><span class="annot"><a href="#local-6989586621679144293"><span class="hs-identifier hs-type">x</span></a></span></span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Render"><span class="annot"><a href="Harness.Alphabet.html#Render"><span class="hs-identifier hs-var">Render</span></a></span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-type">Request</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier hs-type">Refusal</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-type">Response</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679144293"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Perform"><span class="annot"><a href="Harness.Alphabet.html#Perform"><span class="hs-identifier hs-var">Perform</span></a></span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-type">Obs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679144293"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Halt"><span class="annot"><a href="Harness.Alphabet.html#Halt"><span class="hs-identifier hs-var">Halt</span></a></span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Outcome"><span class="hs-identifier hs-type">Outcome</span></a></span><span>
+</span><span id="line-67"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679144298"><span id="local-6989586621679144300"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; HarnessF a -&gt; HarnessF b)
+-&gt; (forall a b. a -&gt; HarnessF b -&gt; HarnessF a) -&gt; Functor HarnessF
+forall a b. a -&gt; HarnessF b -&gt; HarnessF a
+forall a b. (a -&gt; b) -&gt; HarnessF a -&gt; HarnessF b
+forall (f :: * -&gt; *).
+(forall a b. (a -&gt; b) -&gt; f a -&gt; f b)
+-&gt; (forall a b. a -&gt; f b -&gt; f a) -&gt; Functor f
+$cfmap :: forall a b. (a -&gt; b) -&gt; HarnessF a -&gt; HarnessF b
+fmap :: forall a b. (a -&gt; b) -&gt; HarnessF a -&gt; HarnessF b
+$c&lt;$ :: forall a b. a -&gt; HarnessF b -&gt; HarnessF a
+&lt;$ :: forall a b. a -&gt; HarnessF b -&gt; HarnessF a
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Functor</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679144305"><span id="local-6989586621679144307"><span class="annot"><span class="annottext">(forall x. HarnessF x -&gt; Rep (HarnessF x) x)
+-&gt; (forall x. Rep (HarnessF x) x -&gt; HarnessF x)
+-&gt; Generic (HarnessF x)
+forall x. Rep (HarnessF x) x -&gt; HarnessF x
+forall x. HarnessF x -&gt; Rep (HarnessF x) x
+forall a.
+(forall x. a -&gt; Rep a x) -&gt; (forall x. Rep a x -&gt; a) -&gt; Generic a
+forall x x. Rep (HarnessF x) x -&gt; HarnessF x
+forall x x. HarnessF x -&gt; Rep (HarnessF x) x
+$cfrom :: forall x x. HarnessF x -&gt; Rep (HarnessF x) x
+from :: forall x. HarnessF x -&gt; Rep (HarnessF x) x
+$cto :: forall x x. Rep (HarnessF x) x -&gt; HarnessF x
+to :: forall x. Rep (HarnessF x) x -&gt; HarnessF x
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
+</span><span id="line-68"></span></pre></body></html>

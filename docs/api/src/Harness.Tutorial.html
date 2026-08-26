@@ -1,0 +1,237 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# OPTIONS_GHC -fno-warn-unused-imports #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | A guided tour of the harness, modelled on @Pipes.Tutorial@. Read it top to</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- bottom: it walks from the closed alphabet ('HarnessF') through the coalgebra</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- ('step', 'harness'), the shape\/annotation split ('view'), the two ways to</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- consume a tree ('run' versus 'governed'), and finishes on compaction and the</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- law it is required to respect.</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- Nothing here is executable &#8212; the module exports only documentation anchors.</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- Every name in an @\@\/@ reference resolves to something in the real API, so</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- the Haddock links are load-bearing, not decorative.</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Harness.Tutorial.html"><span class="hs-identifier">Harness.Tutorial</span></a></span><span>
+</span><span id="line-13"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="hs-comment">-- * Introduction</span></span><span>
+</span><span id="line-14"></span><span>    </span><span class="annot"><span class="hs-comment">-- $introduction</span></span><span>
+</span><span id="line-15"></span><span>
+</span><span id="line-16"></span><span>    </span><span class="annot"><span class="hs-comment">-- * The closed alphabet</span></span><span>
+</span><span id="line-17"></span><span>    </span><span class="annot"><span class="hs-comment">-- $alphabet</span></span><span>
+</span><span id="line-18"></span><span>
+</span><span id="line-19"></span><span>    </span><span class="annot"><span class="hs-comment">-- * The coalgebra</span></span><span>
+</span><span id="line-20"></span><span>    </span><span class="annot"><span class="hs-comment">-- $coalgebra</span></span><span>
+</span><span id="line-21"></span><span>
+</span><span id="line-22"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Shape versus annotation</span></span><span>
+</span><span id="line-23"></span><span>    </span><span class="annot"><span class="hs-comment">-- $shape</span></span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Counterfactual governance</span></span><span>
+</span><span id="line-26"></span><span>    </span><span class="annot"><span class="hs-comment">-- $governed</span></span><span>
+</span><span id="line-27"></span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="hs-comment">-- * Compaction and its law</span></span><span>
+</span><span id="line-29"></span><span>    </span><span class="annot"><span class="hs-comment">-- $compaction</span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-31"></span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Alphabet.html"><span class="hs-identifier">Harness.Alphabet</span></a></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.State.html"><span class="hs-identifier">Harness.State</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Coalgebra.html"><span class="hs-identifier">Harness.Coalgebra</span></a></span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Interp.html"><span class="hs-identifier">Harness.Interp</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Run.html"><span class="hs-identifier">Harness.Run</span></a></span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Probe.html"><span class="hs-identifier">Harness.Probe</span></a></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Compaction.html"><span class="hs-identifier">Harness.Compaction</span></a></span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="annot"><span class="hs-comment">{- $introduction
+An agent, here, is not a loop with side effects. It is a /coalgebra/: a pure
+function @'S' -&gt; 'HarnessF' 'S'@ that, given the current state, says what the
+agent does next and how each possible reply from the world continues it. The
+loop that actually talks to a language model and a shell is a separate thing &#8212; an
+/interpreter/ ('interp') that walks the shape the coalgebra describes.
+
+That separation is the whole point. The control flow of the agent is a value you
+can inspect, fold, and reason about before any I\/O happens; execution ('run')
+and analysis ('probe', 'governed') are two interpreters over the /same/ shape,
+so anything you prove about one transfers to the other.
+
+Three ideas carry the rest of the tutorial:
+
+* the action alphabet 'HarnessF' is /closed/ &#8212; three constructors, no escape
+  hatch;
+
+* the tree carries an annotation ('Ctx') that execution is forbidden to read &#8212;
+  \&quot;execution consumes the shape; analysis consumes the annotation\&quot;;
+
+* compaction is a coalgebra homomorphism, and there is a law ('respectsBehaviour')
+  that says so in checkable terms.
+-}</span></span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span class="annot"><span class="hs-comment">{- $alphabet
+Everything the harness can do is one of three constructors of 'HarnessF':
+
+@
+data 'HarnessF' x
+  = 'Render' 'Request' (Either 'Refusal' 'Response' -&gt; x)
+  | 'Perform' 'Call' ('Obs' -&gt; x)
+  | 'Halt' 'Outcome'
+@
+
+'Render' asks the oracle (the language model): it carries the 'Request' the
+model sees and a continuation that consumes whatever comes back &#8212; either a
+'Refusal' or a 'Response'. 'Perform' runs a tool 'Call' against the world and
+continues with the 'Obs' it produces. 'Halt' stops, carrying an 'Outcome'.
+
+The positions ('Request', 'Call', 'Outcome') are what the harness /does/ and are
+fully determined; the directions (the @'Either' 'Refusal' 'Response' -&gt; x@ and
+@'Obs' -&gt; x@ functions) are what it does /not/ control. All nondeterminism lives
+in the directions. That is what makes 'HarnessF' a polynomial functor and the
+unfolded tree lazy.
+
+The alphabet is /closed/: 'Refusal' is only 'Overflow' or @'Malformed' msg@ &#8212;
+transient failures (429s, socket timeouts) never appear here &#8212; and 'Outcome' is
+'Done', 'Exhausted', or 'Stuck'. Adding a fourth 'HarnessF' constructor without
+a matching case in 'interp' makes @-Wincomplete-patterns@ fail the build. There
+is deliberately no wildcard to absorb one.
+-}</span></span><span>
+</span><span id="line-91"></span><span>
+</span><span id="line-92"></span><span class="annot"><span class="hs-comment">{- $coalgebra
+The coalgebra is the single function 'step':
+
+@
+'step' :: 'S' -&gt; 'HarnessF' 'S'
+@
+
+It is deterministic: given a state 'S' it always knows what it does next. What
+it cannot know is what comes /back/, which is exactly why the successor is a
+function of the oracle\/world result rather than a plain state. Read 'step' as a
+state transition: out of budget ('budget') it 'Halt's 'Exhausted'; with a 'Call'
+'pending' it 'Perform's it; otherwise it 'Render's the current 'request'.
+
+The reply-handling lives in two continuations. 'working' is the 'Working'-mode
+successor: an 'Overflow' refusal flips 'mode' to 'Summarising' (a state
+transition is the only correct response to overflow, and the coalgebra is the
+only thing that can make one); a good 'Response' appends an 'Assistant' turn and
+spends its 'Usage'. 'summarising' is the other continuation: on success it
+collapses the 'transcript' to a single 'Summary' and returns to 'Working'.
+
+To get a tree, /unfold/ the coalgebra with 'harness':
+
+@
+'harness' :: 'S' -&gt; Cofree 'HarnessF' 'Ctx'
+'harness' = unfold (\\s -&gt; ('view' s, 'step' s))
+@
+
+@'harness' s0@ is the entire branching future of the agent from @s0@, as a
+@Cofree 'HarnessF' 'Ctx'@. It is a /denotation/, not a runtime structure: the
+implementation carries 'S' and the coalgebra, and never serialises or caches the
+tree.
+
+&gt;&gt;&gt; :type harness
+harness :: S -&gt; Cofree HarnessF Ctx
+-}</span></span><span>
+</span><span id="line-127"></span><span>
+</span><span id="line-128"></span><span class="annot"><span class="hs-comment">{- $shape
+Each node of @'harness' s@ is annotated. The unfold pairs @'step' s@ (the shape,
+i.e. which 'HarnessF' constructor and its continuation) with @'view' s@ (the
+annotation):
+
+@
+'view' :: 'S' -&gt; 'Ctx'
+'view' s = 'Ctx' ('request' s) ('budget' s) ('mode' s)
+@
+
+'Ctx' is what analysis reads: the 'Request' that /would/ be sent, the remaining
+budget, the current 'Mode'. The rule is absolute &#8212; execution consumes the shape,
+analysis consumes the annotation. 'run' never looks at 'Ctx' to choose a
+successor; if a field of 'Ctx' ever started influencing execution it would
+belong in 'S' and in 'step' instead.
+
+You can see the discipline in 'interp' itself: reading @'ctxMode'@ from the
+annotation only /labels/ an emitted 'Ev' ('Asked'); the successor it then walks
+is always @k result@, a function of the reply, never of the annotation.
+
+The 'Request' inside 'Ctx' is itself a lossy quotient of the state. 'project'
+renders the 'transcript' to a 'Prompt'; 'afford' folds it to the mode-dependent
+tool set (@commit@ is only offered once a @write@ has happened); 'request' glues
+the two, and adds a summarisation instruction with /no/ tools in 'Summarising'
+mode &#8212; which is how compaction reuses the one 'Render' constructor.
+
+&gt;&gt;&gt; :type view
+view :: S -&gt; Ctx
+-}</span></span><span>
+</span><span id="line-157"></span><span>
+</span><span id="line-158"></span><span class="annot"><span class="hs-comment">{- $governed
+Because the tree branches on things you do not control, you cannot simply fold
+it. But you can fold it under a 'Hypo' &#8212; a pure stand-in for the oracle and the
+world:
+
+@
+data 'Hypo' = 'Hypo'
+  { 'guessOracle' :: 'Request' -&gt; Either 'Refusal' 'Response'
+  , 'guessWorld'  :: 'Call' -&gt; 'Obs'
+  }
+@
+
+Under a 'Hypo' the branching collapses to a single path. 'probe' walks that path
+to a bounded depth and returns the event trace ('Ev' list); 'liftHypo' turns the
+same 'Hypo' into a pure 'Env' &#8212; so @'run' ('liftHypo' h)@ and
+@'outcomeOf' ('probe' h n _)@ can be checked to agree.
+
+The forecasting story is 'assess' and 'governed'. 'assess' summarises a node's
+own future as a 'Risk' (steps ahead, whether it 'terminates', which
+'irreversible' tools it touches, how many 'compactions' it triggers). 'governed'
+then annotates /every reachable node/ with that forecast, using the comonadic
+'Control.Comonad.extend':
+
+@
+'governed' :: 'Hypo' -&gt; Int -&gt; Cofree 'HarnessF' 'Ctx' -&gt; Cofree 'HarnessF' 'Risk'
+'governed' h n = extend ('assess' h n)
+@
+
+The point of 'Control.Comonad.extend' is that it re-annotates each node with a function of that
+node's /whole sub-tree/, not just its label &#8212; so @extract ('governed' h 32 w)@ is
+a pre-action gate computed from the current node's entire forecast future. Both
+'run' and 'probe' factor through 'interp', so this analysis and the real run are
+consuming the same shape by construction.
+
+&gt;&gt;&gt; :type governed
+governed :: Hypo -&gt; Int -&gt; Cofree HarnessF Ctx -&gt; Cofree HarnessF Risk
+-}</span></span><span>
+</span><span id="line-195"></span><span>
+</span><span id="line-196"></span><span class="annot"><span class="hs-comment">{- $compaction
+Compaction is the summarisation that keeps a long run inside its budget.
+'compact' collapses the 'transcript' to a stand-in summary, and is idempotent by
+construction (a naive version regrows on each application, which under memory
+pressure is an infinite loop):
+
+@
+'compact' :: 'S' -&gt; 'S'
+@
+
+The claim we make about it is strong: compaction is a coalgebra homomorphism &#8212;
+invisible in what the agent /does/, even though what it /sees/ (the prompt) must
+change. \&quot;Invisible\&quot; needs a checkable meaning, so we observe the /behavioural
+shadow/ of a run rather than its full trace. 'observe' folds an 'Ev' list to a
+'Behaviour' &#8212; a product of four coarser observations (does it 'Done' the same,
+the sorted multiset of irreversible tool names, the oracle-call count, the
+per-turn call sets) so a divergence /names its kind/ instead of being a bare
+boolean.
+
+The law is then 'respectsBehaviour':
+
+@
+'respectsBehaviour' :: 'Hypo' -&gt; Int -&gt; ('S' -&gt; 'S') -&gt; 'S' -&gt; ('Behaviour', 'Behaviour')
+'respectsBehaviour' h n k s =
+  ( 'observe' ('probe' h n ('harness' (k s)))
+  , 'observe' ('probe' h n ('harness' s))
+  )
+@
+
+It probes the compacted state @k s@ and the untouched state @s@ under the same
+'Hypo' and returns both 'Behaviour's. Compaction respects behaviour at @s@ when
+the two are equal. It returns the /pair/ rather than a 'Bool' on purpose: when
+they differ, the caller can see which of the four components diverged and report
+a rate per component. A high defect rate is a finding about that 'Hypo' and that
+state, not a bug to be hidden &#8212; which is where the tour ends and the experiments
+begin.
+
+&gt;&gt;&gt; :type respectsBehaviour
+respectsBehaviour
+  :: Hypo -&gt; Int -&gt; (S -&gt; S) -&gt; S -&gt; (Behaviour, Behaviour)
+-}</span></span><span>
+</span><span id="line-237"></span></pre></body></html>
