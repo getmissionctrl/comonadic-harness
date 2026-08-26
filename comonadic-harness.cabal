@@ -28,6 +28,7 @@ library
   exposed-modules:
     Harness.Alphabet
     Harness.State
+    Harness.Coalgebra
   build-depends:
       base >= 4.17 && < 5
     , comonad
