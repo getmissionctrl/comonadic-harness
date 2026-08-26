@@ -33,6 +33,7 @@ library
     Harness.Run
     Harness.Probe
     Harness.Compaction
+    Harness.Evolve
   build-depends:
       base >= 4.17 && < 5
     , comonad
