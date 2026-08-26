@@ -8,10 +8,11 @@ module Gen
   ) where
 
 import Test.QuickCheck
-import Control.Comonad.Cofree (Cofree ((:<)))
+import Control.Comonad.Cofree (Cofree)
 import Harness.Alphabet
 import Harness.State
 import Harness.Coalgebra (harness, step)
+import Harness.Path (takeWalk)
 import Harness.Probe (Hypo (..))
 
 -- | The genuine initial state — the only hand-written S permitted.
@@ -43,17 +44,6 @@ reachableStates h fuel b = go fuel (startState b)
   where
     go 0 _ = []
     go n s = (s, harness s) : case step s of
-      Halt _      -> []
-      Render q k  -> go (n - 1) (k (guessOracle h q))
-      Perform c k -> go (n - 1) (k (guessWorld h c))
-
--- | The tree-node path from a node under the hypo (used by the comonad law and,
--- later, the governed scan). Exhaustive, wildcard-free over 'HarnessF'.
-takeWalk :: Hypo -> Int -> Cofree HarnessF Ctx -> [Cofree HarnessF Ctx]
-takeWalk h fuel = go fuel
-  where
-    go 0 _ = []
-    go n w@(_ :< f) = w : case f of
       Halt _      -> []
       Render q k  -> go (n - 1) (k (guessOracle h q))
       Perform c k -> go (n - 1) (k (guessWorld h c))

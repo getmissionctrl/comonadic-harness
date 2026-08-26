@@ -29,6 +29,7 @@ library
     Harness.Alphabet
     Harness.State
     Harness.Coalgebra
+    Harness.Path
     Harness.Interp
     Harness.Run
     Harness.Probe
@@ -64,7 +65,7 @@ test-suite spec
   type:             exitcode-stdio-1.0
   hs-source-dirs:   test
   main-is:          Main.hs
-  other-modules:    Gen, LawsSpec
+  other-modules:    Gen, LawsSpec, PerfSpec
   build-depends:
       base, comonadic-harness, hspec, QuickCheck
     , comonad, free, containers
