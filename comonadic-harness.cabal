@@ -57,8 +57,7 @@ executable demo
   import:           warnings, exts
   hs-source-dirs:   app
   main-is:          Main.hs
-  build-depends:    base
-  buildable:        False
+  build-depends:    base, comonadic-harness, comonad, free
 
 test-suite spec
   import:           warnings, exts
