@@ -21,12 +21,23 @@ firstTree h b = case reachableStates h 20 b of
   ((_, w) : _) -> Just w
   []           -> Nothing
 
+-- | Build an S directly from generated turns. This is NOT a §16.7 violation:
+-- 'project' is a pure function of the transcript, so reachability is irrelevant
+-- here — we are testing an algebraic law of 'project', not running the coalgebra.
 startStateWith :: [Turn] -> S
 startStateWith ts = S { transcript = ts, pending = [], budget = 1, mode = Working }
 
 spec :: Spec
 spec = do
-  describe "comonad laws (Cofree HarnessF Ctx), bounded depth" $
+  describe "comonad laws (Cofree HarnessF Ctx), bounded depth" $ do
+    -- Both laws are provable for 'Cofree' from the 'free' library; they are
+    -- asserted here as a regression guard against a bad hand-written 'Functor'
+    -- instance on 'HarnessF' or a change of 'Cofree' import.
+    prop "extract . duplicate == id (annotation path, depth 12)" $
+      forAll (Blind <$> genHypo) $ \(Blind h) -> forAll (choose (100, 1200)) $ \b ->
+        case firstTree h b of
+          Nothing -> property True
+          Just w  -> annPath h 12 (extract (duplicate w)) === annPath h 12 w
     prop "fmap extract . duplicate == id (annotation path, depth 12)" $
       forAll (Blind <$> genHypo) $ \(Blind h) -> forAll (choose (100, 1200)) $ \b ->
         case firstTree h b of
@@ -48,6 +59,14 @@ spec = do
         let Prompt whole = project (startStateWith (t : ts))
             Prompt rest  = project (startStateWith ts)
          in whole === rest ++ renderLine t ++ "\n"
+
+  describe "affordance law (§16.4, D12)" $
+    -- The coalgebra can currently 'Perform' an unafforded call (e.g. a hypo that
+    -- emits @commit@ before any @write@). Task 20's @admit@ pass closes this, at
+    -- which point this becomes a real assertion. Marked pending, not failing, so
+    -- the suite stays green until then.
+    it "probe never emits (Did c) whose tool is unafforded at that node" $
+      pendingWith "holds after Task 20 (admit); the coalgebra can currently Perform an unafforded call"
 
   describe "compaction violation rate (E1, expected non-zero for real compact)" $ do
     it "no-op compaction scores 0% (baseline null model)" $ do
