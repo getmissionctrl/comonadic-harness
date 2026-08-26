@@ -31,9 +31,7 @@ import Harness.Alphabet
 import Harness.State
 
 {- $claim
-An agentic harness is a __durable polynomial coalgebra over a closed action
-alphabet, equipped with three lossy quotients and one unreliable oracle
-boundary__ (§1). Everything below unpacks that sentence into types that already
+An agentic harness is a __durable polynomial coalgebra over a closed action alphabet, equipped with three lossy quotients and one unreliable oracle boundary__ (§1). Everything below unpacks that sentence into types that already
 exist in this library, plus three tiny illustrations that compile.
 
 @Cofree 'HarnessF' 'Ctx'@ is the /denotation/ of the coalgebra — the
@@ -107,8 +105,8 @@ to compute that legal request from the state, purely and without an oracle call.
 You cannot fold an infinitely-branching tree. You can fold it under a
 /hypothesis/ — a pure stand-in for the oracle and the world — which collapses
 the branching to a single path (§5). 'Harness.Probe.assess' scores one node that
-way; @extend ('Harness.Probe.assess' h n)@ then annotates /every reachable
-state/ with a counterfactual assessment of its own future, from a function that
+way; @extend ('Harness.Probe.assess' h n)@ then annotates /every reachable state/
+with a counterfactual assessment of its own future, from a function that
 only knows how to score one position. @extract@ recovers the assessment at the
 current node, which is the pre-action governance gate.
 
@@ -131,8 +129,7 @@ Equivalently, @s@ and @compact s@ are bisimilar and @unfold@ factors through
 functions; you check its observable shadow. And the shadow is /sharper/ than the
 naive statement: compaction must change the prompt, so the equivalence has to be
 on the __action trace__, never on the rendered context. Hence the governing
-slogan: /compaction is correct exactly when it is invisible in what the agent
-does, not in what it sees./ @[design]@
+slogan: /compaction is correct exactly when it is invisible in what the agent does, not in what it sees./ @[design]@
 
 The one observation that matters most is the multiset of irreversible actions: a
 compaction that manufactures or drops a write has changed behaviour, whatever it
