@@ -29,8 +29,8 @@ been checked against two real harnesses.
   specs in the request, `Either Refusal Response`, token budgets, and
   overflow-triggered compaction through the ordinary `Render` path. **This is
   the one to port.**
-- `runs/run-output.txt`, `runs/oracle-output.txt` — recorded traces. T3's
-  acceptance criterion is reproducing the second one.
+- `runs/run-output.txt`, `runs/oracle-output.txt` — recorded traces. The second
+  is the one the built `demo` reproduces (see *Built module* below).
 
 All three compile clean under GHC 9.x with `base` only and no flags beyond
 `-XDeriveFunctor`:
@@ -38,6 +38,40 @@ All three compile clean under GHC 9.x with `base` only and no flags beyond
 ```
 ghc -Wall -O0 -main-is Oracle.main reference/Oracle.hs reference/Harness.hs -o oracle && ./oracle
 ```
+
+## Built module
+
+The port lives under `src/Harness/`: one closed alphabet (`Harness.Alphabet`),
+the coalgebra (`Harness.Coalgebra`), a single interpreter both `run` and `probe`
+factor through (`Harness.Interp`), counterfactual analysis (`Harness.Probe`),
+compaction with its law (`Harness.Compaction`), and evolution
+(`Harness.Evolve`). The dev shell is a nix flake mirroring `vf-haskell`.
+
+```bash
+nix develop .#dev            # GHC + cabal + HLS; deps from the pinned nixpkgs
+cabal build all              # warning-clean under the strict flag set
+cabal test spec              # 11 examples: comonad, agreement, prefix, affordance,
+                             #   compaction-rate, monoidal-scan, hostile-oracle
+cabal run demo               # reproduces runs/oracle-output.txt (pure scripted oracle)
+cabal run demo live          # drives the same harness against Ollama on hq:11434
+```
+
+Two guided reads inside the library, both rendered by `cabal haddock`:
+
+- **`Harness.Tutorial`** — the *how*: a pipes-style walk from the closed
+  alphabet through `step`, `unfold`, `run` versus `governed`, `extend`, and the
+  compaction law.
+- **`Harness.Motivation`** — the *why*: a literate derivation of the design from
+  `BRIEF.md` §§1, 3, 5, 6.
+
+### A note on the demo trace
+
+`runs/oracle-output.txt` is the current `demo` output. At **step 9** the scripted
+oracle emits a `commit` at a node where `commit` is not afforded (compaction has
+wiped the earlier `write` from view). The coalgebra's admission pass (T6/D3)
+*repairs* the unafforded call into a synthetic error observation rather than
+performing it — so, unlike a pre-T6 recording, no `PERFORM commit` follows. The
+divergence is the D3 behaviour demonstrated live, not a regression.
 
 ## Environment
 

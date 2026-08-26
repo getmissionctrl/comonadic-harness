@@ -1,8 +1,5 @@
-== the request the provider actually receives ================
-{"model":"claude-sonnet-4-6","max_tokens":4096,"messages":[{"role":"user","content":""}],"tools":[{"name":"read","input_schema":"{path:string}"},{"name":"bash","input_schema":"{cmd:string}"},{"name":"write","input_schema":"{path:string,body:string}"}]}
-
 == counterfactual, before any call ===========================
-Risk {stepsAhead = 17, terminates = True, irreversible = ["write","write","write","write","write"], compactions = 2}
+Risk {stepsAhead = Sum {getSum = 17}, terminates = Any {getAny = True}, irreversible = ["write","write","write","write","write"], compactions = Sum {getSum = 2}}
 [Asked Working,Did (Call {tool = "write", args = "g.txt"}),Asked Working,Did (Call {tool = "write", args = "g.txt"}),Asked Working,Did (Call {tool = "write", args = "g.txt"}),Asked Working,Refused Overflow,Asked Summarising,Asked Working,Did (Call {tool = "write", args = "g.txt"}),Asked Working,Did (Call {tool = "write", args = "g.txt"}),Asked Working,Refused Overflow,Asked Summarising,Ended Exhausted]
 
 == the run ===================================================
@@ -24,10 +21,8 @@ Risk {stepsAhead = 17, terminates = True, irreversible = ["write","write","write
     ORACLE 320tok -> worked on files, wrote notes, committed []
 8   tok=360   mode=Working      ctx=1ln tools=["read","bash","write"]        risk=8/T compactions=1
     ORACLE 200tok -> landing ["commit"]
-9   tok=160   mode=Working      ctx=2ln tools=["read","bash","write"]        risk=3/T compactions=0
-    PERFORM commit -> commit:ok
-10  tok=160   mode=Working      ctx=3ln tools=["read","bash","write"]        risk=2/T compactions=0
+9   tok=160   mode=Working      ctx=2ln tools=["read","bash","write"]        risk=2/T compactions=0
     ORACLE 200tok -> landing ["commit"]
-11  tok=-40   mode=Working      ctx=4ln tools=["read","bash","write"]        risk=1/T compactions=0
+10  tok=-40   mode=Working      ctx=4ln tools=["read","bash","write"]        risk=1/T compactions=0
     HALT Exhausted
 outcome: Exhausted
