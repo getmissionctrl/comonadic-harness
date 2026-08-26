@@ -29,6 +29,7 @@ library
     Harness.Alphabet
     Harness.State
     Harness.Coalgebra
+    Harness.Interp
   build-depends:
       base >= 4.17 && < 5
     , comonad
