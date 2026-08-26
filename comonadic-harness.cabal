@@ -36,7 +36,6 @@ library
     Harness.Compaction
     Harness.Evolve
     Harness.Tutorial
-    Harness.Motivation
     Provider.Class
     Provider.Ollama
     Provider.Tools

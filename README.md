@@ -74,16 +74,17 @@ compaction path; bump it for longer runs), `--budget N` (tokens; raise it so a
 real read→write→commit can finish). Note the `--` after `live` so cabal passes
 the flags to the demo rather than interpreting them itself.
 
-Two guided reads inside the library, both rendered by `cabal haddock`. A
-pre-rendered HTML snapshot is committed under **`docs/api/`** (open
-`docs/api/index.html`) so it is available without a local build; regenerate it
-with `cabal haddock lib:comonadic-harness --haddock-hyperlink-source`.
+Two guided reads:
 
-- **`Harness.Tutorial`** — the *how*: a pipes-style walk from the closed
-  alphabet through `step`, `unfold`, `run` versus `governed`, `extend`, and the
-  compaction law. (`docs/api/Harness-Tutorial.html`)
-- **`Harness.Motivation`** — the *why*: a literate derivation of the design from
-  `BRIEF.md` §§1, 3, 5, 6. (`docs/api/Harness-Motivation.html`)
+- **The *how*** — `Harness.Tutorial`, a Haddock walk from the closed alphabet
+  through `step`, `unfold`, `run` versus `governed`, `extend`, and the compaction
+  law. A pre-rendered HTML snapshot of the whole API is committed under
+  **`docs/api/`** (open `docs/api/index.html`); regenerate with
+  `cabal haddock lib:comonadic-harness --haddock-hyperlink-source`.
+- **The *why*** — `docs/motivation.md`, a standalone essay arguing the comonadic
+  design against how coding agents are normally built. It is prose, not a module,
+  so it typesets to a proper PDF: run `scripts/motivation-pdf.sh` to (re)generate
+  the committed **`docs/motivation.pdf`** (pandoc + tectonic, via nix).
 
 ### A note on the demo trace
 
