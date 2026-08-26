@@ -200,8 +200,8 @@ pressure is an infinite loop):
 
 The claim we make about it is strong: compaction is a coalgebra homomorphism —
 invisible in what the agent /does/, even though what it /sees/ (the prompt) must
-change. \"Invisible\" needs a checkable meaning, so we observe the /behavioural
-shadow/ of a run rather than its full trace. 'observe' folds an 'Ev' list to a
+change. \"Invisible\" needs a checkable meaning, so we observe the
+/behavioural shadow/ of a run rather than its full trace. 'observe' folds an 'Ev' list to a
 'Behaviour' — a product of four coarser observations (does it 'Done' the same,
 the sorted multiset of irreversible tool names, the oracle-call count, the
 per-turn call sets) so a divergence /names its kind/ instead of being a bare

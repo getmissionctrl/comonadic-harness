@@ -86,8 +86,8 @@ construction (a naive version regrows on each application, which under memory
 pressure is an infinite loop):</p><pre><code><a href="Harness-Compaction.html#v:compact" title="Harness.Compaction">compact</a></code> :: <code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code> -&gt; <code><a href="Harness-State.html#t:S" title="Harness.State">S</a></code>
 </pre><p>The claim we make about it is strong: compaction is a coalgebra homomorphism &#8212;
 invisible in what the agent <em>does</em>, even though what it <em>sees</em> (the prompt) must
-change. &quot;Invisible&quot; needs a checkable meaning, so we observe the /behavioural
-shadow/ of a run rather than its full trace. <code><a href="Harness-Compaction.html#v:observe" title="Harness.Compaction">observe</a></code> folds an <code><a href="Harness-Interp.html#t:Ev" title="Harness.Interp">Ev</a></code> list to a
+change. &quot;Invisible&quot; needs a checkable meaning, so we observe the
+<em>behavioural shadow</em> of a run rather than its full trace. <code><a href="Harness-Compaction.html#v:observe" title="Harness.Compaction">observe</a></code> folds an <code><a href="Harness-Interp.html#t:Ev" title="Harness.Interp">Ev</a></code> list to a
 <code><a href="Harness-Compaction.html#t:Behaviour" title="Harness.Compaction">Behaviour</a></code> &#8212; a product of four coarser observations (does it <code><a href="Harness-Alphabet.html#v:Done" title="Harness.Alphabet">Done</a></code> the same,
 the sorted multiset of irreversible tool names, the oracle-call count, the
 per-turn call sets) so a divergence <em>names its kind</em> instead of being a bare
