@@ -1,0 +1,59 @@
+cabal-version:      3.0
+name:               comonadic-harness
+version:            0.1.0.0
+synopsis:           An agentic harness as a polynomial coalgebra denoted by a cofree comonad.
+description:        See BRIEF.md. Execution consumes the tree's shape; analysis consumes its annotation.
+license:            MIT
+author:             Ben Ford
+maintainer:         ben@missionctrl.dev
+category:           Control, AI
+build-type:         Simple
+extra-source-files: BRIEF.md, TASKS.md, README.md
+
+common warnings
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns -Wincomplete-patterns
+    -Wredundant-constraints -Wmissing-export-lists
+
+common exts
+  default-language: GHC2021
+  default-extensions:
+    DeriveGeneric DeriveFunctor DeriveTraversable DeriveAnyClass
+    DerivingStrategies LambdaCase OverloadedStrings OverloadedRecordDot
+    DataKinds TypeApplications
+
+library
+  import:           warnings, exts
+  hs-source-dirs:   src
+  exposed-modules:
+    Harness.Alphabet
+  build-depends:
+      base >= 4.17 && < 5
+    , comonad
+    , free
+    , optics-core
+    , containers
+    , mtl
+    , text
+    , bytestring
+    , aeson
+    , dlist
+    -- 0.2.x is what nixpkgs packages; used purely as an HTTP client to the
+    -- Ollama chat endpoint. Tool/affordance/MCP semantics live in the harness,
+    -- not delegated to the library. [design]
+    , ollama-haskell >= 0.2 && < 0.3
+
+executable demo
+  import:           warnings, exts
+  hs-source-dirs:   app
+  main-is:          Main.hs
+  build-depends:    base
+  buildable:        False
+
+test-suite spec
+  import:           warnings, exts
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   test
+  main-is:          Main.hs
+  build-depends:    base
+  buildable:        False

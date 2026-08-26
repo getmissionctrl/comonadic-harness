@@ -170,58 +170,57 @@ From `CLAUDE.md` (these are correctness conditions, not style):
 
 ---
 
-## 5. Provider (T5) — remote Ollama on `hq` via `ollama-haskell`
+## 5. Provider (T5) — remote Ollama on `hq` via `ollama-haskell` 0.2.x
 
-**Library locked:** `ollama-haskell >= 0.4.1.0` (Hackage), native client. It
-satisfies the load-bearing criterion — `Ollama.Types.Options.ModelOptions` has
-`optNumCtx :: Maybe Int` with `defaultOptions` — so `num_ctx` is settable, which
-the OpenAI-compat route could not guarantee. `[established]` — confirmed against
-the 0.4.1.0 Haddock.
+**Library locked:** `ollama-haskell >= 0.2 && < 0.3` — the version nixpkgs
+actually packages (0.2.1.0 in the pin; even latest nixos-unstable has only
+0.2.1.0). 0.4.x is not packaged anywhere and would need a fragile override
+cascade (`ollama-haskell 0.4.1.0` → `mcp-server 0.2.x` → its deps; MCP cannot be
+cleanly stripped because the umbrella `Ollama` module re-exports it). `[established]`
+— verified against both the pinned nixpkgs and the 0.2.1.0/0.4.1.0 tarballs.
 
-Three of its features map directly onto this design:
+**Used purely as an HTTP client to the Ollama chat endpoint.** Tool semantics,
+affordances, admission, and any MCP bridging live in *our* harness (which owns
+the alphabet), not delegated to the library. `[design]` — the harness is the
+authority on what a tool is; the library is transport.
 
-- **`configBaseUrl` / `clientFromEnv`** — point at `hq`. Either
-  `withClient defaultConfig { configBaseUrl = "http://hq:11434" }` (base URL is
-  **config**, never `localhost`), or `clientFromEnv` reading `OLLAMA_HOST`
-  (set `OLLAMA_HOST=http://hq:11434` in `.env`, picked up via
-  `dotenv_if_exists`).
-- **`configRetry = ExponentialRetry n …`** — this *is* invariant 5. Transient
-  failures (connection refused, 5xx, timeout) are absorbed by the library's
-  retry, below the coalgebra, and must never surface as `Refusal`. It replaces
-  the reference's hand-rolled `withRetry`. **Caveat:** ensure `Overflow` is
-  *not* swallowed as a retryable error — it must reach the coalgebra as
-  `Left Overflow` (see below).
-- **`Ollama.Testing`** (pure mock) — the substrate for the T6/E4 hostile-oracle
-  tests: feed it hallucinated tool names, malformed JSON, and empty responses
-  without touching the network.
+0.2.1.0 has everything the provider needs (all confirmed in the tarball source):
+
+- `Data.Ollama.Common.Config.OllamaConfig { hostUrl :: Text }` +
+  `defaultOllamaConfig` (default `http://127.0.0.1:11434`) — set `hostUrl` to the
+  `hq` host. Base URL is **config**, never `localhost`. `OLLAMA_HOST` can seed it
+  via `.env` (`dotenv_if_exists`).
+- `numCtx :: Maybe Int` on the model options record in
+  `Data.Ollama.Common.Types` (serialised as `num_ctx`) — the load-bearing lever,
+  **deliberately settable low** to provoke `Overflow` → compaction cheaply (E1).
+- `Data.Ollama.Chat`: `ChatOps` / `defaultChatOps` / `chat`, with tool support via
+  `InputTool` / `FunctionDef` (`Data.Ollama.Common.Types`). We serialise our
+  `ToolSpec`s into the request and parse tool calls out of the reply into our
+  `Call`s — the library carries them on the wire, the harness decides their fate.
+- Usage: `promptEvalCount` / `evalCount :: Maybe Int64` on the response
+  (`prompt_eval_count` / `eval_count`) → `Usage.inTok` / `Usage.outTok`.
+- Errors: `Data.Ollama.Common.Error.OllamaError`.
 
 The provider implements the injected oracle seam
-`oracle :: Request -> m (Either Refusal Response)` by:
+`oracle :: Request -> m (Either Refusal Response)` by: building a `ChatOps` from
+our `Request` (model tag, the projected prompt as the user message, our tools,
+and options with `numCtx` set); calling `chat` against the `hq` `OllamaConfig`;
+and translating the reply/`OllamaError` back into `Either Refusal Response`,
+mapping the usage counts.
 
-1. translating our `Request` → `chatRequest model messages` with
-   `chatTools = Just [...]` from `afford`, and the model options carrying
-   `optNumCtx = Just <configured>`;
-2. calling `chat client`;
-3. translating the typed `ChatResponse`/error back into
-   `Either Refusal Response`, mapping the usage token counts
-   (`prompt_eval_count` → `Usage.inTok`, `eval_count` → `Usage.outTok`).
+**Invariant 5 (transient failure) note:** 0.2.x has no `ExponentialRetry` config
+(that was a 0.4.x feature). Transient failures (connection refused, 5xx, timeout)
+are absorbed by a thin retry wrapper around the `chat` call in the provider —
+below the coalgebra — and must never surface as `Refusal`. Only `Overflow` and
+terminal decode failures are `Refusal`. This is a small local helper, not the
+reference's `withRetry` in the coalgebra path.
 
-**Locked regardless:**
-
-- Model tag is configuration; confirm the exact tag with `ollama list` on `hq`.
-- `optNumCtx` is configuration and **deliberately settable low** — the single
-  load-bearing lever: a low `num_ctx` provokes the `Overflow` → compaction path
-  cheaply and repeatedly (T4/E1).
-- **Determine overflow behaviour empirically** on the `hq` version: does Ollama
-  truncate silently (infer `Overflow` by comparing the reported prompt-eval
-  count against `num_ctx`) or return a decodable error? Record the answer, and
-  which `ollama-haskell` error constructor surfaces it, with the version, in
-  `docs/ollama-notes.md`. Do not assume.
-
-The exact chat-request field carrying `ModelOptions`, the `ChatResponse` usage
-field names, and the `Ollama.Error` constructor set are implementation-time
-lookups (see Open items); the `optNumCtx` capability that gates the whole
-approach is already confirmed.
+**Empirical, on the `hq` version (Ollama 0.32.13), recorded in
+`docs/ollama-notes.md`:** the model tag (default `qwen3:8b`, confirmed present on
+`hq`); the observed `num_ctx` default; and the overflow presentation — does
+Ollama truncate silently (then infer `Overflow` by comparing the reported
+prompt-eval count against `numCtx`) or return a decodable error (then map that
+`OllamaError` to `Left Overflow`)? Do not assume.
 
 ---
 

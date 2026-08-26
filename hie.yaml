@@ -1,0 +1,8 @@
+cradle:
+  cabal:
+    - path: "./src"
+      component: "lib:comonadic-harness"
+    - path: "./app"
+      component: "exe:demo"
+    - path: "./test"
+      component: "test:spec"
