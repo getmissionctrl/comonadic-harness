@@ -3,8 +3,11 @@
 -- Default (@cabal run demo@): reproduces the recorded reference trace in
 -- @runs\/oracle-output.txt@ using a fake oracle and world.
 --
--- @cabal run demo live@: runs against the real Ollama provider on hq with a
--- small @num_ctx@ (512) to try to provoke the Summarising compaction.
+-- @cabal run demo live [model] [numCtx]@: runs against the real Ollama provider
+-- on hq, printing the same annotated trace as the scripted demo but driven by
+-- the live model. Defaults to @qwen3:8b@ at @num_ctx@ 512 (small, to provoke the
+-- Summarising compaction); override positionally, e.g.
+-- @cabal run demo live qwen3:30b 2048@.
 module Main (main) where
 
 import Control.Comonad.Cofree (Cofree ((:<)))
@@ -12,7 +15,7 @@ import Data.Monoid (Any (..), Sum (..))
 import Harness.Alphabet
 import Harness.Coalgebra (harness)
 import Harness.Probe (Hypo (..), Risk (..), assess, probe)
-import Harness.Run (Env (..), run)
+import Harness.Run (Env (..))
 import Harness.State (Ctx (..), Mode (..), S (..))
 import Provider.Class (providerEnv)
 import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaProvider)
@@ -123,12 +126,31 @@ demoFake = do
     o <- runVerbose (Env fakeOracle fakeWorld) hypo 40 (harness start)
     putStrLn ("outcome: " ++ show o)
 
-live :: IO ()
-live = do
-    let cfg = defaultOllamaCfg { ocNumCtx = 512 }
+-- | Drive the harness against the live Ollama provider, printing the full
+-- annotated trace via 'runVerbose'. The @risk@ column is the harness's own
+-- /pure/ forecast under 'hypo' (it never calls the model), shown beside what the
+-- real model actually does — so you can watch the live run against the
+-- counterfactual. Optional args are @[model] [numCtx]@, applied positionally.
+live :: [String] -> IO ()
+live args = do
+    let cfg = applyArgs args (defaultOllamaCfg { ocNumCtx = 512 })
         env = providerEnv (ollamaProvider cfg)
-    o <- run env (harness start)
+    putStrLn
+        ( "== live run: model=" ++ ocModel cfg
+            ++ " numCtx=" ++ show (ocNumCtx cfg)
+            ++ " @ " ++ ocBaseUrl cfg ++ " ================" )
+    putStrLn "(risk column is the harness's pure forecast; oracle lines are the live model)"
+    o <- runVerbose env hypo 40 (harness start)
     putStrLn ("live outcome: " ++ show o)
+  where
+    -- Positional overrides: first arg is the model tag, second is num_ctx.
+    -- A non-numeric num_ctx is reported and ignored rather than crashing.
+    applyArgs (m : rest) cfg = applyCtx rest (cfg { ocModel = m })
+    applyArgs []         cfg = cfg
+    applyCtx (n : _) cfg = case reads n of
+        [(k, "")] -> cfg { ocNumCtx = k }
+        _         -> cfg   -- non-numeric: keep the default; the header echoes the effective numCtx so the ignored value is visible
+    applyCtx [] cfg = cfg
 
 -- ---------------------------------------------------------------------------
 -- Entry point
@@ -138,5 +160,5 @@ main :: IO ()
 main = do
     args <- getArgs
     case args of
-        ("live" : _) -> live
-        _            -> demoFake
+        ("live" : rest) -> live rest
+        _               -> demoFake
