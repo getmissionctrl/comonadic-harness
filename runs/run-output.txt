@@ -1,0 +1,43 @@
+
+== 1. the annotation at the root, before anything runs =========
+Ctx {ctxPrompt = Prompt "", ctxTools = ["read","bash","write"], ctxBudget = 8}
+
+== 2. counterfactual assessment, no effects performed ==========
+Risk {steps = 8, terminates = True, irreversible = [Call {tool = "write", args = "guess.txt"},Call {tool = "write", args = "guess.txt"},Call {tool = "write", args = "guess.txt"}]}
+[Asked,Did (Call {tool = "write", args = "guess.txt"}),Asked,Did (Call {tool = "write", args = "guess.txt"}),Asked,Did (Call {tool = "write", args = "guess.txt"}),Asked,Ended Done]
+
+== 3. governed: extend attaches that assessment to every node ==
+here:       Risk {steps = 8, terminates = True, irreversible = [Call {tool = "write", args = "guess.txt"},Call {tool = "write", args = "guess.txt"},Call {tool = "write", args = "guess.txt"}]}
+if it writes: Risk {steps = 7, terminates = True, irreversible = [Call {tool = "write", args = "guess.txt"},Call {tool = "write", args = "guess.txt"},Call {tool = "write", args = "guess.txt"}]}
+after that:   Risk {steps = 6, terminates = True, irreversible = [Call {tool = "write", args = "guess.txt"},Call {tool = "write", args = "guess.txt"}]}
+
+== 4. the real run =============================================
+0   budget=8   ctx=0 ln  tools=read,bash,write           risk=8/T   irrev=["write","write","write"]
+    RENDER -> orienting ["read","bash"]
+1   budget=7   ctx=1 ln  tools=read,bash,write           risk=8/T   irrev=["write","write"]
+    PERFORM read(README.md) -> read:README.
+2   budget=7   ctx=2 ln  tools=read,bash,write           risk=7/T   irrev=["write","write"]
+    PERFORM bash(ls) -> bash:ls
+3   budget=7   ctx=2 ln  tools=read,bash,write           risk=6/T   irrev=["write","write"]
+    RENDER -> editing ["write"]
+4   budget=6   ctx=3 ln  tools=read,bash,write           risk=5/T   irrev=["write","write"]
+    PERFORM write(notes.md) -> write:notes.
+5   budget=6   ctx=4 ln  tools=read,bash,write,commit    risk=4/T   irrev=["write"]
+    RENDER -> landing ["commit"]
+6   budget=5   ctx=5 ln  tools=read,bash,write,commit    risk=3/T   irrev=["commit"]
+    PERFORM commit(wip) -> commit:wip
+7   budget=5   ctx=6 ln  tools=read,bash,write,commit    risk=2/T   irrev=[]
+    RENDER -> finished []
+8   budget=4   ctx=7 ln  tools=read,bash,write,commit    risk=1/T   irrev=[]
+    HALT Done
+outcome: Done
+
+== 5. compaction is not a coalgebra homomorphism ===============
+before:  [Asked,Ended Done]
+after:   [Asked,Did (Call {tool = "write", args = "guess.txt"}),Asked,Ended Done]
+respects behaviour? False
+
+== 6. evolution: reject a coalgebra whose future has no exit ===
+loopy:  Risk {steps = 32, terminates = False, irreversible = [Call {tool = "write", args = "guess.txt"},Call {tool = "write", args = "guess.txt"},Call {tool = "write", args = "guess.txt"}]}
+good:   Risk {steps = 8, terminates = True, irreversible = [Call {tool = "write", args = "guess.txt"},Call {tool = "write", args = "guess.txt"},Call {tool = "write", args = "guess.txt"}]}
+outerLoop picked the fallback, outcome: Done
