@@ -7,11 +7,33 @@ for the 23-task implementation plan this build is executing.
 ## Where we are
 
 - **Branch:** `build/harness-t1-t7` (do NOT work on `main`).
-- **Last commit:** `71387fa` (demo + live run).
-- **Done: tasks 1–18 of 23.** T1 (cabal), T2 (nix/direnv, hq confirmed, vf-haskell
-  `.envrc`), T3 (the whole port — 8 library modules), T4 (law-test suite), T5
-  (Ollama provider + demo, both live-verified on hq).
-- **Remaining: tasks 19–23** — see "Next" below.
+- **Status: ALL 23 tasks complete.** Last commit `76328ec`.
+- Tasks 1–18 as before (port, law tests, Ollama provider, demo). Tasks 19–23
+  finished this session, each spec- and quality-reviewed, plus a final holistic
+  review:
+  - **T19 (`355aa89`)** — `Harness.Path` (sole home of `Hypo`/`takeWalk`);
+    linear `governedScan` + `localRisk` in `Harness.Probe`; `test/PerfSpec.hs`
+    proves per-node agreement with `assess` (100/100) and prints the O(d²)→O(d)
+    timing curve (398ms→0ms at depth 1000).
+  - **T20 (`00a5d09`, `e1effdd`, `76328ec`)** — `admit` pass in `step`: only
+    afforded calls reach `Perform`, unafforded ones repaired to a synthetic
+    `Obs` (D3, alphabet stays closed). Affordance law (D12) flipped from pending
+    to a real, non-vacuous prop. `test/HostileSpec.hs`: 150 hostile seeds, 0
+    crashes, all halt cleanly (E4).
+  - **T21/T22 (`fcb0135`)** — `Harness.Tutorial` (Haddock-only how) and
+    `Harness.Motivation.lhs` (literate why).
+  - **T23 (`8cd0063`)** — `docs/phase-2-recipe-morphism.md` stub, README "Built
+    module" section, regenerated `runs/oracle-output.txt`.
+- **Final verification (all green):** `cabal build all` warning-clean; `cabal
+  test spec` = 11 examples, 0 failures, 0 pending; `cabal run demo` byte-matches
+  `runs/oracle-output.txt`; `cabal haddock` renders (100% on every module built
+  this session); closed-alphabet guard confirmed (a 4th `HarnessF` ctor fires
+  `-Wincomplete-patterns` in Interp/Path/Probe/Coalgebra/Motivation).
+- **One deliberate change to record:** the regenerated demo trace diverges from
+  the pre-T20 recording at step 9 — the scripted oracle emits a `commit` that is
+  no longer afforded (compaction wiped the write), and the admit pass now
+  repairs it instead of performing it. This is the D3 behaviour shown live, not
+  a regression (documented in `README.md`).
 
 ## Verification snapshot (all currently green)
 
