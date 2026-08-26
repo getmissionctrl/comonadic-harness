@@ -30,6 +30,7 @@ library
     Harness.State
     Harness.Coalgebra
     Harness.Interp
+    Harness.Run
   build-depends:
       base >= 4.17 && < 5
     , comonad
@@ -37,6 +38,7 @@ library
     , optics-core
     , containers
     , mtl
+    , transformers
     , text
     , bytestring
     , aeson
