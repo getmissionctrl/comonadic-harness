@@ -54,9 +54,16 @@ cabal test spec              # 11 examples: comonad, agreement, prefix, affordan
                              #   compaction-rate, monoidal-scan, hostile-oracle
 cabal run demo               # reproduces runs/oracle-output.txt (pure scripted oracle)
 cabal run demo live          # same harness, live against Ollama on hq:11434,
-                             #   printing the full annotated trace
-cabal run demo live qwen3:30b 2048   # optional [model] [numCtx] overrides
+                             #   printing the full annotated trace (built-in task)
+# give it your own task (trailing words); --model / --ctx tune the provider:
+cabal run demo live -- --ctx 4096 read the README then write a note and commit it
+cabal run demo live -- --model qwen3:30b refactor the parser
 ```
+
+The task is seeded as the opening transcript turn (an empty prompt is what real
+Ollama rejects). A small `--ctx` provokes the compaction path; bump it (e.g.
+`--ctx 4096`) for longer tool-calling runs. Note the `--` after `live` so cabal
+passes the flags to the demo rather than interpreting them itself.
 
 Two guided reads inside the library, both rendered by `cabal haddock`. A
 pre-rendered HTML snapshot is committed under **`docs/api/`** (open

@@ -3,11 +3,14 @@
 -- Default (@cabal run demo@): reproduces the recorded reference trace in
 -- @runs\/oracle-output.txt@ using a fake oracle and world.
 --
--- @cabal run demo live [model] [numCtx]@: runs against the real Ollama provider
--- on hq, printing the same annotated trace as the scripted demo but driven by
--- the live model. Defaults to @qwen3:8b@ at @num_ctx@ 512 (small, to provoke the
--- Summarising compaction); override positionally, e.g.
--- @cabal run demo live qwen3:30b 2048@.
+-- @cabal run demo live [--model M] [--ctx N] your task words...@: runs against
+-- the real Ollama provider on hq, printing the same annotated trace as the
+-- scripted demo but driven by the live model. The trailing words become the
+-- initial task (seeded as the opening transcript turn, so the first prompt is
+-- non-empty); @--model@\/@--ctx@ tune the provider. Defaults: @qwen3:8b@,
+-- @num_ctx@ 512 (small, to provoke the Summarising compaction), and a built-in
+-- read\/write\/commit task. Example:
+-- @cabal run demo live --ctx 4096 add a haskell function that reverses a list@.
 module Main (main) where
 
 import Control.Comonad.Cofree (Cofree ((:<)))
@@ -16,10 +19,11 @@ import Harness.Alphabet
 import Harness.Coalgebra (harness)
 import Harness.Probe (Hypo (..), Risk (..), assess, probe)
 import Harness.Run (Env (..))
-import Harness.State (Ctx (..), Mode (..), S (..))
+import Harness.State (Ctx (..), Mode (..), S (..), Turn (..))
 import Provider.Class (providerEnv)
 import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaProvider)
 import System.Environment (getArgs)
+import Text.Read (readMaybe)
 
 -- ---------------------------------------------------------------------------
 -- Fake oracle / world (ported verbatim from reference/Oracle.hs §274-298)
@@ -126,31 +130,55 @@ demoFake = do
     o <- runVerbose (Env fakeOracle fakeWorld) hypo 40 (harness start)
     putStrLn ("outcome: " ++ show o)
 
+-- | Options for a live run, parsed from the args after @live@.
+data LiveOpts = LiveOpts
+    { loModel :: String
+    , loCtx   :: Int
+    , loTask  :: String
+    }
+
+-- | Parse @[--model M] [--ctx N] word...@: the recognised flags tune the
+-- provider; every other argument is joined (on spaces) into the initial task.
+-- Unknown or dangling flags simply fall through into the task text rather than
+-- aborting — this is a demo, not a CLI to defend. A non-numeric @--ctx@ keeps
+-- the default.
+parseLive :: [String] -> LiveOpts
+parseLive = go (LiveOpts (ocModel defaultOllamaCfg) 512 "")
+  where
+    go o ("--model" : m : rest) = go o { loModel = m } rest
+    go o ("--ctx" : n : rest)   = go o { loCtx = maybe (loCtx o) id (readMaybe n) } rest
+    go o (w : rest)             = go o { loTask = appendWord (loTask o) w } rest
+    go o []                     = o
+    appendWord ""  w = w
+    appendWord acc w = acc ++ " " ++ w
+
+-- | A default task when none is given, chosen to invite the read → write →
+-- commit progression (recall @commit@ is only afforded once a @write@ has
+-- happened, so this exercises the mode-dependent affordance fold).
+defaultTask :: String
+defaultTask = "Read the project README, write a one-line note summarising it, then commit."
+
 -- | Drive the harness against the live Ollama provider, printing the full
--- annotated trace via 'runVerbose'. The @risk@ column is the harness's own
--- /pure/ forecast under 'hypo' (it never calls the model), shown beside what the
--- real model actually does — so you can watch the live run against the
--- counterfactual. Optional args are @[model] [numCtx]@, applied positionally.
+-- annotated trace via 'runVerbose'. The initial task is /seeded/ as the opening
+-- 'Summary' turn so the first prompt is non-empty (an empty prompt is what real
+-- Ollama rejects). The @risk@ column is the harness's own /pure/ forecast under
+-- 'hypo' (it never calls the model), shown beside what the real model actually
+-- does — so you can watch the live run against the counterfactual.
 live :: [String] -> IO ()
 live args = do
-    let cfg = applyArgs args (defaultOllamaCfg { ocNumCtx = 512 })
-        env = providerEnv (ollamaProvider cfg)
+    let o    = parseLive args
+        task = if null (loTask o) then defaultTask else loTask o
+        cfg  = defaultOllamaCfg { ocModel = loModel o, ocNumCtx = loCtx o }
+        env  = providerEnv (ollamaProvider cfg)
+        seeded = start { transcript = [Summary task] }
     putStrLn
         ( "== live run: model=" ++ ocModel cfg
             ++ " numCtx=" ++ show (ocNumCtx cfg)
             ++ " @ " ++ ocBaseUrl cfg ++ " ================" )
+    putStrLn ("task (seeded as the opening turn): " ++ task)
     putStrLn "(risk column is the harness's pure forecast; oracle lines are the live model)"
-    o <- runVerbose env hypo 40 (harness start)
-    putStrLn ("live outcome: " ++ show o)
-  where
-    -- Positional overrides: first arg is the model tag, second is num_ctx.
-    -- A non-numeric num_ctx is reported and ignored rather than crashing.
-    applyArgs (m : rest) cfg = applyCtx rest (cfg { ocModel = m })
-    applyArgs []         cfg = cfg
-    applyCtx (n : _) cfg = case reads n of
-        [(k, "")] -> cfg { ocNumCtx = k }
-        _         -> cfg   -- non-numeric: keep the default; the header echoes the effective numCtx so the ignored value is visible
-    applyCtx [] cfg = cfg
+    result <- runVerbose env hypo 40 (harness seeded)
+    putStrLn ("live outcome: " ++ show result)
 
 -- ---------------------------------------------------------------------------
 -- Entry point
