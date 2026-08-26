@@ -39,6 +39,7 @@ library
     Harness.Motivation
     Provider.Class
     Provider.Ollama
+    Provider.Tools
   build-depends:
       base >= 4.17 && < 5
     , comonad
@@ -51,6 +52,10 @@ library
     , bytestring
     , aeson
     , dlist
+    -- Provider.Tools' sandboxed world executor (real read/write/bash/commit).
+    , process
+    , directory
+    , filepath
     -- 0.2.x is what nixpkgs packages; used purely as an HTTP client to the
     -- Ollama chat endpoint. Tool/affordance/MCP semantics live in the harness,
     -- not delegated to the library. [design]

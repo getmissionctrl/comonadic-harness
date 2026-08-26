@@ -20,8 +20,9 @@ import Harness.Coalgebra (harness)
 import Harness.Probe (Hypo (..), Risk (..), assess, probe)
 import Harness.Run (Env (..))
 import Harness.State (Ctx (..), Mode (..), S (..), Turn (..))
-import Provider.Class (providerEnv)
+import Provider.Class (Provider (..))
 import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaProvider)
+import Provider.Tools (prepareSandbox, sandboxAct)
 import System.Environment (getArgs)
 import Text.Read (readMaybe)
 
@@ -138,25 +139,33 @@ demoFake = do
     o <- runVerbose (Env fakeOracle fakeWorld) hypo 40 (harness start)
     putStrLn ("outcome: " ++ show o)
 
+-- | The sandbox the live run's tools operate in. @read@\/@write@\/@bash@\/
+-- @commit@ are confined here (its own git repo); the surrounding project repo is
+-- never touched.
+sandboxDir :: FilePath
+sandboxDir = "runs/agent-sandbox"
+
 -- | Options for a live run, parsed from the args after @live@.
 data LiveOpts = LiveOpts
-    { loModel :: String
-    , loCtx   :: Int
-    , loTask  :: String
+    { loModel  :: String
+    , loCtx    :: Int
+    , loBudget :: Int
+    , loTask   :: String
     }
 
--- | Parse @[--model M] [--ctx N] word...@: the recognised flags tune the
--- provider; every other argument is joined (on spaces) into the initial task.
--- Unknown or dangling flags simply fall through into the task text rather than
--- aborting — this is a demo, not a CLI to defend. A non-numeric @--ctx@ keeps
--- the default.
+-- | Parse @[--model M] [--ctx N] [--budget N] word...@: the recognised flags
+-- tune the run; every other argument is joined (on spaces) into the initial
+-- task. Unknown or dangling flags simply fall through into the task text rather
+-- than aborting — this is a demo, not a CLI to defend. A non-numeric flag value
+-- keeps the default.
 parseLive :: [String] -> LiveOpts
-parseLive = go (LiveOpts (ocModel defaultOllamaCfg) 512 "")
+parseLive = go (LiveOpts (ocModel defaultOllamaCfg) 512 6000 "")
   where
-    go o ("--model" : m : rest) = go o { loModel = m } rest
-    go o ("--ctx" : n : rest)   = go o { loCtx = maybe (loCtx o) id (readMaybe n) } rest
-    go o (w : rest)             = go o { loTask = appendWord (loTask o) w } rest
-    go o []                     = o
+    go o ("--model" : m : rest)  = go o { loModel = m } rest
+    go o ("--ctx" : n : rest)    = go o { loCtx = maybe (loCtx o) id (readMaybe n) } rest
+    go o ("--budget" : n : rest) = go o { loBudget = maybe (loBudget o) id (readMaybe n) } rest
+    go o (w : rest)              = go o { loTask = appendWord (loTask o) w } rest
+    go o []                      = o
     appendWord ""  w = w
     appendWord acc w = acc ++ " " ++ w
 
@@ -177,13 +186,17 @@ live args = do
     let o    = parseLive args
         task = if null (loTask o) then defaultTask else loTask o
         cfg  = defaultOllamaCfg { ocModel = loModel o, ocNumCtx = loCtx o }
-        env  = providerEnv (ollamaProvider cfg)
-        seeded = start { transcript = [Summary task] }
+        -- Real oracle (Ollama) + real sandboxed world (Provider.Tools).
+        env  = Env (complete (ollamaProvider cfg)) (sandboxAct sandboxDir)
+        seeded = start { transcript = [Summary task], budget = loBudget o }
+    prepareSandbox sandboxDir "README.md"
     putStrLn
         ( "== live run: model=" ++ ocModel cfg
             ++ " numCtx=" ++ show (ocNumCtx cfg)
+            ++ " budget=" ++ show (loBudget o)
             ++ " @ " ++ ocBaseUrl cfg ++ " ================" )
     putStrLn ("task (seeded as the opening turn): " ++ task)
+    putStrLn ("sandbox: " ++ sandboxDir ++ " (tools run here; project repo untouched)")
     putStrLn "(risk column is the harness's pure forecast; oracle lines are the live model)"
     result <- runVerbose env hypo 40 (harness seeded)
     putStrLn ("live outcome: " ++ show result)
