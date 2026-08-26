@@ -34,6 +34,8 @@ library
     Harness.Probe
     Harness.Compaction
     Harness.Evolve
+    Provider.Class
+    Provider.Ollama
   build-depends:
       base >= 4.17 && < 5
     , comonad
