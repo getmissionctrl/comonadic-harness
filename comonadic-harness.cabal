@@ -27,6 +27,7 @@ library
   hs-source-dirs:   src
   exposed-modules:
     Harness.Alphabet
+    Harness.State
   build-depends:
       base >= 4.17 && < 5
     , comonad
