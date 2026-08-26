@@ -55,15 +55,24 @@ cabal test spec              # 11 examples: comonad, agreement, prefix, affordan
 cabal run demo               # reproduces runs/oracle-output.txt (pure scripted oracle)
 cabal run demo live          # same harness, live against Ollama on hq:11434,
                              #   printing the full annotated trace (built-in task)
-# give it your own task (trailing words); --model / --ctx tune the provider:
-cabal run demo live -- --ctx 4096 read the README then write a note and commit it
+# give it your own task (trailing words); flags tune the run:
+cabal run demo live -- --ctx 8192 --budget 10000 read README.md then write notes.md summarising it and commit
 cabal run demo live -- --model qwen3:30b refactor the parser
 ```
 
+In `live` mode the tools are **real**, executed by `Provider.Tools` inside a
+sandbox (`runs/agent-sandbox`, its own git repo, seeded with a copy of the
+README): `read`/`write` are path-confined (a `..`/absolute escape is refused),
+`bash` runs there with a 10s timeout, and `commit` is a git commit in that
+sandbox — the project repo is never touched. So the agent genuinely reads the
+README, writes a file, and commits; a completed run ends `Done` with the model's
+summary (see `runs/live-demo.txt`).
+
 The task is seeded as the opening transcript turn (an empty prompt is what real
-Ollama rejects). A small `--ctx` provokes the compaction path; bump it (e.g.
-`--ctx 4096`) for longer tool-calling runs. Note the `--` after `live` so cabal
-passes the flags to the demo rather than interpreting them itself.
+Ollama rejects). Flags: `--model M`, `--ctx N` (a small `--ctx` provokes the
+compaction path; bump it for longer runs), `--budget N` (tokens; raise it so a
+real read→write→commit can finish). Note the `--` after `live` so cabal passes
+the flags to the demo rather than interpreting them itself.
 
 Two guided reads inside the library, both rendered by `cabal haddock`. A
 pre-rendered HTML snapshot is committed under **`docs/api/`** (open
