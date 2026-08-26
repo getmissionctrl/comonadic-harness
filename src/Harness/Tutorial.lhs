@@ -3,11 +3,13 @@ title: The comonadic harness — how it works
 subtitle: The closed alphabet, the coalgebra, and the tool-call cycle
 ---
 
-This is a literate module. The prose you are reading is not seen by the
-compiler; the indented `>` lines are real Haskell, compiled as part of the
-library, so every example below is guaranteed to build against the current API.
-Reference documentation for each type and function lives in its own module's
-Haddock; this document is the guided walk through how the pieces fit.
+An agentic harness runs a language model in a loop: show it a prompt and some
+tools, do what it asks, feed the result back, and repeat until it stops. This
+library builds that loop as a value you can inspect rather than a procedure you
+can only run — a pure state machine unfolded into a tree of every reachable
+future. That is what lets you predict what a run will do before it happens, and
+check that compacting its history did not change its behaviour. It starts from
+the small, fixed set of actions the harness can take.
 
 > module Harness.Tutorial
 >   ( demoStart
@@ -76,7 +78,7 @@ harness :: S -> Cofree HarnessF Ctx
 harness = unfold (\s -> (view s, step s))
 ```
 
-Our first compiling values — a start state, and the tree it denotes:
+A start state, and the tree it denotes:
 
 > -- | An empty starting state: no transcript, no pending calls, a 500-token
 > -- budget, in 'Working' mode.
