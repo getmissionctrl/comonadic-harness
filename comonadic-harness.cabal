@@ -31,6 +31,7 @@ library
     Harness.Coalgebra
     Harness.Interp
     Harness.Run
+    Harness.Probe
   build-depends:
       base >= 4.17 && < 5
     , comonad
