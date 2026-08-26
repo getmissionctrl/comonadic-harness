@@ -1,8 +1,39 @@
--- | Compaction and its correctness condition. The law: compaction is a
--- coalgebra homomorphism, i.e. invisible in what the agent /does/ (not in what
--- it /sees/ — the prompt must change). We check the observable shadow, and we
--- make that shadow a /product of four coarser observations/ so a divergence
--- names its kind (D10, §16.2) rather than being a bare boolean.
+-- | Compaction and its correctness condition.
+--
+-- __What.__ /Compaction/ is the operation that collapses a long transcript to a
+-- short summary stand-in so the running prompt stays inside the model's context
+-- window. 'compact' performs it; the rest of this module is the /law/ that says
+-- when it was safe.
+--
+-- __Why a law at all.__ Compaction rewrites the state the agent is standing on.
+-- If that rewrite changed what the agent goes on to /do/, compaction would be a
+-- silent behavioural edit hiding inside a memory-management routine — the worst
+-- kind of bug, because nothing in the transcript records it. So we demand a
+-- correctness condition and /measure/ how often real compaction breaks it.
+--
+-- __The law.__ Compaction is required to be a /coalgebra homomorphism/: the
+-- state @s@ and its image @'compact' s@ must be /bisimilar/ — they may present
+-- a different prompt to the model (indeed they must; that is the whole point of
+-- compacting), but they must exhibit the same observable behaviour thereafter.
+-- Invisible in what the agent /does/, not in what it /sees/. This is the
+-- companion of the prefix-stability law in "Harness.State": prefix stability
+-- keeps the /cached/ prompt untouched when a turn is appended; compaction
+-- deliberately rewrites the prompt and asks only that /behaviour/ survive.
+--
+-- __How we check it.__ Bisimilarity between two branching trees is not directly
+-- decidable here, so we observe the /shadow/ each state casts under a fixed
+-- hypothesis: drive both to a fuel bound with 'Harness.Probe.probe' and compare
+-- the resulting traces through 'observe'. Crucially the shadow is not a single
+-- bit. 'Behaviour' is a /product of four coarser observations/, so when the two
+-- disagree the divergence /names its kind/ — halting, irreversible writes,
+-- oracle cost, or per-turn call structure — rather than collapsing to an
+-- unhelpful @False@ (D10, §16.2).
+--
+-- __The result is a rate, not a proof.__ A property checked at one state proves
+-- nothing (this bit us: the first @respectsBehaviour@ example returned @True@ by
+-- coincidence). Experiment E1 samples many reachable states and reports a
+-- /violation rate per component/. A high defect rate is a finding about this
+-- compaction strategy, not a bug to be hidden. [established]
 module Harness.Compaction
   ( compact
   , Behaviour (..)
@@ -19,9 +50,31 @@ import Harness.Probe (Hypo, probe)
 import Harness.State
 import Harness.Coalgebra (harness)
 
--- | Collapse the transcript to a summary stand-in. Idempotent by fiat (D11):
--- for @|ts| < 2@ the naive @take 2 ts ++ [User []]@ grows on each application,
--- which under memory pressure is an infinite compaction loop. Guard it.
+-- | Collapse the transcript to a summary stand-in.
+--
+-- __What.__ Keeps the two newest turns and appends an empty @'Harness.State.User' []@
+-- marker to stand in for everything older, so the prompt projected from the
+-- result is short regardless of how long the original conversation was.
+--
+-- __Why idempotent by fiat.__ Compaction is triggered under /memory pressure/
+-- and may fire repeatedly. It must therefore reach a fixed point:
+-- @'compact' ('compact' s) == 'compact' s@. The naive body
+-- @take 2 ts ++ ['Harness.State.User' []]@ does /not/ have this property — when
+-- the transcript is already short (@|ts| < 2@) each application appends another
+-- marker, growing the transcript one turn at a time. Under sustained pressure
+-- that is an infinite compaction loop that never shrinks anything. This is
+-- defect D11.
+--
+-- __How the guard works.__ Before rewriting, @alreadyCompact@ asks whether the
+-- transcript is already in compacted shape: newest turn an empty
+-- @'Harness.State.User' []@ marker /and/ no more than three turns total. If so,
+-- the state is returned unchanged, so a second application is the identity and
+-- the fixed point is reached after one step. [established]
+--
+-- __Gotcha.__ This is a deliberately crude summariser: it does not call the
+-- oracle to /produce/ a summary, it merely truncates and drops a placeholder.
+-- The behavioural cost of that crudeness is exactly what 'respectsBehaviour'
+-- and experiment E1 quantify — see the module header.
 compact :: S -> S
 compact s
   | alreadyCompact (transcript s) = s
@@ -31,19 +84,64 @@ compact s
       (User [] : _) -> length ts <= 3
       _ -> False
 
--- | The behavioural observation: four components, each with its own algebra.
--- Two compactions are behaviourally equal iff all four agree.
+-- | The behavioural shadow of a trace: four components, each with its own
+-- algebra, so that two traces are declared behaviourally equal exactly when all
+-- four agree.
+--
+-- __Why four and not one.__ A bare @Bool@ (\"did behaviour change?\") tells you
+-- /that/ compaction misbehaved but not /how/, and the how is the whole
+-- diagnostic value. By making 'Behaviour' a /product/ of four coarser
+-- observations, a divergence localises to a named axis — the task halted
+-- differently, or an irreversible tool fired, or the oracle was consulted a
+-- different number of times, or the per-turn call structure shifted — and E1 can
+-- report a violation /rate/ per component rather than one lumped figure (D10,
+-- §16.2).
+--
+-- __Why these four.__ They are the axes on which a compaction defect actually
+-- /matters/: what the agent ultimately decides ('bHalt'), what it did to the
+-- world that cannot be undone ('bWrites'), what it cost ('bCalls'), and the
+-- shape of its tool use turn by turn ('bTurnSets'). Each field is a monoid or
+-- list so the observation composes cleanly over a trace. [design]
 data Behaviour = Behaviour
-  { bHalt     :: Last Outcome          -- ^ does the task end differently?
-  , bWrites   :: [String]              -- ^ multiset of irreversible tool names (sorted)
-  , bCalls    :: Sum Int               -- ^ oracle call count — did cost change?
-  , bTurnSets :: [[String]]            -- ^ per-turn call sets, order-insensitive within a turn
+  { bHalt     :: Last Outcome
+    -- ^ The terminal 'Outcome', if the trace reached one (@'Data.Monoid.Last'@
+    -- keeps the /final/ halt). Answers: does the task end, and end the /same/
+    -- way, after compaction?
+  , bWrites   :: [String]
+    -- ^ The sorted multiset of /irreversible/ tool names invoked (@write@ and
+    -- @commit@). These are the calls compaction must never add, drop, or
+    -- reorder-into-existence, because they touch the world. Sorted so that a
+    -- mere permutation is not counted as a divergence.
+  , bCalls    :: Sum Int
+    -- ^ The number of oracle consultations (@'Harness.Interp.Asked'@ events).
+    -- A proxy for /cost/: if compaction changed how many times the model was
+    -- called, it changed the token bill even when the outcome matched.
+  , bTurnSets :: [[String]]
+    -- ^ The per-turn call sets: one sorted list of tool names per turn, in turn
+    -- order. Finer than 'bWrites' (it sees /every/ tool, and /when/) but still
+    -- order-insensitive /within/ a turn, because pi runs the calls of a single
+    -- turn in parallel (§16.2).
   }
   deriving stock (Eq, Show)
 
--- | Observe a trace. @bWrites@ and each @bTurnSets@ entry are sorted so that
--- permuting independent calls within a turn is /not/ a divergence (pi runs them
--- in parallel; the trace is a list of multisets, not a list of events, §16.2).
+-- | Fold a trace down to its behavioural shadow.
+--
+-- __What.__ Reduces the raw @['Harness.Interp.Ev']@ trace produced by
+-- 'Harness.Probe.probe' to the four-axis 'Behaviour' that the compaction law
+-- compares.
+--
+-- __How.__ 'bHalt' takes the last 'Outcome'; 'bWrites' filters the @'Harness.Interp.Did'@
+-- calls to the irreversible tools and sorts them; 'bCalls' counts the
+-- @'Harness.Interp.Asked'@ boundaries; 'bTurnSets' groups @'Harness.Interp.Did'@
+-- calls into the turns between successive @'Harness.Interp.Asked'@ events and
+-- sorts each group.
+--
+-- __Why the sorting.__ Both 'bWrites' and every 'bTurnSets' entry are sorted so
+-- that permuting the /independent/ calls within a single turn is not counted as
+-- a divergence: pi runs a turn's calls in parallel, so the trace is a list of
+-- multisets, not a list of ordered events (§16.2). @'Harness.Interp.Refused'@
+-- events are dropped from the turn grouping — a refusal is not a tool call and
+-- carries no name to compare. [established]
 observe :: [Ev] -> Behaviour
 observe evs = Behaviour
   { bHalt = Last (listToMaybe [o | Ended o <- evs])
@@ -61,9 +159,26 @@ observe evs = Behaviour
         go acc (Ended _ : _)    = [sort acc]
         go acc []               = [sort acc]
 
--- | Compaction respects behaviour at @s@ when the compacted and uncompacted
--- states observe /identically/. Returns the 'Behaviour' pair so callers can
--- classify /which/ component diverged (Task 16 reports a rate per component).
+-- | The compaction law, made checkable at a single state.
+--
+-- __What.__ Drives both the compacted state @k s@ and the raw state @s@ to fuel
+-- @n@ under the same hypothesis @h@, and returns the pair of behavioural shadows
+-- @('observe' … (k s), 'observe' … s)@. Compaction /respects behaviour at @s@/
+-- exactly when the two are equal — that is the bisimilarity check of the module
+-- header, reduced to an @Eq@ on 'Behaviour'.
+--
+-- __Why return the pair, not a @Bool@.__ Equality throws away the diagnosis. By
+-- handing back both shadows the caller can see /which/ of the four components
+-- diverged and classify the failure, which is what experiment E1 needs to report
+-- a rate per component rather than a single pass\/fail.
+--
+-- __How to use it honestly.__ One evaluation proves nothing about compaction in
+-- general — it only witnesses agreement (or not) at the state you happened to
+-- pass. Sample @s@ across many /reachable/ states (generated through public
+-- transitions, never by hand-constructing @'Harness.State.S'@), and quantify the
+-- violation rate. The @k@ parameter is the compaction under test — normally
+-- 'compact', but abstracted so a null model (e.g. @id@) can be measured against
+-- the same harness for a baseline. [established]
 respectsBehaviour :: Hypo -> Int -> (S -> S) -> S -> (Behaviour, Behaviour)
 respectsBehaviour h n k s =
   ( observe (probe h n (harness (k s)))
