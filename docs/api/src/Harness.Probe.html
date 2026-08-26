@@ -30,10 +30,10 @@
 </span><span id="line-30"></span><span class="hs-comment">-- One line, because it is just 'interp' in the 'Writer' monad. [established]</span><span>
 </span><span id="line-31"></span><span class="annot"><a href="Harness.Probe.html#probe"><span class="hs-identifier hs-type">probe</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Path.html#Hypo"><span class="hs-identifier hs-type">Hypo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html#Cofree"><span class="hs-identifier hs-type">Cofree</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier hs-type">HarnessF</span></a></span><span> </span><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier hs-type">Ctx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Interp.html#Ev"><span class="hs-identifier hs-type">Ev</span></a></span><span class="hs-special">]</span><span>
 </span><span id="line-32"></span><span id="probe"><span class="annot"><span class="annottext">probe :: Hypo -&gt; Int -&gt; Cofree HarnessF Ctx -&gt; [Ev]
-</span><a href="Harness.Probe.html#probe"><span class="hs-identifier hs-var hs-var">probe</span></a></span></span><span> </span><span id="local-6989586621679145046"><span class="annot"><span class="annottext">Hypo
-</span><a href="#local-6989586621679145046"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span id="local-6989586621679145047"><span class="annot"><span class="annottext">Int
-</span><a href="#local-6989586621679145047"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679145048"><span class="annot"><span class="annottext">Cofree HarnessF Ctx
-</span><a href="#local-6989586621679145048"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><a href="Harness.Probe.html#probe"><span class="hs-identifier hs-var hs-var">probe</span></a></span></span><span> </span><span id="local-6989586621679148059"><span class="annot"><span class="annottext">Hypo
+</span><a href="#local-6989586621679148059"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span id="local-6989586621679148060"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679148060"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679148061"><span class="annot"><span class="annottext">Cofree HarnessF Ctx
+</span><a href="#local-6989586621679148061"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
 </span><span id="line-33"></span><span>  </span><span class="annot"><span class="annottext">Writer [Ev] (Maybe Outcome) -&gt; [Ev]
 forall w a. Writer w a -&gt; w
 </span><span class="hs-identifier hs-var">execWriter</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Request -&gt; WriterT [Ev] Identity (Either Refusal Response))
@@ -60,7 +60,7 @@ forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Hypo -&gt; Request -&gt; Either Refusal Response
 </span><a href="Harness.Path.html#guessOracle"><span class="hs-identifier hs-var">guessOracle</span></a></span><span> </span><span class="annot"><span class="annottext">Hypo
-</span><a href="#local-6989586621679145046"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Obs -&gt; WriterT [Ev] Identity Obs
+</span><a href="#local-6989586621679148059"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Obs -&gt; WriterT [Ev] Identity Obs
 forall a. a -&gt; WriterT [Ev] Identity a
 forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
 </span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Obs -&gt; WriterT [Ev] Identity Obs)
@@ -68,9 +68,9 @@ forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Hypo -&gt; Call -&gt; Obs
 </span><a href="Harness.Path.html#guessWorld"><span class="hs-identifier hs-var">guessWorld</span></a></span><span> </span><span class="annot"><span class="annottext">Hypo
-</span><a href="#local-6989586621679145046"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
-</span><a href="#local-6989586621679145047"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Cofree HarnessF Ctx
-</span><a href="#local-6989586621679145048"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679148059"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679148060"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Cofree HarnessF Ctx
+</span><a href="#local-6989586621679148061"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-34"></span><span>
 </span><span id="line-35"></span><span class="hs-comment">-- | A forward-looking assessment of a node's own future. Every field carries a</span><span>
 </span><span id="line-36"></span><span class="hs-comment">-- monoid, so the 'Monoid' instance derives generically (&#167;16.3) &#8212; which is what</span><span>
@@ -85,14 +85,14 @@ forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span id="line-42"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="compactions"><span class="annot"><span class="annottext">Risk -&gt; Sum Int
 </span><a href="Harness.Probe.html#compactions"><span class="hs-identifier hs-var hs-var">compactions</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Sum</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
 </span><span id="line-43"></span><span>  </span><span class="hs-special">}</span><span>
-</span><span id="line-44"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679145058"><span id="local-6989586621679145067"><span class="annot"><span class="annottext">Risk -&gt; Risk -&gt; Bool
+</span><span id="line-44"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679148071"><span id="local-6989586621679148080"><span class="annot"><span class="annottext">Risk -&gt; Risk -&gt; Bool
 (Risk -&gt; Risk -&gt; Bool) -&gt; (Risk -&gt; Risk -&gt; Bool) -&gt; Eq Risk
 forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
 $c== :: Risk -&gt; Risk -&gt; Bool
 == :: Risk -&gt; Risk -&gt; Bool
 $c/= :: Risk -&gt; Risk -&gt; Bool
 /= :: Risk -&gt; Risk -&gt; Bool
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679145073"><span id="local-6989586621679145086"><span id="local-6989586621679145090"><span class="annot"><span class="annottext">Int -&gt; Risk -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148086"><span id="local-6989586621679148099"><span id="local-6989586621679148103"><span class="annot"><span class="annottext">Int -&gt; Risk -&gt; ShowS
 [Risk] -&gt; ShowS
 Risk -&gt; String
 (Int -&gt; Risk -&gt; ShowS)
@@ -105,7 +105,7 @@ $cshow :: Risk -&gt; String
 show :: Risk -&gt; String
 $cshowList :: [Risk] -&gt; ShowS
 showList :: [Risk] -&gt; ShowS
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679145098"><span id="local-6989586621679145100"><span class="annot"><span class="annottext">(forall x. Risk -&gt; Rep Risk x)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148111"><span id="local-6989586621679148113"><span class="annot"><span class="annottext">(forall x. Risk -&gt; Rep Risk x)
 -&gt; (forall x. Rep Risk x -&gt; Risk) -&gt; Generic Risk
 forall x. Rep Risk x -&gt; Risk
 forall x. Risk -&gt; Rep Risk x
@@ -116,7 +116,7 @@ from :: forall x. Risk -&gt; Rep Risk x
 $cto :: forall x. Rep Risk x -&gt; Risk
 to :: forall x. Rep Risk x -&gt; Risk
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-45"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679145106"><span id="local-6989586621679145113"><span id="local-6989586621679145121"><span class="annot"><span class="annottext">NonEmpty Risk -&gt; Risk
+</span><span id="line-45"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span id="local-6989586621679148119"><span id="local-6989586621679148126"><span id="local-6989586621679148134"><span class="annot"><span class="annottext">NonEmpty Risk -&gt; Risk
 Risk -&gt; Risk -&gt; Risk
 (Risk -&gt; Risk -&gt; Risk)
 -&gt; (NonEmpty Risk -&gt; Risk)
@@ -134,7 +134,7 @@ $csconcat :: NonEmpty Risk -&gt; Risk
 sconcat :: NonEmpty Risk -&gt; Risk
 $cstimes :: forall b. Integral b =&gt; b -&gt; Risk -&gt; Risk
 stimes :: forall b. Integral b =&gt; b -&gt; Risk -&gt; Risk
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679145185"><span id="local-6989586621679145192"><span id="local-6989586621679145198"><span class="annot"><span class="annottext">Semigroup Risk
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Semigroup</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679148198"><span id="local-6989586621679148205"><span id="local-6989586621679148211"><span class="annot"><span class="annottext">Semigroup Risk
 Risk
 Semigroup Risk =&gt;
 Risk -&gt; (Risk -&gt; Risk -&gt; Risk) -&gt; ([Risk] -&gt; Risk) -&gt; Monoid Risk
@@ -153,10 +153,10 @@ mconcat :: [Risk] -&gt; Risk
 </span><span id="line-46"></span><span>
 </span><span id="line-47"></span><span class="annot"><a href="Harness.Probe.html#assess"><span class="hs-identifier hs-type">assess</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Path.html#Hypo"><span class="hs-identifier hs-type">Hypo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html#Cofree"><span class="hs-identifier hs-type">Cofree</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier hs-type">HarnessF</span></a></span><span> </span><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier hs-type">Ctx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.Probe.html#Risk"><span class="hs-identifier hs-type">Risk</span></a></span><span>
 </span><span id="line-48"></span><span id="assess"><span class="annot"><span class="annottext">assess :: Hypo -&gt; Int -&gt; Cofree HarnessF Ctx -&gt; Risk
-</span><a href="Harness.Probe.html#assess"><span class="hs-identifier hs-var hs-var">assess</span></a></span></span><span> </span><span id="local-6989586621679145254"><span class="annot"><span class="annottext">Hypo
-</span><a href="#local-6989586621679145254"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span id="local-6989586621679145255"><span class="annot"><span class="annottext">Int
-</span><a href="#local-6989586621679145255"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679145256"><span class="annot"><span class="annottext">Cofree HarnessF Ctx
-</span><a href="#local-6989586621679145256"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><a href="Harness.Probe.html#assess"><span class="hs-identifier hs-var hs-var">assess</span></a></span></span><span> </span><span id="local-6989586621679148267"><span class="annot"><span class="annottext">Hypo
+</span><a href="#local-6989586621679148267"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span id="local-6989586621679148268"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679148268"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span id="local-6989586621679148269"><span class="annot"><span class="annottext">Cofree HarnessF Ctx
+</span><a href="#local-6989586621679148269"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
 </span><span id="line-49"></span><span>  </span><span class="annot"><a href="Harness.Probe.html#Risk"><span class="hs-identifier hs-type">Risk</span></a></span><span>
 </span><span id="line-50"></span><span>    </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">stepsAhead :: Sum Int
 </span><a href="Harness.Probe.html#stepsAhead"><span class="hs-identifier hs-var">stepsAhead</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Int -&gt; Sum Int
@@ -165,22 +165,22 @@ forall a. a -&gt; Sum a
 forall a. [a] -&gt; Int
 forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
 </span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="annot"><span class="annottext">[Ev]
-</span><a href="#local-6989586621679145259"><span class="hs-identifier hs-var">evs</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679148272"><span class="hs-identifier hs-var">evs</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-51"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">terminates :: Any
 </span><a href="Harness.Probe.html#terminates"><span class="hs-identifier hs-var">terminates</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Any
 </span><span class="hs-identifier hs-var">Any</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Ev -&gt; Bool) -&gt; [Ev] -&gt; Bool
 forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
 </span><span class="hs-identifier hs-var">any</span></span><span> </span><span class="annot"><span class="annottext">Ev -&gt; Bool
-</span><a href="#local-6989586621679145262"><span class="hs-identifier hs-var">ended</span></a></span><span> </span><span class="annot"><span class="annottext">[Ev]
-</span><a href="#local-6989586621679145259"><span class="hs-identifier hs-var">evs</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679148275"><span class="hs-identifier hs-var">ended</span></a></span><span> </span><span class="annot"><span class="annottext">[Ev]
+</span><a href="#local-6989586621679148272"><span class="hs-identifier hs-var">evs</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-52"></span><span>    </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">irreversible :: [String]
 </span><a href="Harness.Probe.html#irreversible"><span class="hs-identifier hs-var">irreversible</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Call -&gt; String
 </span><a href="Harness.Alphabet.html#tool"><span class="hs-identifier hs-var">tool</span></a></span><span> </span><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679145264"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Harness.Interp.html#Did"><span class="hs-identifier hs-type">Did</span></a></span><span> </span><span id="local-6989586621679145264"><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679145264"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Ev]
-</span><a href="#local-6989586621679145259"><span class="hs-identifier hs-var">evs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Call -&gt; String
+</span><a href="#local-6989586621679148277"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Harness.Interp.html#Did"><span class="hs-identifier hs-type">Did</span></a></span><span> </span><span id="local-6989586621679148277"><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679148277"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Ev]
+</span><a href="#local-6989586621679148272"><span class="hs-identifier hs-var">evs</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Call -&gt; String
 </span><a href="Harness.Alphabet.html#tool"><span class="hs-identifier hs-var">tool</span></a></span><span> </span><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679145264"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; Bool
+</span><a href="#local-6989586621679148277"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; [String] -&gt; Bool
 forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
 forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
 </span><span class="hs-operator hs-var">`elem`</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String
@@ -194,20 +194,20 @@ forall a. [a] -&gt; Int
 forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
 </span><span class="hs-identifier hs-var">length</span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Harness.Interp.html#Refused"><span class="hs-identifier hs-type">Refused</span></a></span><span> </span><span class="annot"><span class="annottext">Refusal
 </span><a href="Harness.Alphabet.html#Overflow"><span class="hs-identifier hs-var">Overflow</span></a></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Ev]
-</span><a href="#local-6989586621679145259"><span class="hs-identifier hs-var">evs</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679148272"><span class="hs-identifier hs-var">evs</span></a></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
 </span><span id="line-54"></span><span>    </span><span class="hs-special">}</span><span>
 </span><span id="line-55"></span><span>  </span><span class="hs-keyword">where</span><span>
-</span><span id="line-56"></span><span>    </span><span id="local-6989586621679145259"><span class="annot"><span class="annottext">evs :: [Ev]
-</span><a href="#local-6989586621679145259"><span class="hs-identifier hs-var hs-var">evs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hypo -&gt; Int -&gt; Cofree HarnessF Ctx -&gt; [Ev]
+</span><span id="line-56"></span><span>    </span><span id="local-6989586621679148272"><span class="annot"><span class="annottext">evs :: [Ev]
+</span><a href="#local-6989586621679148272"><span class="hs-identifier hs-var hs-var">evs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Hypo -&gt; Int -&gt; Cofree HarnessF Ctx -&gt; [Ev]
 </span><a href="Harness.Probe.html#probe"><span class="hs-identifier hs-var">probe</span></a></span><span> </span><span class="annot"><span class="annottext">Hypo
-</span><a href="#local-6989586621679145254"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">Int
-</span><a href="#local-6989586621679145255"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Cofree HarnessF Ctx
-</span><a href="#local-6989586621679145256"><span class="hs-identifier hs-var">w</span></a></span><span>
-</span><span id="line-57"></span><span>    </span><span id="local-6989586621679145262"><span class="annot"><span class="annottext">ended :: Ev -&gt; Bool
-</span><a href="#local-6989586621679145262"><span class="hs-identifier hs-var hs-var">ended</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.Interp.html#Ended"><span class="hs-identifier hs-type">Ended</span></a></span><span> </span><span class="annot"><span class="annottext">Outcome
+</span><a href="#local-6989586621679148267"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679148268"><span class="hs-identifier hs-var">n</span></a></span><span> </span><span class="annot"><span class="annottext">Cofree HarnessF Ctx
+</span><a href="#local-6989586621679148269"><span class="hs-identifier hs-var">w</span></a></span><span>
+</span><span id="line-57"></span><span>    </span><span id="local-6989586621679148275"><span class="annot"><span class="annottext">ended :: Ev -&gt; Bool
+</span><a href="#local-6989586621679148275"><span class="hs-identifier hs-var hs-var">ended</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.Interp.html#Ended"><span class="hs-identifier hs-type">Ended</span></a></span><span> </span><span class="annot"><span class="annottext">Outcome
 </span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
 </span><span class="hs-identifier hs-var">True</span></span><span>
-</span><span id="line-58"></span><span>    </span><span class="annot"><a href="#local-6989586621679145262"><span class="hs-identifier hs-var">ended</span></a></span><span> </span><span class="annot"><span class="annottext">Ev
+</span><span id="line-58"></span><span>    </span><span class="annot"><a href="#local-6989586621679148275"><span class="hs-identifier hs-var">ended</span></a></span><span> </span><span class="annot"><span class="annottext">Ev
 </span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
 </span><span class="hs-identifier hs-var">False</span></span><span>
 </span><span id="line-59"></span><span>
@@ -215,17 +215,17 @@ forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Int
 </span><span id="line-61"></span><span class="hs-comment">-- @extract (governed h 32 w)@ is the pre-action gate at the current node.</span><span>
 </span><span id="line-62"></span><span class="annot"><a href="Harness.Probe.html#governed"><span class="hs-identifier hs-type">governed</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Path.html#Hypo"><span class="hs-identifier hs-type">Hypo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html#Cofree"><span class="hs-identifier hs-type">Cofree</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier hs-type">HarnessF</span></a></span><span> </span><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier hs-type">Ctx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html#Cofree"><span class="hs-identifier hs-type">Cofree</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier hs-type">HarnessF</span></a></span><span> </span><span class="annot"><a href="Harness.Probe.html#Risk"><span class="hs-identifier hs-type">Risk</span></a></span><span>
 </span><span id="line-63"></span><span id="governed"><span class="annot"><span class="annottext">governed :: Hypo -&gt; Int -&gt; Cofree HarnessF Ctx -&gt; Cofree HarnessF Risk
-</span><a href="Harness.Probe.html#governed"><span class="hs-identifier hs-var hs-var">governed</span></a></span></span><span> </span><span id="local-6989586621679145270"><span class="annot"><span class="annottext">Hypo
-</span><a href="#local-6989586621679145270"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span id="local-6989586621679145271"><span class="annot"><span class="annottext">Int
-</span><a href="#local-6989586621679145271"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Cofree HarnessF Ctx -&gt; Risk)
+</span><a href="Harness.Probe.html#governed"><span class="hs-identifier hs-var hs-var">governed</span></a></span></span><span> </span><span id="local-6989586621679148283"><span class="annot"><span class="annottext">Hypo
+</span><a href="#local-6989586621679148283"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span id="local-6989586621679148284"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679148284"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Cofree HarnessF Ctx -&gt; Risk)
 -&gt; Cofree HarnessF Ctx -&gt; Cofree HarnessF Risk
 forall a b.
 (Cofree HarnessF a -&gt; b) -&gt; Cofree HarnessF a -&gt; Cofree HarnessF b
 forall (w :: * -&gt; *) a b. Comonad w =&gt; (w a -&gt; b) -&gt; w a -&gt; w b
 </span><a href="file:///nix/store/kb5isj7h7854mf10middyab7l3yvax0z-comonad-5.0.10-doc/share/doc/comonad-5.0.10/html/src/Control.Comonad.html#extend"><span class="hs-identifier hs-var">extend</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Hypo -&gt; Int -&gt; Cofree HarnessF Ctx -&gt; Risk
 </span><a href="Harness.Probe.html#assess"><span class="hs-identifier hs-var">assess</span></a></span><span> </span><span class="annot"><span class="annottext">Hypo
-</span><a href="#local-6989586621679145270"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">Int
-</span><a href="#local-6989586621679145271"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679148283"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679148284"><span class="hs-identifier hs-var">n</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-64"></span><span>
 </span><span id="line-65"></span><span class="hs-comment">-- | The one-node contribution to 'Risk' under a hypo &#8212; what THIS node adds to</span><span>
 </span><span id="line-66"></span><span class="hs-comment">-- the trace, without re-probing its future. This is the summand that makes the</span><span>
@@ -239,30 +239,30 @@ forall (w :: * -&gt; *) a b. Comonad w =&gt; (w a -&gt; b) -&gt; w a -&gt; w b
 </span><span id="line-74"></span><span class="hs-comment">-- 'Overflow' refusal additionally contributes 1 to @compactions@.</span><span>
 </span><span id="line-75"></span><span class="annot"><a href="Harness.Probe.html#localRisk"><span class="hs-identifier hs-type">localRisk</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Path.html#Hypo"><span class="hs-identifier hs-type">Hypo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html#Cofree"><span class="hs-identifier hs-type">Cofree</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier hs-type">HarnessF</span></a></span><span> </span><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier hs-type">Ctx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.Probe.html#Risk"><span class="hs-identifier hs-type">Risk</span></a></span><span>
 </span><span id="line-76"></span><span id="localRisk"><span class="annot"><span class="annottext">localRisk :: Hypo -&gt; Cofree HarnessF Ctx -&gt; Risk
-</span><a href="Harness.Probe.html#localRisk"><span class="hs-identifier hs-var hs-var">localRisk</span></a></span></span><span> </span><span id="local-6989586621679145275"><span class="annot"><span class="annottext">Hypo
-</span><a href="#local-6989586621679145275"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ctx
-</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html#%3A%3C"><span class="hs-operator hs-type">:&lt;</span></a></span><span> </span><span id="local-6989586621679145276"><span class="annot"><span class="annottext">HarnessF (Cofree HarnessF Ctx)
-</span><a href="#local-6989586621679145276"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">HarnessF (Cofree HarnessF Ctx)
-</span><a href="#local-6989586621679145276"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><a href="Harness.Probe.html#localRisk"><span class="hs-identifier hs-var hs-var">localRisk</span></a></span></span><span> </span><span id="local-6989586621679148288"><span class="annot"><span class="annottext">Hypo
+</span><a href="#local-6989586621679148288"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Ctx
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html#%3A%3C"><span class="hs-operator hs-type">:&lt;</span></a></span><span> </span><span id="local-6989586621679148289"><span class="annot"><span class="annottext">HarnessF (Cofree HarnessF Ctx)
+</span><a href="#local-6989586621679148289"><span class="hs-identifier hs-var">f</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">HarnessF (Cofree HarnessF Ctx)
+</span><a href="#local-6989586621679148289"><span class="hs-identifier hs-var">f</span></a></span><span> </span><span class="hs-keyword">of</span><span>
 </span><span id="line-77"></span><span>  </span><span class="annot"><a href="Harness.Alphabet.html#Halt"><span class="hs-identifier hs-type">Halt</span></a></span><span> </span><span class="annot"><span class="annottext">Outcome
 </span><span class="hs-identifier">_</span></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Risk
 forall a. Monoid a =&gt; a
 </span><span class="hs-identifier hs-var">mempty</span></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Harness.Probe.html#stepsAhead"><span class="hs-identifier hs-var">stepsAhead</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Sum</span></span><span> </span><span class="annot"><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Probe.html#terminates"><span class="hs-identifier hs-var">terminates</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Any</span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">True</span></span><span> </span><span class="hs-special">}</span><span>
-</span><span id="line-78"></span><span>  </span><span class="annot"><a href="Harness.Alphabet.html#Perform"><span class="hs-identifier hs-type">Perform</span></a></span><span> </span><span id="local-6989586621679145277"><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679145277"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="annot"><span class="annottext">Obs -&gt; Cofree HarnessF Ctx
+</span><span id="line-78"></span><span>  </span><span class="annot"><a href="Harness.Alphabet.html#Perform"><span class="hs-identifier hs-type">Perform</span></a></span><span> </span><span id="local-6989586621679148290"><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679148290"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="annot"><span class="annottext">Obs -&gt; Cofree HarnessF Ctx
 </span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
 </span><span id="line-79"></span><span>    </span><span class="annot"><span class="annottext">Risk
 forall a. Monoid a =&gt; a
 </span><span class="hs-identifier hs-var">mempty</span></span><span>
 </span><span id="line-80"></span><span>      </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Harness.Probe.html#stepsAhead"><span class="hs-identifier hs-var">stepsAhead</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Sum</span></span><span> </span><span class="annot"><span class="hs-number">1</span></span><span>
-</span><span id="line-81"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Probe.html#irreversible"><span class="hs-identifier hs-var">irreversible</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#tool"><span class="hs-identifier hs-var">tool</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145277"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#tool"><span class="hs-identifier hs-var">tool</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679145277"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">`elem`</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-string">&quot;write&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;commit&quot;</span></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
+</span><span id="line-81"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Probe.html#irreversible"><span class="hs-identifier hs-var">irreversible</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#tool"><span class="hs-identifier hs-var">tool</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679148290"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#tool"><span class="hs-identifier hs-var">tool</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679148290"><span class="hs-identifier hs-type">c</span></a></span><span> </span><span class="annot"><span class="hs-operator hs-type">`elem`</span></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-string">&quot;write&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="hs-string">&quot;commit&quot;</span></span><span class="hs-special">]</span><span class="hs-special">]</span><span>
 </span><span id="line-82"></span><span>      </span><span class="hs-special">}</span><span>
-</span><span id="line-83"></span><span>  </span><span class="annot"><a href="Harness.Alphabet.html#Render"><span class="hs-identifier hs-type">Render</span></a></span><span> </span><span id="local-6989586621679145278"><span class="annot"><span class="annottext">Request
-</span><a href="#local-6989586621679145278"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span class="annot"><span class="annottext">Either Refusal Response -&gt; Cofree HarnessF Ctx
+</span><span id="line-83"></span><span>  </span><span class="annot"><a href="Harness.Alphabet.html#Render"><span class="hs-identifier hs-type">Render</span></a></span><span> </span><span id="local-6989586621679148291"><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679148291"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span class="annot"><span class="annottext">Either Refusal Response -&gt; Cofree HarnessF Ctx
 </span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">Hypo -&gt; Request -&gt; Either Refusal Response
 </span><a href="Harness.Path.html#guessOracle"><span class="hs-identifier hs-var">guessOracle</span></a></span><span> </span><span class="annot"><span class="annottext">Hypo
-</span><a href="#local-6989586621679145275"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">Request
-</span><a href="#local-6989586621679145278"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><a href="#local-6989586621679148288"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679148291"><span class="hs-identifier hs-var">q</span></a></span><span> </span><span class="hs-keyword">of</span><span>
 </span><span id="line-84"></span><span>    </span><span class="hs-comment">-- Asked only: 1 event.</span><span>
 </span><span id="line-85"></span><span>    </span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span class="annot"><span class="annottext">Response
 </span><span class="hs-identifier">_</span></span><span>            </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Risk
@@ -289,9 +289,9 @@ forall a. Monoid a =&gt; a
 </span><span id="line-98"></span><span class="hs-comment">-- node once the run halts within the horizon @n@ (&#167;16.3, D1).</span><span>
 </span><span id="line-99"></span><span class="annot"><a href="Harness.Probe.html#governedScan"><span class="hs-identifier hs-type">governedScan</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Path.html#Hypo"><span class="hs-identifier hs-type">Hypo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html#Cofree"><span class="hs-identifier hs-type">Cofree</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier hs-type">HarnessF</span></a></span><span> </span><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier hs-type">Ctx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Probe.html#Risk"><span class="hs-identifier hs-type">Risk</span></a></span><span class="hs-special">]</span><span>
 </span><span id="line-100"></span><span id="governedScan"><span class="annot"><span class="annottext">governedScan :: Hypo -&gt; Int -&gt; Cofree HarnessF Ctx -&gt; [Risk]
-</span><a href="Harness.Probe.html#governedScan"><span class="hs-identifier hs-var hs-var">governedScan</span></a></span></span><span> </span><span id="local-6989586621679145281"><span class="annot"><span class="annottext">Hypo
-</span><a href="#local-6989586621679145281"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span id="local-6989586621679145282"><span class="annot"><span class="annottext">Int
-</span><a href="#local-6989586621679145282"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Risk -&gt; Risk -&gt; Risk) -&gt; [Risk] -&gt; [Risk]
+</span><a href="Harness.Probe.html#governedScan"><span class="hs-identifier hs-var hs-var">governedScan</span></a></span></span><span> </span><span id="local-6989586621679148294"><span class="annot"><span class="annottext">Hypo
+</span><a href="#local-6989586621679148294"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span id="local-6989586621679148295"><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679148295"><span class="hs-identifier hs-var">n</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Risk -&gt; Risk -&gt; Risk) -&gt; [Risk] -&gt; [Risk]
 forall a. (a -&gt; a -&gt; a) -&gt; [a] -&gt; [a]
 </span><span class="hs-identifier hs-var">scanr1</span></span><span> </span><span class="annot"><span class="annottext">Risk -&gt; Risk -&gt; Risk
 forall a. Semigroup a =&gt; a -&gt; a -&gt; a
@@ -302,22 +302,22 @@ forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
 </span><span class="hs-identifier hs-var">map</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Hypo -&gt; Cofree HarnessF Ctx -&gt; Risk
 </span><a href="Harness.Probe.html#localRisk"><span class="hs-identifier hs-var">localRisk</span></a></span><span> </span><span class="annot"><span class="annottext">Hypo
-</span><a href="#local-6989586621679145281"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Cofree HarnessF Ctx] -&gt; [Risk])
+</span><a href="#local-6989586621679148294"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">([Cofree HarnessF Ctx] -&gt; [Risk])
 -&gt; (Cofree HarnessF Ctx -&gt; [Cofree HarnessF Ctx])
 -&gt; Cofree HarnessF Ctx
 -&gt; [Risk]
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Hypo -&gt; Int -&gt; Cofree HarnessF Ctx -&gt; [Cofree HarnessF Ctx]
 </span><a href="Harness.Path.html#takeWalk"><span class="hs-identifier hs-var">takeWalk</span></a></span><span> </span><span class="annot"><span class="annottext">Hypo
-</span><a href="#local-6989586621679145281"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">Int
-</span><a href="#local-6989586621679145282"><span class="hs-identifier hs-var">n</span></a></span><span>
+</span><a href="#local-6989586621679148294"><span class="hs-identifier hs-var">h</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679148295"><span class="hs-identifier hs-var">n</span></a></span><span>
 </span><span id="line-101"></span><span>
 </span><span id="line-102"></span><span class="hs-comment">-- | Turn a 'Hypo' into a pure 'Env', so the agreement law (&#167;16.1, Task 14) can</span><span>
 </span><span id="line-103"></span><span class="hs-comment">-- compare @run (liftHypo h)@ against @outcomeOf (probe h n)@.</span><span>
-</span><span id="line-104"></span><span id="local-6989586621679144982"><span class="annot"><a href="Harness.Probe.html#liftHypo"><span class="hs-identifier hs-type">liftHypo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Applicative</span></span><span> </span><span class="annot"><a href="#local-6989586621679144982"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Harness.Path.html#Hypo"><span class="hs-identifier hs-type">Hypo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.Run.html#Env"><span class="hs-identifier hs-type">Env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679144982"><span class="hs-identifier hs-type">m</span></a></span></span><span>
+</span><span id="line-104"></span><span id="local-6989586621679147995"><span class="annot"><a href="Harness.Probe.html#liftHypo"><span class="hs-identifier hs-type">liftHypo</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Applicative</span></span><span> </span><span class="annot"><a href="#local-6989586621679147995"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="Harness.Path.html#Hypo"><span class="hs-identifier hs-type">Hypo</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.Run.html#Env"><span class="hs-identifier hs-type">Env</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679147995"><span class="hs-identifier hs-type">m</span></a></span></span><span>
 </span><span id="line-105"></span><span id="liftHypo"><span class="annot"><span class="annottext">liftHypo :: forall (m :: * -&gt; *). Applicative m =&gt; Hypo -&gt; Env m
-</span><a href="Harness.Probe.html#liftHypo"><span class="hs-identifier hs-var hs-var">liftHypo</span></a></span></span><span> </span><span id="local-6989586621679145287"><span class="annot"><span class="annottext">Hypo
-</span><a href="#local-6989586621679145287"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Request -&gt; m (Either Refusal Response))
+</span><a href="Harness.Probe.html#liftHypo"><span class="hs-identifier hs-var hs-var">liftHypo</span></a></span></span><span> </span><span id="local-6989586621679148300"><span class="annot"><span class="annottext">Hypo
+</span><a href="#local-6989586621679148300"><span class="hs-identifier hs-var">h</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Request -&gt; m (Either Refusal Response))
 -&gt; (Call -&gt; m Obs) -&gt; Env m
 forall (m :: * -&gt; *).
 (Request -&gt; m (Either Refusal Response))
@@ -332,29 +332,29 @@ forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Hypo -&gt; Request -&gt; Either Refusal Response
 </span><a href="Harness.Path.html#guessOracle"><span class="hs-identifier hs-var">guessOracle</span></a></span><span> </span><span class="annot"><span class="annottext">Hypo
-</span><a href="#local-6989586621679145287"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Obs -&gt; m Obs
+</span><a href="#local-6989586621679148300"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Obs -&gt; m Obs
 forall a. a -&gt; m a
 forall (f :: * -&gt; *) a. Applicative f =&gt; a -&gt; f a
 </span><span class="hs-identifier hs-var">pure</span></span><span> </span><span class="annot"><span class="annottext">(Obs -&gt; m Obs) -&gt; (Call -&gt; Obs) -&gt; Call -&gt; m Obs
 forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">Hypo -&gt; Call -&gt; Obs
 </span><a href="Harness.Path.html#guessWorld"><span class="hs-identifier hs-var">guessWorld</span></a></span><span> </span><span class="annot"><span class="annottext">Hypo
-</span><a href="#local-6989586621679145287"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span>
+</span><a href="#local-6989586621679148300"><span class="hs-identifier hs-var">h</span></a></span><span class="hs-special">)</span><span>
 </span><span id="line-106"></span><span>
 </span><span id="line-107"></span><span class="annot"><span class="hs-comment">-- | The terminal outcome of a trace, if it halted within the horizon.</span></span><span>
 </span><span id="line-108"></span><span class="annot"><a href="Harness.Probe.html#outcomeOf"><span class="hs-identifier hs-type">outcomeOf</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Interp.html#Ev"><span class="hs-identifier hs-type">Ev</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Maybe</span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Outcome"><span class="hs-identifier hs-type">Outcome</span></a></span><span>
 </span><span id="line-109"></span><span id="outcomeOf"><span class="annot"><span class="annottext">outcomeOf :: [Ev] -&gt; Maybe Outcome
-</span><a href="Harness.Probe.html#outcomeOf"><span class="hs-identifier hs-var hs-var">outcomeOf</span></a></span></span><span> </span><span id="local-6989586621679145288"><span class="annot"><span class="annottext">[Ev]
-</span><a href="#local-6989586621679145288"><span class="hs-identifier hs-var">evs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Outcome
-</span><a href="#local-6989586621679145289"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Harness.Interp.html#Ended"><span class="hs-identifier hs-type">Ended</span></a></span><span> </span><span id="local-6989586621679145289"><span class="annot"><span class="annottext">Outcome
-</span><a href="#local-6989586621679145289"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Ev]
-</span><a href="#local-6989586621679145288"><span class="hs-identifier hs-var">evs</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-keyword">of</span><span>
-</span><span id="line-110"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679145290"><span class="annot"><span class="annottext">Outcome
-</span><a href="#local-6989586621679145290"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span class="annot"><span class="annottext">[Outcome]
+</span><a href="Harness.Probe.html#outcomeOf"><span class="hs-identifier hs-var hs-var">outcomeOf</span></a></span></span><span> </span><span id="local-6989586621679148301"><span class="annot"><span class="annottext">[Ev]
+</span><a href="#local-6989586621679148301"><span class="hs-identifier hs-var">evs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Outcome
+</span><a href="#local-6989586621679148302"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="hs-glyph">|</span><span> </span><span class="annot"><a href="Harness.Interp.html#Ended"><span class="hs-identifier hs-type">Ended</span></a></span><span> </span><span id="local-6989586621679148302"><span class="annot"><span class="annottext">Outcome
+</span><a href="#local-6989586621679148302"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">[Ev]
+</span><a href="#local-6989586621679148301"><span class="hs-identifier hs-var">evs</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-110"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679148303"><span class="annot"><span class="annottext">Outcome
+</span><a href="#local-6989586621679148303"><span class="hs-identifier hs-var">o</span></a></span></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span class="annot"><span class="annottext">[Outcome]
 </span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Outcome -&gt; Maybe Outcome
 forall a. a -&gt; Maybe a
 </span><span class="hs-identifier hs-var">Just</span></span><span> </span><span class="annot"><span class="annottext">Outcome
-</span><a href="#local-6989586621679145290"><span class="hs-identifier hs-var">o</span></a></span><span>
+</span><a href="#local-6989586621679148303"><span class="hs-identifier hs-var">o</span></a></span><span>
 </span><span id="line-111"></span><span>  </span><span class="hs-special">[</span><span class="hs-special">]</span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Maybe Outcome
 forall a. Maybe a
 </span><span class="hs-identifier hs-var">Nothing</span></span><span>

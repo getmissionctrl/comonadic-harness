@@ -1,14 +1,9 @@
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
--- | A guided tour of the harness, modelled on @Pipes.Tutorial@. Read it top to
--- bottom: it walks from the closed alphabet ('HarnessF') through the coalgebra
--- ('step', 'harness'), the shape\/annotation split ('view'), the two ways to
--- consume a tree ('run' versus 'governed'), and finishes on compaction and the
--- law it is required to respect.
---
--- Nothing here is executable — the module exports only documentation anchors.
--- Every name in an @\@\/@ reference resolves to something in the real API, so
--- the Haddock links are load-bearing, not decorative.
+-- | How the harness fits together: the closed alphabet ('HarnessF'), the
+-- coalgebra ('step', 'harness'), the shape\/annotation split ('view'),
+-- execution versus governance ('run' versus 'governed'), and compaction's law
+-- ('respectsBehaviour').
 module Harness.Tutorial
   ( -- * Introduction
     -- $introduction
