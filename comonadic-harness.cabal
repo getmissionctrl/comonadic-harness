@@ -63,5 +63,7 @@ test-suite spec
   type:             exitcode-stdio-1.0
   hs-source-dirs:   test
   main-is:          Main.hs
-  build-depends:    base
-  buildable:        False
+  other-modules:    Gen, LawsSpec
+  build-depends:
+      base, comonadic-harness, hspec, QuickCheck
+    , comonad, free, containers
