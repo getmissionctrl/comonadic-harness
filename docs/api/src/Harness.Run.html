@@ -1,39 +1,116 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
 </span><span id="line-2"></span><span>
-</span><span id="line-3"></span><span class="hs-comment">-- | Running a harness: pair the tree against an effectful environment. @run@ is</span><span>
-</span><span id="line-4"></span><span class="hs-comment">-- @interp@ over the real oracle and world, in @WriterT@ over @IO@ with the</span><span>
-</span><span id="line-5"></span><span class="hs-comment">-- event trace discarded &#8212; execution consumes the shape, not the annotation.</span><span>
-</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Harness.Run.html"><span class="hs-identifier">Harness.Run</span></a></span><span>
-</span><span id="line-7"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Harness.Run.html#Env"><span class="hs-identifier">Env</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Run.html#run"><span class="hs-identifier">run</span></a></span><span>
-</span><span id="line-9"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-10"></span><span>
-</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html"><span class="hs-identifier">Control.Comonad.Cofree</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html#Cofree"><span class="hs-identifier">Cofree</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Class</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">lift</span></span><span class="hs-special">)</span><span>
-</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Writer</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">runWriterT</span></span><span class="hs-special">)</span><span>
-</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Alphabet.html"><span class="hs-identifier">Harness.Alphabet</span></a></span><span>
-</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Interp.html"><span class="hs-identifier">Harness.Interp</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.Interp.html#Ev"><span class="hs-identifier">Ev</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Interp.html#interp"><span class="hs-identifier">interp</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.State.html"><span class="hs-identifier">Harness.State</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier">Ctx</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-17"></span><span>
-</span><span id="line-18"></span><span class="annot"><span class="hs-comment">-- | The provider seam and the world seam. The LLM lives in exactly one field.</span></span><span>
-</span><span id="line-19"></span><span class="hs-keyword">data</span><span> </span><span id="Env"><span class="annot"><a href="Harness.Run.html#Env"><span class="hs-identifier hs-var">Env</span></a></span></span><span> </span><span id="local-6989586621679147756"><span class="annot"><a href="#local-6989586621679147756"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Env"><span class="annot"><a href="Harness.Run.html#Env"><span class="hs-identifier hs-var">Env</span></a></span></span><span>
-</span><span id="line-20"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="oracle"><span class="annot"><span class="annottext">forall (m :: * -&gt; *).
+</span><span id="line-3"></span><span class="hs-comment">-- | Running a harness: pair the denotation tree against an effectful</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- environment.</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- __What.__ This module is the /execution/ half of the design. It takes a</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- 'Cofree' 'HarnessF' tree &#8212; the lazy, branching denotation obtained by</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- unfolding a coalgebra &#8212; and drives it against a real oracle (the LLM) and a</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- real world (tools), yielding a terminal 'Outcome' in 'IO'.</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- __Why one module, one function.__ 'run' is deliberately thin. It is</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- 'Harness.Interp.interp' specialised to the real provider and the real world,</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- in @WriterT [Ev]@ over 'IO', with the event trace __discarded__. The trace is</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- an analysis artefact; execution has no use for it. Keeping 'run' a bare</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- instance of the one shared interpreter is what buys the agreement law for</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- free: 'Harness.Probe.probe' is the /same/ 'Harness.Interp.interp' in a pure</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- monad, so /run and probe cannot drift/ &#8212; there is no second hand-written case</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- analysis to fall out of step (defect D9, &#167;16.1). Contrast a design with two</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- loops, where the law that they agree must be re-established by inspection</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- every time either changes. [established]</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- __The shape, not the annotation.__ Execution consumes the /shape/ of the tree</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- (the 'HarnessF' layer: which action to take, and the successor keyed by the</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- result). It never reads the 'Harness.State.Ctx' annotation on a node</span><span>
+</span><span id="line-25"></span><span class="hs-comment">-- (invariant 2). The annotation exists for analysis ('Harness.Probe'); if a</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- field of 'Harness.State.Ctx' ever began steering execution it would belong in</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- @S@ and in @step@, not here.</span><span>
+</span><span id="line-28"></span><span class="hs-comment">--</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- __The tree is a denotation.__ Do not read the 'Cofree' argument as a</span><span>
+</span><span id="line-30"></span><span class="hs-comment">-- materialised data structure to be cached or serialised (invariant 3). It is</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- lazy and produced on demand from @S@ and the coalgebra; 'run' walks exactly</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- the single path the oracle and world select, and no more.</span><span>
+</span><span id="line-33"></span><span class="hs-comment">--</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- __Cross-references.__ The pure twin is 'Harness.Probe.probe'; the shared</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- kernel is 'Harness.Interp.interp'; the pure 'Env' used to state the agreement</span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- law is 'Harness.Probe.liftHypo'.</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Harness.Run.html"><span class="hs-identifier">Harness.Run</span></a></span><span>
+</span><span id="line-38"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Harness.Run.html#Env"><span class="hs-identifier">Env</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Run.html#run"><span class="hs-identifier">run</span></a></span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html"><span class="hs-identifier">Control.Comonad.Cofree</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html#Cofree"><span class="hs-identifier">Cofree</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Trans.Class</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">lift</span></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">Control.Monad.Writer</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">runWriterT</span></span><span class="hs-special">)</span><span>
+</span><span id="line-45"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Alphabet.html"><span class="hs-identifier">Harness.Alphabet</span></a></span><span>
+</span><span id="line-46"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Interp.html"><span class="hs-identifier">Harness.Interp</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.Interp.html#Ev"><span class="hs-identifier">Ev</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Interp.html#interp"><span class="hs-identifier">interp</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.State.html"><span class="hs-identifier">Harness.State</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier">Ctx</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- | The provider seam and the world seam &#8212; the two effectful edges of a run.</span><span>
+</span><span id="line-50"></span><span class="hs-comment">--</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- __What.__ An 'Env' is a pair of interpreters for the /directions/ of the</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- alphabet: given a 'Request' it produces a model reply (or a 'Refusal'), and</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- given a 'Call' it produces an 'Obs' from the world. The functor @m@ is the</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- effect these live in &#8212; 'IO' for a live run, or a pure 'Applicative' for the</span><span>
+</span><span id="line-55"></span><span class="hs-comment">-- forecast (see 'Harness.Probe.liftHypo').</span><span>
+</span><span id="line-56"></span><span class="hs-comment">--</span><span>
+</span><span id="line-57"></span><span class="hs-comment">-- __Why.__ Everything nondeterministic and everything effectful in a run enters</span><span>
+</span><span id="line-58"></span><span class="hs-comment">-- through exactly these two fields. That is the seam that makes the harness</span><span>
+</span><span id="line-59"></span><span class="hs-comment">-- testable: swap 'Env' and the /same/ tree runs against a stub instead of a</span><span>
+</span><span id="line-60"></span><span class="hs-comment">-- provider, which is precisely how the agreement law is stated. It is also</span><span>
+</span><span id="line-61"></span><span class="hs-comment">-- where invariant 5 is enforced &#8212; retries, backoff and transient connection</span><span>
+</span><span id="line-62"></span><span class="hs-comment">-- errors are decorators /on/ these fields and are resolved before they return,</span><span>
+</span><span id="line-63"></span><span class="hs-comment">-- so only 'Overflow' and terminal decode failures ('Malformed') ever surface as</span><span>
+</span><span id="line-64"></span><span class="hs-comment">-- a 'Refusal' to the coalgebra. [design]</span><span>
+</span><span id="line-65"></span><span class="hs-comment">--</span><span>
+</span><span id="line-66"></span><span class="hs-comment">-- __The LLM lives in exactly one field.__ 'oracle' is the /only/ place the</span><span>
+</span><span id="line-67"></span><span class="hs-comment">-- language model appears. Nothing else in the codebase talks to a provider;</span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- 'run' does not, the coalgebra does not, analysis does not. That single</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- containment is what lets 'Harness.Probe' reason about a machine's future</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- without ever calling out &#8212; it substitutes a pure 'oracle' and folds.</span><span>
+</span><span id="line-71"></span><span class="hs-keyword">data</span><span> </span><span id="Env"><span class="annot"><a href="Harness.Run.html#Env"><span class="hs-identifier hs-var">Env</span></a></span></span><span> </span><span id="local-6989586621679147777"><span class="annot"><a href="#local-6989586621679147777"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Env"><span class="annot"><a href="Harness.Run.html#Env"><span class="hs-identifier hs-var">Env</span></a></span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="oracle"><span class="annot"><span class="annottext">forall (m :: * -&gt; *).
 Env m -&gt; Request -&gt; m (Either Refusal Response)
-</span><a href="Harness.Run.html#oracle"><span class="hs-identifier hs-var hs-var">oracle</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-type">Request</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679147756"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier hs-type">Refusal</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-type">Response</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="world"><span class="annot"><span class="annottext">forall (m :: * -&gt; *). Env m -&gt; Call -&gt; m Obs
-</span><a href="Harness.Run.html#world"><span class="hs-identifier hs-var hs-var">world</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679147756"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-type">Obs</span></a></span><span>
-</span><span id="line-22"></span><span>  </span><span class="hs-special">}</span><span>
-</span><span id="line-23"></span><span>
-</span><span id="line-24"></span><span class="hs-comment">-- | Drive the harness to termination. Fuel is 'maxBound': a real run halts on</span><span>
-</span><span id="line-25"></span><span class="hs-comment">-- 'Halt', never on fuel. A @Nothing@ (fuel exhausted) is impossible here and</span><span>
-</span><span id="line-26"></span><span class="hs-comment">-- maps to @Stuck@ defensively.</span><span>
-</span><span id="line-27"></span><span class="annot"><a href="Harness.Run.html#run"><span class="hs-identifier hs-type">run</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Run.html#Env"><span class="hs-identifier hs-type">Env</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html#Cofree"><span class="hs-identifier hs-type">Cofree</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier hs-type">HarnessF</span></a></span><span> </span><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier hs-type">Ctx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Outcome"><span class="hs-identifier hs-type">Outcome</span></a></span><span>
-</span><span id="line-28"></span><span id="run"><span class="annot"><span class="annottext">run :: Env IO -&gt; Cofree HarnessF Ctx -&gt; IO Outcome
-</span><a href="Harness.Run.html#run"><span class="hs-identifier hs-var hs-var">run</span></a></span></span><span> </span><span id="local-6989586621679147806"><span class="annot"><span class="annottext">Env IO
-</span><a href="#local-6989586621679147806"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621679147807"><span class="annot"><span class="annottext">Cofree HarnessF Ctx
-</span><a href="#local-6989586621679147807"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
-</span><span id="line-29"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679147808"><span class="annot"><a href="#local-6989586621679147808"><span class="hs-identifier hs-var">mo</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147809"><span class="annot"><a href="#local-6989586621679147809"><span class="hs-identifier hs-var">_evs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier">Ev</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span>
-</span><span id="line-30"></span><span>    </span><span class="annot"><span class="annottext">WriterT [Ev] IO (Maybe Outcome) -&gt; IO (Maybe Outcome, [Ev])
+</span><a href="Harness.Run.html#oracle"><span class="hs-identifier hs-var hs-var">oracle</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-type">Request</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679147777"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier hs-type">Refusal</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-type">Response</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-73"></span><span>    </span><span class="hs-comment">-- ^ The provider seam: the sole point of contact with the language model.</span><span>
+</span><span id="line-74"></span><span>    </span><span class="hs-comment">-- A 'Left' is a 'Refusal' the coalgebra is permitted to see &#8212; 'Overflow'</span><span>
+</span><span id="line-75"></span><span>    </span><span class="hs-comment">-- (context exceeded) or 'Malformed' (a terminal decode failure). Transient</span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-comment">-- faults must be absorbed here and never returned (invariant 5).</span><span>
+</span><span id="line-77"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="world"><span class="annot"><span class="annottext">forall (m :: * -&gt; *). Env m -&gt; Call -&gt; m Obs
+</span><a href="Harness.Run.html#world"><span class="hs-identifier hs-var hs-var">world</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679147777"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-type">Obs</span></a></span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-comment">-- ^ The world seam: run a tool 'Call' and observe its result. Total in @m@;</span><span>
+</span><span id="line-79"></span><span>    </span><span class="hs-comment">-- a failed tool is an 'Obs' describing the failure, not an exception that</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-comment">-- escapes the seam.</span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-82"></span><span>
+</span><span id="line-83"></span><span class="hs-comment">-- | Drive the harness tree to termination against a real 'Env', in 'IO'.</span><span>
+</span><span id="line-84"></span><span class="hs-comment">--</span><span>
+</span><span id="line-85"></span><span class="hs-comment">-- __What.__ Walk the 'Cofree' 'HarnessF' tree one node at a time, at each node</span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- performing the 'oracle' or 'world' action named by the shape and following</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- the successor keyed by the result, until the tree reaches a 'Halt' and yields</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- its 'Outcome'.</span><span>
+</span><span id="line-89"></span><span class="hs-comment">--</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- __How.__ 'run' is 'Harness.Interp.interp' with the two seams lifted from</span><span>
+</span><span id="line-91"></span><span class="hs-comment">-- 'Env' into @WriterT [Ev] IO@, then 'Control.Monad.Writer.runWriterT' applied</span><span>
+</span><span id="line-92"></span><span class="hs-comment">-- and the accumulated @[Ev]@ trace dropped on the floor (bound to @_evs@).</span><span>
+</span><span id="line-93"></span><span class="hs-comment">-- Execution wants the 'Outcome', not the trace; the trace is what</span><span>
+</span><span id="line-94"></span><span class="hs-comment">-- 'Harness.Probe.probe' keeps. Because both go through the one 'interp', they</span><span>
+</span><span id="line-95"></span><span class="hs-comment">-- agree on the path taken by construction (&#167;16.1).</span><span>
+</span><span id="line-96"></span><span class="hs-comment">--</span><span>
+</span><span id="line-97"></span><span class="hs-comment">-- __Why fuel is 'maxBound'.__ 'Harness.Interp.interp' is depth-bounded so that</span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- /analysis/ can look a finite distance ahead; a live run has no such horizon &#8212;</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- it should stop when the machine says to, i.e. on 'Halt', not because a</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- counter ran out. Passing 'maxBound' makes the fuel guard practically</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- unreachable. The @Nothing@ branch (fuel exhausted before 'Halt') is therefore</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- a can't-happen; it is mapped to @'Stuck' \&quot;fuel exhausted\&quot;@ defensively</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- rather than left partial. [design]</span><span>
+</span><span id="line-104"></span><span class="annot"><a href="Harness.Run.html#run"><span class="hs-identifier hs-type">run</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Run.html#Env"><span class="hs-identifier hs-type">Env</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="file:///nix/store/99dwwx9hfy67g2y979c3jnl50zalgpip-free-5.2-doc/share/doc/free-5.2/html/src/Control.Comonad.Cofree.html#Cofree"><span class="hs-identifier hs-type">Cofree</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier hs-type">HarnessF</span></a></span><span> </span><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier hs-type">Ctx</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Outcome"><span class="hs-identifier hs-type">Outcome</span></a></span><span>
+</span><span id="line-105"></span><span id="run"><span class="annot"><span class="annottext">run :: Env IO -&gt; Cofree HarnessF Ctx -&gt; IO Outcome
+</span><a href="Harness.Run.html#run"><span class="hs-identifier hs-var hs-var">run</span></a></span></span><span> </span><span id="local-6989586621679147833"><span class="annot"><span class="annottext">Env IO
+</span><a href="#local-6989586621679147833"><span class="hs-identifier hs-var">env</span></a></span></span><span> </span><span id="local-6989586621679147834"><span class="annot"><span class="annottext">Cofree HarnessF Ctx
+</span><a href="#local-6989586621679147834"><span class="hs-identifier hs-var">w</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-106"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621679147835"><span class="annot"><a href="#local-6989586621679147835"><span class="hs-identifier hs-var">mo</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147836"><span class="annot"><a href="#local-6989586621679147836"><span class="hs-identifier hs-var">_evs</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier">Ev</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-107"></span><span>    </span><span class="annot"><span class="annottext">WriterT [Ev] IO (Maybe Outcome) -&gt; IO (Maybe Outcome, [Ev])
 forall w (m :: * -&gt; *) a. WriterT w m a -&gt; m (a, w)
 </span><span class="hs-identifier hs-var">runWriterT</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Request -&gt; WriterT [Ev] IO (Either Refusal Response))
 -&gt; (Call -&gt; WriterT [Ev] IO Obs)
@@ -47,8 +124,8 @@ MonadWriter [Ev] m =&gt;
 -&gt; Int
 -&gt; Cofree HarnessF Ctx
 -&gt; m (Maybe Outcome)
-</span><a href="Harness.Interp.html#interp"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679147810"><span class="annot"><span class="annottext">Request
-</span><a href="#local-6989586621679147810"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO (Either Refusal Response)
+</span><a href="Harness.Interp.html#interp"><span class="hs-identifier hs-var">interp</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679147837"><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679147837"><span class="hs-identifier hs-var">q</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO (Either Refusal Response)
 -&gt; WriterT [Ev] IO (Either Refusal Response)
 forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; WriterT [Ev] m a
 forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
@@ -58,9 +135,9 @@ m a -&gt; t m a
 forall (m :: * -&gt; *).
 Env m -&gt; Request -&gt; m (Either Refusal Response)
 </span><a href="Harness.Run.html#oracle"><span class="hs-identifier hs-var">oracle</span></a></span><span> </span><span class="annot"><span class="annottext">Env IO
-</span><a href="#local-6989586621679147806"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">Request
-</span><a href="#local-6989586621679147810"><span class="hs-identifier hs-var">q</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679147811"><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679147811"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO Obs -&gt; WriterT [Ev] IO Obs
+</span><a href="#local-6989586621679147833"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">Request
+</span><a href="#local-6989586621679147837"><span class="hs-identifier hs-var">q</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679147838"><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679147838"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">IO Obs -&gt; WriterT [Ev] IO Obs
 forall (m :: * -&gt; *) a. Monad m =&gt; m a -&gt; WriterT [Ev] m a
 forall (t :: (* -&gt; *) -&gt; * -&gt; *) (m :: * -&gt; *) a.
 (MonadTrans t, Monad m) =&gt;
@@ -68,10 +145,10 @@ m a -&gt; t m a
 </span><span class="hs-identifier hs-var">lift</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Env IO -&gt; Call -&gt; IO Obs
 forall (m :: * -&gt; *). Env m -&gt; Call -&gt; m Obs
 </span><a href="Harness.Run.html#world"><span class="hs-identifier hs-var">world</span></a></span><span> </span><span class="annot"><span class="annottext">Env IO
-</span><a href="#local-6989586621679147806"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679147811"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
+</span><a href="#local-6989586621679147833"><span class="hs-identifier hs-var">env</span></a></span><span> </span><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679147838"><span class="hs-identifier hs-var">c</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Int
 forall a. Bounded a =&gt; a
 </span><span class="hs-identifier hs-var">maxBound</span></span><span> </span><span class="annot"><span class="annottext">Cofree HarnessF Ctx
-</span><a href="#local-6989586621679147807"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-31"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.Alphabet.html#Stuck"><span class="hs-identifier hs-type">Stuck</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;fuel exhausted&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">id</span></span><span> </span><span class="annot"><a href="#local-6989586621679147808"><span class="hs-identifier hs-type">mo</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-32"></span></pre></body></html>
+</span><a href="#local-6989586621679147834"><span class="hs-identifier hs-var">w</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-108"></span><span>  </span><span class="annot"><span class="hs-identifier hs-type">pure</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">maybe</span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.Alphabet.html#Stuck"><span class="hs-identifier hs-type">Stuck</span></a></span><span> </span><span class="annot"><span class="hs-string">&quot;fuel exhausted&quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="hs-identifier hs-type">id</span></span><span> </span><span class="annot"><a href="#local-6989586621679147835"><span class="hs-identifier hs-type">mo</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-109"></span></pre></body></html>

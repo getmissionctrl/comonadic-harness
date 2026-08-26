@@ -1,31 +1,59 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | The harness state @S@ and the three quotients on it:</span><span>
-</span><span id="line-2"></span><span class="hs-comment">-- @project@ (lossy, what the model sees), the affordance fold, and @view@</span><span>
-</span><span id="line-3"></span><span class="hs-comment">-- (the annotation placed on every tree node).</span><span>
-</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Harness.State.html"><span class="hs-identifier">Harness.State</span></a></span><span>
-</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Harness.State.html#Mode"><span class="hs-identifier">Mode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#Turn"><span class="hs-identifier">Turn</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-7"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier">S</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-8"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier">Ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-9"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#project"><span class="hs-identifier">project</span></a></span><span>
-</span><span id="line-10"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#allTools"><span class="hs-identifier">allTools</span></a></span><span>
-</span><span id="line-11"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#afford"><span class="hs-identifier">afford</span></a></span><span>
-</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#request"><span class="hs-identifier">request</span></a></span><span>
-</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#view"><span class="hs-identifier">view</span></a></span><span>
-</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#renderLine"><span class="hs-identifier">renderLine</span></a></span><span>
-</span><span id="line-15"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-16"></span><span>
-</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
-</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Alphabet.html"><span class="hs-identifier">Harness.Alphabet</span></a></span><span>
-</span><span id="line-19"></span><span>
-</span><span id="line-20"></span><span class="hs-keyword">data</span><span> </span><span id="Mode"><span class="annot"><a href="Harness.State.html#Mode"><span class="hs-identifier hs-var">Mode</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Working"><span class="annot"><a href="Harness.State.html#Working"><span class="hs-identifier hs-var">Working</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Summarising"><span class="annot"><a href="Harness.State.html#Summarising"><span class="hs-identifier hs-var">Summarising</span></a></span></span><span>
-</span><span id="line-21"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147374"><span id="local-6989586621679147379"><span class="annot"><span class="annottext">Mode -&gt; Mode -&gt; Bool
+</span><span id="line-2"></span><span class="hs-comment">-- 'project' (lossy, what the model sees), the affordance fold 'afford', and</span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- 'view' (the annotation placed on every tree node).</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- @S@ is the runtime representation &#8212; the thing the coalgebra</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- 'Harness.Coalgebra.step' consumes and evolves. The alphabet ('Harness.Alphabet')</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- is the shape; this module is the memory. The split enforced across the two is</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- invariant 2: __execution consumes the shape, analysis consumes the annotation__.</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- 'project'\/'afford'\/'request' feed execution; 'view' produces the 'Ctx' that</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- only analysis (@probe@\/@governed@) reads. If a field of 'Ctx' ever began to</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- influence which successor is chosen, it would belong in @S@ and in @step@, not</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- here.</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- The three quotients are lossy maps out of @S@: 'project' forgets everything</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- but the flattened prompt, 'afford' forgets everything but the tool set, and</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- 'view' bundles what analysis is allowed to see. Compaction is interesting</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- precisely because 'project' is lossy: two different @S@ can project to the same</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- 'Prompt', and the bisimulation law asks when that shared projection means the</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- agent behaves identically.</span><span>
+</span><span id="line-20"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Harness.State.html"><span class="hs-identifier">Harness.State</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Harness.State.html#Mode"><span class="hs-identifier">Mode</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#Turn"><span class="hs-identifier">Turn</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier">S</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-24"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier">Ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#project"><span class="hs-identifier">project</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#allTools"><span class="hs-identifier">allTools</span></a></span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#afford"><span class="hs-identifier">afford</span></a></span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#request"><span class="hs-identifier">request</span></a></span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#view"><span class="hs-identifier">view</span></a></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.State.html#renderLine"><span class="hs-identifier">renderLine</span></a></span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Alphabet.html"><span class="hs-identifier">Harness.Alphabet</span></a></span><span>
+</span><span id="line-35"></span><span>
+</span><span id="line-36"></span><span class="hs-comment">-- | Which of the two turn-shapes the harness is currently in. Both go through</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- the single 'Harness.Alphabet.Render' constructor; @Mode@ is the bit that tells</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- 'request' and 'afford' which one to build, so the alphabet does not need a</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- separate &quot;summarise&quot; symbol. Flipping the mode is the coalgebra's only</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- response to an 'Harness.Alphabet.Overflow'.</span><span>
+</span><span id="line-41"></span><span class="hs-keyword">data</span><span> </span><span id="Mode"><span class="annot"><a href="Harness.State.html#Mode"><span class="hs-identifier hs-var">Mode</span></a></span></span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Working"><span class="annot"><a href="Harness.State.html#Working"><span class="hs-identifier hs-var">Working</span></a></span></span><span>
+</span><span id="line-43"></span><span>    </span><span class="hs-comment">-- ^ Ordinary task turns: 'request' offers the mode-dependent tool set and</span><span>
+</span><span id="line-44"></span><span>    </span><span class="hs-comment">-- the prompt is the plain projection.</span><span>
+</span><span id="line-45"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Summarising"><span class="annot"><a href="Harness.State.html#Summarising"><span class="hs-identifier hs-var">Summarising</span></a></span></span><span>
+</span><span id="line-46"></span><span>    </span><span class="hs-comment">-- ^ A compaction turn: 'afford' offers no tools and 'request' appends a</span><span>
+</span><span id="line-47"></span><span>    </span><span class="hs-comment">-- summarise instruction. The next successful 'Harness.Alphabet.Response'</span><span>
+</span><span id="line-48"></span><span>    </span><span class="hs-comment">-- collapses the transcript to a single 'Summary' and returns to 'Working'.</span><span>
+</span><span id="line-49"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147380"><span id="local-6989586621679147385"><span class="annot"><span class="annottext">Mode -&gt; Mode -&gt; Bool
 (Mode -&gt; Mode -&gt; Bool) -&gt; (Mode -&gt; Mode -&gt; Bool) -&gt; Eq Mode
 forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
 $c== :: Mode -&gt; Mode -&gt; Bool
 == :: Mode -&gt; Mode -&gt; Bool
 $c/= :: Mode -&gt; Mode -&gt; Bool
 /= :: Mode -&gt; Mode -&gt; Bool
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147383"><span id="local-6989586621679147385"><span id="local-6989586621679147389"><span class="annot"><span class="annottext">Int -&gt; Mode -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147389"><span id="local-6989586621679147391"><span id="local-6989586621679147395"><span class="annot"><span class="annottext">Int -&gt; Mode -&gt; ShowS
 [Mode] -&gt; ShowS
 Mode -&gt; String
 (Int -&gt; Mode -&gt; ShowS)
@@ -38,7 +66,7 @@ $cshow :: Mode -&gt; String
 show :: Mode -&gt; String
 $cshowList :: [Mode] -&gt; ShowS
 showList :: [Mode] -&gt; ShowS
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147394"><span id="local-6989586621679147396"><span class="annot"><span class="annottext">(forall x. Mode -&gt; Rep Mode x)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147400"><span id="local-6989586621679147402"><span class="annot"><span class="annottext">(forall x. Mode -&gt; Rep Mode x)
 -&gt; (forall x. Rep Mode x -&gt; Mode) -&gt; Generic Mode
 forall x. Rep Mode x -&gt; Mode
 forall x. Mode -&gt; Rep Mode x
@@ -49,19 +77,34 @@ from :: forall x. Mode -&gt; Rep Mode x
 $cto :: forall x. Rep Mode x -&gt; Mode
 to :: forall x. Rep Mode x -&gt; Mode
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-22"></span><span>
-</span><span id="line-23"></span><span class="hs-keyword">data</span><span> </span><span id="Turn"><span class="annot"><a href="Harness.State.html#Turn"><span class="hs-identifier hs-var">Turn</span></a></span></span><span>
-</span><span id="line-24"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Assistant"><span class="annot"><a href="Harness.State.html#Assistant"><span class="hs-identifier hs-var">Assistant</span></a></span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-type">Response</span></a></span><span>
-</span><span id="line-25"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="User"><span class="annot"><a href="Harness.State.html#User"><span class="hs-identifier hs-var">User</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-type">Obs</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
-</span><span id="line-26"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Summary"><span class="annot"><a href="Harness.State.html#Summary"><span class="hs-identifier hs-var">Summary</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
-</span><span id="line-27"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147405"><span id="local-6989586621679147414"><span class="annot"><span class="annottext">Turn -&gt; Turn -&gt; Bool
+</span><span id="line-50"></span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- | One entry in the transcript. The transcript is the agent's whole memory; a</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- 'Turn' is rendered to a prompt line by 'renderLine' and the sequence of them</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- is what 'project' flattens. Compaction replaces a run of turns with a single</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- 'Summary'.</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">data</span><span> </span><span id="Turn"><span class="annot"><a href="Harness.State.html#Turn"><span class="hs-identifier hs-var">Turn</span></a></span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Assistant"><span class="annot"><a href="Harness.State.html#Assistant"><span class="hs-identifier hs-var">Assistant</span></a></span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-type">Response</span></a></span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-comment">-- ^ A model turn: carries the full 'Harness.Alphabet.Response' (what it</span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-comment">-- said and which tools it called). An 'Assistant' turn with no</span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-comment">-- 'Harness.Alphabet.calls' at the head of the transcript in 'Working' mode</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-comment">-- is the completion signal.</span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="User"><span class="annot"><a href="Harness.State.html#User"><span class="hs-identifier hs-var">User</span></a></span></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-type">Obs</span></a></span><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-comment">-- ^ A batch of tool results fed back to the model: each performed (or</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-comment">-- repaired) 'Harness.Alphabet.Call' paired with its</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-comment">-- 'Harness.Alphabet.Obs'. Grouped into one turn so consecutive tool</span><span>
+</span><span id="line-65"></span><span>    </span><span class="hs-comment">-- observations append to the same 'User' line rather than proliferating.</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Summary"><span class="annot"><a href="Harness.State.html#Summary"><span class="hs-identifier hs-var">Summary</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-67"></span><span>    </span><span class="hs-comment">-- ^ A compaction marker. Produced by a 'Summarising' turn (replacing the</span><span>
+</span><span id="line-68"></span><span>    </span><span class="hs-comment">-- transcript it summarises) or by the coalgebra to record a</span><span>
+</span><span id="line-69"></span><span>    </span><span class="hs-comment">-- 'Harness.Alphabet.Malformed' refusal.</span><span>
+</span><span id="line-70"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147414"><span id="local-6989586621679147423"><span class="annot"><span class="annottext">Turn -&gt; Turn -&gt; Bool
 (Turn -&gt; Turn -&gt; Bool) -&gt; (Turn -&gt; Turn -&gt; Bool) -&gt; Eq Turn
 forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
 $c== :: Turn -&gt; Turn -&gt; Bool
 == :: Turn -&gt; Turn -&gt; Bool
 $c/= :: Turn -&gt; Turn -&gt; Bool
 /= :: Turn -&gt; Turn -&gt; Bool
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147423"><span id="local-6989586621679147436"><span id="local-6989586621679147440"><span class="annot"><span class="annottext">Int -&gt; Turn -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147432"><span id="local-6989586621679147445"><span id="local-6989586621679147449"><span class="annot"><span class="annottext">Int -&gt; Turn -&gt; ShowS
 [Turn] -&gt; ShowS
 Turn -&gt; String
 (Int -&gt; Turn -&gt; ShowS)
@@ -74,7 +117,7 @@ $cshow :: Turn -&gt; String
 show :: Turn -&gt; String
 $cshowList :: [Turn] -&gt; ShowS
 showList :: [Turn] -&gt; ShowS
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147449"><span id="local-6989586621679147451"><span class="annot"><span class="annottext">(forall x. Turn -&gt; Rep Turn x)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147458"><span id="local-6989586621679147460"><span class="annot"><span class="annottext">(forall x. Turn -&gt; Rep Turn x)
 -&gt; (forall x. Rep Turn x -&gt; Turn) -&gt; Generic Turn
 forall x. Rep Turn x -&gt; Turn
 forall x. Turn -&gt; Rep Turn x
@@ -85,27 +128,43 @@ from :: forall x. Turn -&gt; Rep Turn x
 $cto :: forall x. Rep Turn x -&gt; Turn
 to :: forall x. Rep Turn x -&gt; Turn
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-28"></span><span>
-</span><span id="line-29"></span><span class="hs-comment">-- | Newest turn first. @mode@ is the bit that lets one 'Render' constructor</span><span>
-</span><span id="line-30"></span><span class="hs-comment">-- serve both a task turn and a summarisation turn.</span><span>
-</span><span id="line-31"></span><span class="hs-keyword">data</span><span> </span><span id="S"><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-var">S</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="S"><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-var">S</span></a></span></span><span>
-</span><span id="line-32"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="transcript"><span class="annot"><span class="annottext">S -&gt; [Turn]
+</span><span id="line-71"></span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- | The harness state: the agent's entire runtime memory, and the thing the</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- coalgebra 'Harness.Coalgebra.step' unfolds. This is the concrete carrier &#8212;</span><span>
+</span><span id="line-74"></span><span class="hs-comment">-- @Cofree HarnessF Ctx@ is only its denotation (invariant 3), never serialised.</span><span>
+</span><span id="line-75"></span><span class="hs-comment">-- Generators for the law tests reach @S@ only through public transitions, never</span><span>
+</span><span id="line-76"></span><span class="hs-comment">-- by record construction, so no unreachable state is ever measured (&#167;16.7).</span><span>
+</span><span id="line-77"></span><span class="hs-keyword">data</span><span> </span><span id="S"><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-var">S</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="S"><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-var">S</span></a></span></span><span>
+</span><span id="line-78"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="transcript"><span class="annot"><span class="annottext">S -&gt; [Turn]
 </span><a href="Harness.State.html#transcript"><span class="hs-identifier hs-var hs-var">transcript</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.State.html#Turn"><span class="hs-identifier hs-type">Turn</span></a></span><span class="hs-special">]</span><span>
-</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="pending"><span class="annot"><span class="annottext">S -&gt; [Call]
+</span><span id="line-79"></span><span>    </span><span class="hs-comment">-- ^ The conversation so far, __newest turn first__. 'project' reverses it</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-comment">-- before flattening. Compaction rewrites this list down to a single</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-comment">-- 'Summary'.</span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="pending"><span class="annot"><span class="annottext">S -&gt; [Call]
 </span><a href="Harness.State.html#pending"><span class="hs-identifier hs-var hs-var">pending</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span class="hs-special">]</span><span>
-</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="budget"><span class="annot"><span class="annottext">S -&gt; Int
-</span><a href="Harness.State.html#budget"><span class="hs-identifier hs-var hs-var">budget</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>      </span><span class="annot"><span class="hs-comment">-- ^ tokens, not turns</span></span><span>
-</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="mode"><span class="annot"><span class="annottext">S -&gt; Mode
+</span><span id="line-83"></span><span>    </span><span class="hs-comment">-- ^ Tool calls the model has asked for but that have not yet been performed.</span><span>
+</span><span id="line-84"></span><span>    </span><span class="hs-comment">-- 'Harness.Coalgebra.step' drains this list one 'Harness.Alphabet.Perform'</span><span>
+</span><span id="line-85"></span><span>    </span><span class="hs-comment">-- at a time, having first passed it through 'Harness.Coalgebra.admit' to</span><span>
+</span><span id="line-86"></span><span>    </span><span class="hs-comment">-- reject unafforded calls. Non-empty only in 'Working' mode.</span><span>
+</span><span id="line-87"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="budget"><span class="annot"><span class="annottext">S -&gt; Int
+</span><a href="Harness.State.html#budget"><span class="hs-identifier hs-var hs-var">budget</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-88"></span><span>    </span><span class="hs-comment">-- ^ Remaining token budget. Spent in __tokens, not turns__: each successful</span><span>
+</span><span id="line-89"></span><span>    </span><span class="hs-comment">-- turn debits @inTok + outTok@ of its 'Harness.Alphabet.Usage'. Reaching</span><span>
+</span><span id="line-90"></span><span>    </span><span class="hs-comment">-- zero halts the run with 'Harness.Alphabet.Exhausted'. [established]</span><span>
+</span><span id="line-91"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="mode"><span class="annot"><span class="annottext">S -&gt; Mode
 </span><a href="Harness.State.html#mode"><span class="hs-identifier hs-var hs-var">mode</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#Mode"><span class="hs-identifier hs-type">Mode</span></a></span><span>
-</span><span id="line-36"></span><span>  </span><span class="hs-special">}</span><span>
-</span><span id="line-37"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147460"><span id="local-6989586621679147469"><span class="annot"><span class="annottext">S -&gt; S -&gt; Bool
+</span><span id="line-92"></span><span>    </span><span class="hs-comment">-- ^ The current turn-shape. The single field that lets one</span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-comment">-- 'Harness.Alphabet.Render' constructor serve both a task turn and a</span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-comment">-- summarisation turn.</span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-96"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147472"><span id="local-6989586621679147481"><span class="annot"><span class="annottext">S -&gt; S -&gt; Bool
 (S -&gt; S -&gt; Bool) -&gt; (S -&gt; S -&gt; Bool) -&gt; Eq S
 forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
 $c== :: S -&gt; S -&gt; Bool
 == :: S -&gt; S -&gt; Bool
 $c/= :: S -&gt; S -&gt; Bool
 /= :: S -&gt; S -&gt; Bool
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147473"><span id="local-6989586621679147483"><span id="local-6989586621679147487"><span class="annot"><span class="annottext">Int -&gt; S -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147485"><span id="local-6989586621679147495"><span id="local-6989586621679147499"><span class="annot"><span class="annottext">Int -&gt; S -&gt; ShowS
 [S] -&gt; ShowS
 S -&gt; String
 (Int -&gt; S -&gt; ShowS) -&gt; (S -&gt; String) -&gt; ([S] -&gt; ShowS) -&gt; Show S
@@ -117,7 +176,7 @@ $cshow :: S -&gt; String
 show :: S -&gt; String
 $cshowList :: [S] -&gt; ShowS
 showList :: [S] -&gt; ShowS
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147490"><span id="local-6989586621679147492"><span class="annot"><span class="annottext">(forall x. S -&gt; Rep S x) -&gt; (forall x. Rep S x -&gt; S) -&gt; Generic S
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147502"><span id="local-6989586621679147504"><span class="annot"><span class="annottext">(forall x. S -&gt; Rep S x) -&gt; (forall x. Rep S x -&gt; S) -&gt; Generic S
 forall x. Rep S x -&gt; S
 forall x. S -&gt; Rep S x
 forall a.
@@ -127,21 +186,36 @@ from :: forall x. S -&gt; Rep S x
 $cto :: forall x. Rep S x -&gt; S
 to :: forall x. Rep S x -&gt; S
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-38"></span><span>
-</span><span id="line-39"></span><span class="hs-comment">-- | The annotation. Read by analysis (@probe@/@governed@), never used by</span><span>
-</span><span id="line-40"></span><span class="hs-comment">-- execution to choose a successor (invariant 2).</span><span>
-</span><span id="line-41"></span><span class="hs-keyword">data</span><span> </span><span id="Ctx"><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier hs-var">Ctx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Ctx"><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier hs-var">Ctx</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="ctxRequest"><span class="annot"><span class="annottext">Ctx -&gt; Request
-</span><a href="Harness.State.html#ctxRequest"><span class="hs-identifier hs-var hs-var">ctxRequest</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-type">Request</span></a></span><span class="hs-special">,</span><span> </span><span id="ctxBudget"><span class="annot"><span class="annottext">Ctx -&gt; Int
-</span><a href="Harness.State.html#ctxBudget"><span class="hs-identifier hs-var hs-var">ctxBudget</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span id="ctxMode"><span class="annot"><span class="annottext">Ctx -&gt; Mode
-</span><a href="Harness.State.html#ctxMode"><span class="hs-identifier hs-var hs-var">ctxMode</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#Mode"><span class="hs-identifier hs-type">Mode</span></a></span><span> </span><span class="hs-special">}</span><span>
-</span><span id="line-42"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147499"><span id="local-6989586621679147505"><span class="annot"><span class="annottext">Ctx -&gt; Ctx -&gt; Bool
+</span><span id="line-97"></span><span>
+</span><span id="line-98"></span><span class="hs-comment">-- | The annotation placed on every node of the unfolded tree &#8212; the third</span><span>
+</span><span id="line-99"></span><span class="hs-comment">-- quotient, produced by 'view'. Read by analysis (@probe@\/@governed@), __never__</span><span>
+</span><span id="line-100"></span><span class="hs-comment">-- used by execution to choose a successor (invariant 2). It is a read-only</span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- snapshot: the fields it exposes are a strict subset of @S@, chosen so that an</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- analyser can label a node without being able to steer it. If a field here</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- started influencing execution, it would have to move into @S@.</span><span>
+</span><span id="line-104"></span><span class="hs-keyword">data</span><span> </span><span id="Ctx"><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier hs-var">Ctx</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Ctx"><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier hs-var">Ctx</span></a></span></span><span>
+</span><span id="line-105"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="ctxRequest"><span class="annot"><span class="annottext">Ctx -&gt; Request
+</span><a href="Harness.State.html#ctxRequest"><span class="hs-identifier hs-var hs-var">ctxRequest</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-type">Request</span></a></span><span>
+</span><span id="line-106"></span><span>    </span><span class="hs-comment">-- ^ The 'Harness.Alphabet.Request' that would be sent at this node &#8212; the</span><span>
+</span><span id="line-107"></span><span>    </span><span class="hs-comment">-- prompt and afforded tools the analyser can inspect without contacting a</span><span>
+</span><span id="line-108"></span><span>    </span><span class="hs-comment">-- provider.</span><span>
+</span><span id="line-109"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ctxBudget"><span class="annot"><span class="annottext">Ctx -&gt; Int
+</span><a href="Harness.State.html#ctxBudget"><span class="hs-identifier hs-var hs-var">ctxBudget</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-110"></span><span>    </span><span class="hs-comment">-- ^ The remaining 'budget' at this node, so analysis can reason about how</span><span>
+</span><span id="line-111"></span><span>    </span><span class="hs-comment">-- close the run is to 'Harness.Alphabet.Exhausted'.</span><span>
+</span><span id="line-112"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="ctxMode"><span class="annot"><span class="annottext">Ctx -&gt; Mode
+</span><a href="Harness.State.html#ctxMode"><span class="hs-identifier hs-var hs-var">ctxMode</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#Mode"><span class="hs-identifier hs-type">Mode</span></a></span><span>
+</span><span id="line-113"></span><span>    </span><span class="hs-comment">-- ^ The 'mode' at this node, letting a trace distinguish task turns from</span><span>
+</span><span id="line-114"></span><span>    </span><span class="hs-comment">-- summarisation turns (as 'Harness.Interp.Ev' does).</span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-116"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147511"><span id="local-6989586621679147517"><span class="annot"><span class="annottext">Ctx -&gt; Ctx -&gt; Bool
 (Ctx -&gt; Ctx -&gt; Bool) -&gt; (Ctx -&gt; Ctx -&gt; Bool) -&gt; Eq Ctx
 forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
 $c== :: Ctx -&gt; Ctx -&gt; Bool
 == :: Ctx -&gt; Ctx -&gt; Bool
 $c/= :: Ctx -&gt; Ctx -&gt; Bool
 /= :: Ctx -&gt; Ctx -&gt; Bool
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147509"><span id="local-6989586621679147516"><span id="local-6989586621679147520"><span class="annot"><span class="annottext">Int -&gt; Ctx -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147521"><span id="local-6989586621679147528"><span id="local-6989586621679147532"><span class="annot"><span class="annottext">Int -&gt; Ctx -&gt; ShowS
 [Ctx] -&gt; ShowS
 Ctx -&gt; String
 (Int -&gt; Ctx -&gt; ShowS)
@@ -154,7 +228,7 @@ $cshow :: Ctx -&gt; String
 show :: Ctx -&gt; String
 $cshowList :: [Ctx] -&gt; ShowS
 showList :: [Ctx] -&gt; ShowS
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147523"><span id="local-6989586621679147525"><span class="annot"><span class="annottext">(forall x. Ctx -&gt; Rep Ctx x)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147535"><span id="local-6989586621679147537"><span class="annot"><span class="annottext">(forall x. Ctx -&gt; Rep Ctx x)
 -&gt; (forall x. Rep Ctx x -&gt; Ctx) -&gt; Generic Ctx
 forall x. Rep Ctx x -&gt; Ctx
 forall x. Ctx -&gt; Rep Ctx x
@@ -165,68 +239,75 @@ from :: forall x. Ctx -&gt; Rep Ctx x
 $cto :: forall x. Rep Ctx x -&gt; Ctx
 to :: forall x. Rep Ctx x -&gt; Ctx
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-43"></span><span>
-</span><span id="line-44"></span><span class="hs-comment">-- | Render one turn to a prompt line. Factored out so the prefix-stability</span><span>
-</span><span id="line-45"></span><span class="hs-comment">-- law (&#167;16.6) can be stated: in 'Working' mode,</span><span>
-</span><span id="line-46"></span><span class="hs-comment">-- @project (t : ts) == project ts &lt;&gt; renderLine t@ (appending a turn appends</span><span>
-</span><span id="line-47"></span><span class="hs-comment">-- to the end of the prompt, leaving the cached prefix untouched). [established]</span><span>
-</span><span id="line-48"></span><span class="annot"><a href="Harness.State.html#renderLine"><span class="hs-identifier hs-type">renderLine</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#Turn"><span class="hs-identifier hs-type">Turn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
-</span><span id="line-49"></span><span id="renderLine"><span class="annot"><span class="annottext">renderLine :: Turn -&gt; String
-</span><a href="Harness.State.html#renderLine"><span class="hs-identifier hs-var hs-var">renderLine</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.State.html#Assistant"><span class="hs-identifier hs-type">Assistant</span></a></span><span> </span><span id="local-6989586621679147527"><span class="annot"><span class="annottext">Response
-</span><a href="#local-6989586621679147527"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span class="hs-comment">-- | Render one 'Turn' to a single prompt line. Factored out so the</span><span>
+</span><span id="line-119"></span><span class="hs-comment">-- prefix-stability law (&#167;16.6) can be stated: in 'Working' mode,</span><span>
+</span><span id="line-120"></span><span class="hs-comment">-- @project (t : ts) == project ts &lt;&gt; renderLine t@ (appending a turn appends to</span><span>
+</span><span id="line-121"></span><span class="hs-comment">-- the end of the prompt, leaving the cached prefix untouched &#8212; the property a</span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- KV-cache relies on). Keeping this the /only/ turn-to-text function means the</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- law is about one definition, not two that might drift. [established]</span><span>
+</span><span id="line-124"></span><span class="annot"><a href="Harness.State.html#renderLine"><span class="hs-identifier hs-type">renderLine</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#Turn"><span class="hs-identifier hs-type">Turn</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-125"></span><span id="renderLine"><span class="annot"><span class="annottext">renderLine :: Turn -&gt; String
+</span><a href="Harness.State.html#renderLine"><span class="hs-identifier hs-var hs-var">renderLine</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.State.html#Assistant"><span class="hs-identifier hs-type">Assistant</span></a></span><span> </span><span id="local-6989586621679147539"><span class="annot"><span class="annottext">Response
+</span><a href="#local-6989586621679147539"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;A: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Response -&gt; String
 </span><a href="Harness.Alphabet.html#say"><span class="hs-identifier hs-var">say</span></a></span><span> </span><span class="annot"><span class="annottext">Response
-</span><a href="#local-6989586621679147527"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="#local-6989586621679147539"><span class="hs-identifier hs-var">r</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">(Call -&gt; String) -&gt; [Call] -&gt; String
 forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
-</span><span class="hs-identifier hs-var">concatMap</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679147530"><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679147530"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-identifier hs-var">concatMap</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679147542"><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679147542"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot; &lt;&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">Call -&gt; String
 </span><a href="Harness.Alphabet.html#tool"><span class="hs-identifier hs-var">tool</span></a></span><span> </span><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679147530"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="#local-6989586621679147542"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;&gt;&quot;</span></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Response -&gt; [Call]
 </span><a href="Harness.Alphabet.html#calls"><span class="hs-identifier hs-var">calls</span></a></span><span> </span><span class="annot"><span class="annottext">Response
-</span><a href="#local-6989586621679147527"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-50"></span><span class="annot"><a href="Harness.State.html#renderLine"><span class="hs-identifier hs-var">renderLine</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.State.html#User"><span class="hs-identifier hs-type">User</span></a></span><span> </span><span id="local-6989586621679147533"><span class="annot"><span class="annottext">[(Call, Obs)]
-</span><a href="#local-6989586621679147533"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679147539"><span class="hs-identifier hs-var">r</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-126"></span><span class="annot"><a href="Harness.State.html#renderLine"><span class="hs-identifier hs-var">renderLine</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.State.html#User"><span class="hs-identifier hs-type">User</span></a></span><span> </span><span id="local-6989586621679147544"><span class="annot"><span class="annottext">[(Call, Obs)]
+</span><a href="#local-6989586621679147544"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span>     </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;U: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">((Call, Obs) -&gt; String) -&gt; [(Call, Obs)] -&gt; String
 forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
-</span><span class="hs-identifier hs-var">concatMap</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679147534"><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679147534"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-type">Obs</span></a></span><span> </span><span id="local-6989586621679147536"><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621679147536"><span class="hs-identifier hs-var">o</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Call -&gt; String
+</span><span class="hs-identifier hs-var">concatMap</span></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span class="hs-special">(</span><span id="local-6989586621679147545"><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679147545"><span class="hs-identifier hs-var">c</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-type">Obs</span></a></span><span> </span><span id="local-6989586621679147546"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679147546"><span class="hs-identifier hs-var">o</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Call -&gt; String
 </span><a href="Harness.Alphabet.html#tool"><span class="hs-identifier hs-var">tool</span></a></span><span> </span><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679147534"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="#local-6989586621679147545"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;=&quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621679147536"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="#local-6989586621679147546"><span class="hs-identifier hs-var">o</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot; &quot;</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(Call, Obs)]
-</span><a href="#local-6989586621679147533"><span class="hs-identifier hs-var">rs</span></a></span><span>
-</span><span id="line-51"></span><span class="annot"><a href="Harness.State.html#renderLine"><span class="hs-identifier hs-var">renderLine</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.State.html#Summary"><span class="hs-identifier hs-type">Summary</span></a></span><span> </span><span id="local-6989586621679147537"><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621679147537"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679147544"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-127"></span><span class="annot"><a href="Harness.State.html#renderLine"><span class="hs-identifier hs-var">renderLine</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.State.html#Summary"><span class="hs-identifier hs-type">Summary</span></a></span><span> </span><span id="local-6989586621679147547"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679147547"><span class="hs-identifier hs-var">t</span></a></span></span><span class="hs-special">)</span><span>   </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;S: &quot;</span></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621679147537"><span class="hs-identifier hs-var">t</span></a></span><span>
-</span><span id="line-52"></span><span>
-</span><span id="line-53"></span><span class="annot"><span class="hs-comment">-- | Quotient 1. Lossy, total, recomputed each turn.</span></span><span>
-</span><span id="line-54"></span><span class="annot"><a href="Harness.State.html#project"><span class="hs-identifier hs-type">project</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-type">Prompt</span></a></span><span>
-</span><span id="line-55"></span><span id="project"><span class="annot"><span class="annottext">project :: S -&gt; Prompt
-</span><a href="Harness.State.html#project"><span class="hs-identifier hs-var hs-var">project</span></a></span></span><span> </span><span id="local-6989586621679147538"><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679147538"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Prompt
+</span><a href="#local-6989586621679147547"><span class="hs-identifier hs-var">t</span></a></span><span>
+</span><span id="line-128"></span><span>
+</span><span id="line-129"></span><span class="hs-comment">-- | Quotient 1: the projection @S -&gt; Prompt@. Lossy (it keeps only the rendered</span><span>
+</span><span id="line-130"></span><span class="hs-comment">-- transcript, discarding 'pending', 'budget' and 'mode'), total, and recomputed</span><span>
+</span><span id="line-131"></span><span class="hs-comment">-- from scratch each turn rather than cached. The transcript is stored</span><span>
+</span><span id="line-132"></span><span class="hs-comment">-- newest-first, so 'project' reverses it to put the prompt in reading order.</span><span>
+</span><span id="line-133"></span><span class="hs-comment">-- Its lossiness is the whole point: distinct states sharing a 'Prompt' is the</span><span>
+</span><span id="line-134"></span><span class="hs-comment">-- collapse that compaction exploits and the bisimulation law quantifies.</span><span>
+</span><span id="line-135"></span><span class="annot"><a href="Harness.State.html#project"><span class="hs-identifier hs-type">project</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-type">Prompt</span></a></span><span>
+</span><span id="line-136"></span><span id="project"><span class="annot"><span class="annottext">project :: S -&gt; Prompt
+</span><a href="Harness.State.html#project"><span class="hs-identifier hs-var hs-var">project</span></a></span></span><span> </span><span id="local-6989586621679147548"><span class="annot"><span class="annottext">S
+</span><a href="#local-6989586621679147548"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">String -&gt; Prompt
 </span><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-var">Prompt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[String] -&gt; String
 </span><span class="hs-identifier hs-var">unlines</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">(Turn -&gt; String) -&gt; [Turn] -&gt; [String]
 forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
@@ -235,50 +316,57 @@ forall a b. (a -&gt; b) -&gt; [a] -&gt; [b]
 forall a. [a] -&gt; [a]
 </span><span class="hs-identifier hs-var">reverse</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; [Turn]
 </span><a href="Harness.State.html#transcript"><span class="hs-identifier hs-var">transcript</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679147538"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
-</span><span id="line-56"></span><span>
-</span><span id="line-57"></span><span class="annot"><a href="Harness.State.html#allTools"><span class="hs-identifier hs-type">allTools</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-type">ToolSpec</span></a></span><span class="hs-special">]</span><span>
-</span><span id="line-58"></span><span id="allTools"><span class="annot"><span class="annottext">allTools :: [ToolSpec]
+</span><a href="#local-6989586621679147548"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-137"></span><span>
+</span><span id="line-138"></span><span class="hs-comment">-- | The full catalogue of tools the harness can ever offer. 'afford' selects a</span><span>
+</span><span id="line-139"></span><span class="hs-comment">-- subset of this list per turn; nothing outside it is ever afforded. Kept as a</span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- flat constant so the affordance /policy/ lives entirely in 'afford' rather</span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- than being smeared across construction sites.</span><span>
+</span><span id="line-142"></span><span class="annot"><a href="Harness.State.html#allTools"><span class="hs-identifier hs-type">allTools</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-type">ToolSpec</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-143"></span><span id="allTools"><span class="annot"><span class="annottext">allTools :: [ToolSpec]
 </span><a href="Harness.State.html#allTools"><span class="hs-identifier hs-var hs-var">allTools</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
-</span><span id="line-59"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; ToolSpec
+</span><span id="line-144"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; ToolSpec
 </span><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-var">ToolSpec</span></a></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;read&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;{path:string}&quot;</span></span><span>
-</span><span id="line-60"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; ToolSpec
+</span><span id="line-145"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; ToolSpec
 </span><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-var">ToolSpec</span></a></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;bash&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;{cmd:string}&quot;</span></span><span>
-</span><span id="line-61"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; ToolSpec
+</span><span id="line-146"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; ToolSpec
 </span><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-var">ToolSpec</span></a></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;write&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;{path:string,body:string}&quot;</span></span><span>
-</span><span id="line-62"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; ToolSpec
+</span><span id="line-147"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String -&gt; String -&gt; ToolSpec
 </span><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-var">ToolSpec</span></a></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;commit&quot;</span></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;{msg:string}&quot;</span></span><span>
-</span><span id="line-63"></span><span>  </span><span class="hs-special">]</span><span>
-</span><span id="line-64"></span><span>
-</span><span id="line-65"></span><span class="hs-comment">-- | Mode-dependent affordances &#8212; a fold over the transcript, not a constant.</span><span>
-</span><span id="line-66"></span><span class="hs-comment">-- This is what makes the interface polynomial. @commit@ is only offered once</span><span>
-</span><span id="line-67"></span><span class="hs-comment">-- a @write@ has happened.</span><span>
-</span><span id="line-68"></span><span class="annot"><a href="Harness.State.html#afford"><span class="hs-identifier hs-type">afford</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-type">ToolSpec</span></a></span><span class="hs-special">]</span><span>
-</span><span id="line-69"></span><span id="afford"><span class="annot"><span class="annottext">afford :: S -&gt; [ToolSpec]
-</span><a href="Harness.State.html#afford"><span class="hs-identifier hs-var hs-var">afford</span></a></span></span><span> </span><span id="local-6989586621679147543"><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679147543"><span class="hs-identifier hs-var">s</span></a></span></span><span>
-</span><span id="line-70"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">S -&gt; Mode
+</span><span id="line-148"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="hs-comment">-- | Quotient 2: the affordance fold @S -&gt; [ToolSpec]@. Mode-dependent and a fold</span><span>
+</span><span id="line-151"></span><span class="hs-comment">-- over the transcript, __not a constant__ &#8212; this is precisely what makes the</span><span>
+</span><span id="line-152"></span><span class="hs-comment">-- interface polynomial (the set of directions available at a node varies with</span><span>
+</span><span id="line-153"></span><span class="hs-comment">-- the node). The policy: no tools at all while 'Summarising'; otherwise the</span><span>
+</span><span id="line-154"></span><span class="hs-comment">-- full 'allTools', except @commit@ is withheld until a @write@ has actually</span><span>
+</span><span id="line-155"></span><span class="hs-comment">-- happened, so the model cannot commit work it never wrote. [design]</span><span>
+</span><span id="line-156"></span><span class="annot"><a href="Harness.State.html#afford"><span class="hs-identifier hs-type">afford</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-type">ToolSpec</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-157"></span><span id="afford"><span class="annot"><span class="annottext">afford :: S -&gt; [ToolSpec]
+</span><a href="Harness.State.html#afford"><span class="hs-identifier hs-var hs-var">afford</span></a></span></span><span> </span><span id="local-6989586621679147552"><span class="annot"><span class="annottext">S
+</span><a href="#local-6989586621679147552"><span class="hs-identifier hs-var">s</span></a></span></span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">S -&gt; Mode
 </span><a href="Harness.State.html#mode"><span class="hs-identifier hs-var">mode</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679147543"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Mode -&gt; Mode -&gt; Bool
+</span><a href="#local-6989586621679147552"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="annot"><span class="annottext">Mode -&gt; Mode -&gt; Bool
 forall a. Eq a =&gt; a -&gt; a -&gt; Bool
 </span><span class="hs-operator hs-var">==</span></span><span> </span><span class="annot"><span class="annottext">Mode
 </span><a href="Harness.State.html#Summarising"><span class="hs-identifier hs-var">Summarising</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
-</span><span id="line-71"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">(Turn -&gt; Bool) -&gt; [Turn] -&gt; Bool
+</span><span id="line-159"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">(Turn -&gt; Bool) -&gt; [Turn] -&gt; Bool
 forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
 </span><span class="hs-identifier hs-var">any</span></span><span> </span><span class="annot"><span class="annottext">Turn -&gt; Bool
-</span><a href="#local-6989586621679147545"><span class="hs-identifier hs-var">wrote</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; [Turn]
+</span><a href="#local-6989586621679147554"><span class="hs-identifier hs-var">wrote</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; [Turn]
 </span><a href="Harness.State.html#transcript"><span class="hs-identifier hs-var">transcript</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679147543"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ToolSpec]
+</span><a href="#local-6989586621679147552"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">[ToolSpec]
 </span><a href="Harness.State.html#allTools"><span class="hs-identifier hs-var">allTools</span></a></span><span>
-</span><span id="line-72"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><span id="line-160"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span class="annot"><span class="annottext">Bool
 </span><span class="hs-identifier hs-var">otherwise</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(ToolSpec -&gt; Bool) -&gt; [ToolSpec] -&gt; [ToolSpec]
 forall a. (a -&gt; Bool) -&gt; [a] -&gt; [a]
 </span><span class="hs-identifier hs-var">filter</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; String -&gt; Bool
@@ -289,10 +377,10 @@ forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">ToolSpec -&gt; String
 </span><a href="Harness.Alphabet.html#specName"><span class="hs-identifier hs-var">specName</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[ToolSpec]
 </span><a href="Harness.State.html#allTools"><span class="hs-identifier hs-var">allTools</span></a></span><span>
-</span><span id="line-73"></span><span>  </span><span class="hs-keyword">where</span><span>
-</span><span id="line-74"></span><span>    </span><span id="local-6989586621679147545"><span class="annot"><span class="annottext">wrote :: Turn -&gt; Bool
-</span><a href="#local-6989586621679147545"><span class="hs-identifier hs-var hs-var">wrote</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.State.html#User"><span class="hs-identifier hs-type">User</span></a></span><span> </span><span id="local-6989586621679147554"><span class="annot"><span class="annottext">[(Call, Obs)]
-</span><a href="#local-6989586621679147554"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((Call, Obs) -&gt; Bool) -&gt; [(Call, Obs)] -&gt; Bool
+</span><span id="line-161"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-162"></span><span>    </span><span id="local-6989586621679147554"><span class="annot"><span class="annottext">wrote :: Turn -&gt; Bool
+</span><a href="#local-6989586621679147554"><span class="hs-identifier hs-var hs-var">wrote</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.State.html#User"><span class="hs-identifier hs-type">User</span></a></span><span> </span><span id="local-6989586621679147563"><span class="annot"><span class="annottext">[(Call, Obs)]
+</span><a href="#local-6989586621679147563"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">((Call, Obs) -&gt; Bool) -&gt; [(Call, Obs)] -&gt; Bool
 forall (t :: * -&gt; *) a. Foldable t =&gt; (a -&gt; Bool) -&gt; t a -&gt; Bool
 </span><span class="hs-identifier hs-var">any</span></span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; String -&gt; Bool
 forall a. Eq a =&gt; a -&gt; a -&gt; Bool
@@ -305,49 +393,58 @@ forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
 </span><span class="hs-operator hs-var">.</span></span><span> </span><span class="annot"><span class="annottext">(Call, Obs) -&gt; Call
 forall a b. (a, b) -&gt; a
 </span><span class="hs-identifier hs-var">fst</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">[(Call, Obs)]
-</span><a href="#local-6989586621679147554"><span class="hs-identifier hs-var">rs</span></a></span><span>
-</span><span id="line-75"></span><span>    </span><span class="annot"><a href="#local-6989586621679147545"><span class="hs-identifier hs-var">wrote</span></a></span><span> </span><span class="annot"><span class="annottext">Turn
+</span><a href="#local-6989586621679147563"><span class="hs-identifier hs-var">rs</span></a></span><span>
+</span><span id="line-163"></span><span>    </span><span class="annot"><a href="#local-6989586621679147554"><span class="hs-identifier hs-var">wrote</span></a></span><span> </span><span class="annot"><span class="annottext">Turn
 </span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Bool
 </span><span class="hs-identifier hs-var">False</span></span><span>
-</span><span id="line-76"></span><span>
-</span><span id="line-77"></span><span class="hs-comment">-- | In 'Summarising' mode the request carries a summarisation instruction and</span><span>
-</span><span id="line-78"></span><span class="hs-comment">-- /no tools/ &#8212; so compaction goes through the same 'Render' constructor.</span><span>
-</span><span id="line-79"></span><span class="annot"><a href="Harness.State.html#request"><span class="hs-identifier hs-type">request</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-type">Request</span></a></span><span>
-</span><span id="line-80"></span><span id="request"><span class="annot"><span class="annottext">request :: S -&gt; Request
-</span><a href="Harness.State.html#request"><span class="hs-identifier hs-var hs-var">request</span></a></span></span><span> </span><span id="local-6989586621679147556"><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679147556"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">S -&gt; Mode
+</span><span id="line-164"></span><span>
+</span><span id="line-165"></span><span class="hs-comment">-- | Assemble the 'Harness.Alphabet.Request' for the current turn. In 'Working'</span><span>
+</span><span id="line-166"></span><span class="hs-comment">-- mode it pairs the plain 'project'ion with the afforded tools. In 'Summarising'</span><span>
+</span><span id="line-167"></span><span class="hs-comment">-- mode the request carries a summarisation instruction appended to the prompt</span><span>
+</span><span id="line-168"></span><span class="hs-comment">-- and __no tools__ &#8212; so compaction goes through the same</span><span>
+</span><span id="line-169"></span><span class="hs-comment">-- 'Harness.Alphabet.Render' constructor as an ordinary turn, needing no new</span><span>
+</span><span id="line-170"></span><span class="hs-comment">-- alphabet symbol.</span><span>
+</span><span id="line-171"></span><span class="annot"><a href="Harness.State.html#request"><span class="hs-identifier hs-type">request</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-type">Request</span></a></span><span>
+</span><span id="line-172"></span><span id="request"><span class="annot"><span class="annottext">request :: S -&gt; Request
+</span><a href="Harness.State.html#request"><span class="hs-identifier hs-var hs-var">request</span></a></span></span><span> </span><span id="local-6989586621679147565"><span class="annot"><span class="annottext">S
+</span><a href="#local-6989586621679147565"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">S -&gt; Mode
 </span><a href="Harness.State.html#mode"><span class="hs-identifier hs-var">mode</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679147556"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
-</span><span id="line-81"></span><span>  </span><span class="annot"><span class="annottext">Mode
+</span><a href="#local-6989586621679147565"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
+</span><span id="line-173"></span><span>  </span><span class="annot"><span class="annottext">Mode
 </span><a href="Harness.State.html#Working"><span class="hs-identifier hs-var">Working</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Prompt -&gt; [ToolSpec] -&gt; Request
 </span><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-var">Request</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; Prompt
 </span><a href="Harness.State.html#project"><span class="hs-identifier hs-var">project</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679147556"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; [ToolSpec]
+</span><a href="#local-6989586621679147565"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; [ToolSpec]
 </span><a href="Harness.State.html#afford"><span class="hs-identifier hs-var">afford</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679147556"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-82"></span><span>  </span><span class="annot"><span class="annottext">Mode
+</span><a href="#local-6989586621679147565"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-174"></span><span>  </span><span class="annot"><span class="annottext">Mode
 </span><a href="Harness.State.html#Summarising"><span class="hs-identifier hs-var">Summarising</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span>
-</span><span id="line-83"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-type">Prompt</span></a></span><span> </span><span id="local-6989586621679147558"><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621679147558"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">S -&gt; Prompt
+</span><span id="line-175"></span><span>    </span><span class="hs-keyword">let</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-type">Prompt</span></a></span><span> </span><span id="local-6989586621679147566"><span class="annot"><span class="annottext">String
+</span><a href="#local-6989586621679147566"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">S -&gt; Prompt
 </span><a href="Harness.State.html#project"><span class="hs-identifier hs-var">project</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679147556"><span class="hs-identifier hs-var">s</span></a></span><span>
-</span><span id="line-84"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Prompt -&gt; [ToolSpec] -&gt; Request
+</span><a href="#local-6989586621679147565"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-176"></span><span>     </span><span class="hs-keyword">in</span><span> </span><span class="annot"><span class="annottext">Prompt -&gt; [ToolSpec] -&gt; Request
 </span><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-var">Request</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Prompt
 </span><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-var">Prompt</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String
-</span><a href="#local-6989586621679147558"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
+</span><a href="#local-6989586621679147566"><span class="hs-identifier hs-var">p</span></a></span><span> </span><span class="annot"><span class="annottext">String -&gt; ShowS
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;\n[summarise the above in one line]&quot;</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
-</span><span id="line-85"></span><span>
-</span><span id="line-86"></span><span class="annot"><a href="Harness.State.html#view"><span class="hs-identifier hs-type">view</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier hs-type">Ctx</span></a></span><span>
-</span><span id="line-87"></span><span id="view"><span class="annot"><span class="annottext">view :: S -&gt; Ctx
-</span><a href="Harness.State.html#view"><span class="hs-identifier hs-var hs-var">view</span></a></span></span><span> </span><span id="local-6989586621679147559"><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679147559"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Request -&gt; Int -&gt; Mode -&gt; Ctx
+</span><span id="line-177"></span><span>
+</span><span id="line-178"></span><span class="hs-comment">-- | Quotient 3: the annotation map @S -&gt; Ctx@ used to label every node of the</span><span>
+</span><span id="line-179"></span><span class="hs-comment">-- unfolded tree (@unfold (\\s -&gt; (view s, step s))@ in 'Harness.Coalgebra.harness').</span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- It exposes only what analysis is permitted to read &#8212; the pending 'request',</span><span>
+</span><span id="line-181"></span><span class="hs-comment">-- the remaining 'budget', and the 'mode' &#8212; and deliberately withholds the rest</span><span>
+</span><span id="line-182"></span><span class="hs-comment">-- of @S@, keeping execution and analysis on their separate sides of invariant 2.</span><span>
+</span><span id="line-183"></span><span class="annot"><a href="Harness.State.html#view"><span class="hs-identifier hs-type">view</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.State.html#Ctx"><span class="hs-identifier hs-type">Ctx</span></a></span><span>
+</span><span id="line-184"></span><span id="view"><span class="annot"><span class="annottext">view :: S -&gt; Ctx
+</span><a href="Harness.State.html#view"><span class="hs-identifier hs-var hs-var">view</span></a></span></span><span> </span><span id="local-6989586621679147567"><span class="annot"><span class="annottext">S
+</span><a href="#local-6989586621679147567"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Request -&gt; Int -&gt; Mode -&gt; Ctx
 </span><a href="Harness.State.html#Ctx"><span class="hs-identifier hs-var">Ctx</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; Request
 </span><a href="Harness.State.html#request"><span class="hs-identifier hs-var">request</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679147559"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; Int
+</span><a href="#local-6989586621679147567"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; Int
 </span><a href="Harness.State.html#budget"><span class="hs-identifier hs-var">budget</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679147559"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; Mode
+</span><a href="#local-6989586621679147567"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">S -&gt; Mode
 </span><a href="Harness.State.html#mode"><span class="hs-identifier hs-var">mode</span></a></span><span> </span><span class="annot"><span class="annottext">S
-</span><a href="#local-6989586621679147559"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-88"></span></pre></body></html>
+</span><a href="#local-6989586621679147567"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-185"></span></pre></body></html>

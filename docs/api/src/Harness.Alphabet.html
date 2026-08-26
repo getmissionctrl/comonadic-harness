@@ -2,28 +2,49 @@
 </span><span id="line-2"></span><span>
 </span><span id="line-3"></span><span class="hs-comment">-- | The closed action alphabet. Three constructors, no escape hatch.</span><span>
 </span><span id="line-4"></span><span class="hs-comment">--</span><span>
-</span><span id="line-5"></span><span class="hs-comment">-- Positions are what the harness /does/; directions (the function</span><span>
-</span><span id="line-6"></span><span class="hs-comment">-- arguments) are what it does /not/ control. The harness is deterministic;</span><span>
-</span><span id="line-7"></span><span class="hs-comment">-- all nondeterminism lives in the directions, which is exactly why</span><span>
-</span><span id="line-8"></span><span class="hs-comment">-- 'Control.Comonad.Cofree.duplicate' on the unfolded tree is pure and lazy.</span><span>
-</span><span id="line-9"></span><span class="hs-comment">-- [established]</span><span>
-</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Harness.Alphabet.html"><span class="hs-identifier">Harness.Alphabet</span></a></span><span>
-</span><span id="line-11"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier">Prompt</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-12"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier">ToolSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-13"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier">Request</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-14"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier">Call</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-15"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier">Obs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Usage"><span class="hs-identifier">Usage</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-17"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier">Response</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier">Refusal</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-19"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Outcome"><span class="hs-identifier">Outcome</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier">HarnessF</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-21"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-22"></span><span>
-</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
-</span><span id="line-24"></span><span>
-</span><span id="line-25"></span><span class="hs-keyword">newtype</span><span> </span><span id="Prompt"><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-var">Prompt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Prompt"><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-var">Prompt</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
-</span><span id="line-26"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147005"><span id="local-6989586621679147010"><span class="annot"><span class="annottext">Prompt -&gt; Prompt -&gt; Bool
+</span><span id="line-5"></span><span class="hs-comment">-- This module is the polynomial interface functor 'HarnessF' together with the</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- concrete payloads its constructors carry. It is the /shape/ of the agent: the</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- set of things the harness can do and the set of replies it can receive. It</span><span>
+</span><span id="line-8"></span><span class="hs-comment">-- deliberately says nothing about state &#8212; the coalgebra 'Harness.Coalgebra.step'</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- supplies that (invariant 4: evolution lives outside the functor, so 'HarnessF'</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- must never mention @S@).</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- Positions are what the harness /does/; directions (the function arguments) are</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- what it does /not/ control. In 'HarnessF' the positions are 'Request', 'Call'</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- and 'Outcome'; the directions are the @... -&gt; x@ continuations. The harness is</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- deterministic; all nondeterminism lives in the directions, which is exactly</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- why 'Control.Comonad.Cofree.duplicate' on the unfolded tree is pure and lazy.</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- [established]</span><span>
+</span><span id="line-18"></span><span class="hs-comment">--</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- The alphabet being __closed__ is the load-bearing property. A fourth</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- constructor is not a local change: it forces a matching case in</span><span>
+</span><span id="line-21"></span><span class="hs-comment">-- 'Harness.Interp.interp' (the single interpreter both 'Harness.Run.run' and</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- 'Harness.Probe.probe' factor through) and in the law tests, or</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- @-Wincomplete-patterns@ fails the build (invariant 1). There are no wildcard</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- matches over 'HarnessF' anywhere, so this coupling cannot be silently evaded.</span><span>
+</span><span id="line-25"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Harness.Alphabet.html"><span class="hs-identifier">Harness.Alphabet</span></a></span><span>
+</span><span id="line-26"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier">Prompt</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-27"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier">ToolSpec</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier">Request</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-29"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier">Call</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier">Obs</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Usage"><span class="hs-identifier">Usage</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier">Response</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-33"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier">Refusal</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Outcome"><span class="hs-identifier">Outcome</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier">HarnessF</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-37"></span><span>
+</span><span id="line-38"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><span class="hs-identifier">GHC.Generics</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier">Generic</span></span><span class="hs-special">)</span><span>
+</span><span id="line-39"></span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- | The text actually handed to the model on a turn: the transcript projected</span><span>
+</span><span id="line-41"></span><span class="hs-comment">-- down to a flat prompt string. It is the output of the lossy quotient</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- 'Harness.State.project', so two distinct states can share a 'Prompt' &#8212; that</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- collapse is what compaction exploits and what the bisimulation law measures.</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- Wrapped in a @newtype@ so a projected prompt is never confused with an</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- arbitrary 'String' at a call site.</span><span>
+</span><span id="line-46"></span><span class="hs-keyword">newtype</span><span> </span><span id="Prompt"><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-var">Prompt</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Prompt"><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-var">Prompt</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-47"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147007"><span id="local-6989586621679147012"><span class="annot"><span class="annottext">Prompt -&gt; Prompt -&gt; Bool
 (Prompt -&gt; Prompt -&gt; Bool)
 -&gt; (Prompt -&gt; Prompt -&gt; Bool) -&gt; Eq Prompt
 forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
@@ -31,7 +52,7 @@ $c== :: Prompt -&gt; Prompt -&gt; Bool
 == :: Prompt -&gt; Prompt -&gt; Bool
 $c/= :: Prompt -&gt; Prompt -&gt; Bool
 /= :: Prompt -&gt; Prompt -&gt; Bool
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147016"><span id="local-6989586621679147023"><span id="local-6989586621679147027"><span class="annot"><span class="annottext">Int -&gt; Prompt -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147018"><span id="local-6989586621679147025"><span id="local-6989586621679147029"><span class="annot"><span class="annottext">Int -&gt; Prompt -&gt; ShowS
 [Prompt] -&gt; ShowS
 Prompt -&gt; String
 (Int -&gt; Prompt -&gt; ShowS)
@@ -44,7 +65,7 @@ $cshow :: Prompt -&gt; String
 show :: Prompt -&gt; String
 $cshowList :: [Prompt] -&gt; ShowS
 showList :: [Prompt] -&gt; ShowS
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147033"><span id="local-6989586621679147035"><span class="annot"><span class="annottext">(forall x. Prompt -&gt; Rep Prompt x)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147035"><span id="local-6989586621679147037"><span class="annot"><span class="annottext">(forall x. Prompt -&gt; Rep Prompt x)
 -&gt; (forall x. Rep Prompt x -&gt; Prompt) -&gt; Generic Prompt
 forall x. Rep Prompt x -&gt; Prompt
 forall x. Prompt -&gt; Rep Prompt x
@@ -55,13 +76,27 @@ from :: forall x. Prompt -&gt; Rep Prompt x
 $cto :: forall x. Rep Prompt x -&gt; Prompt
 to :: forall x. Rep Prompt x -&gt; Prompt
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-27"></span><span>
-</span><span id="line-28"></span><span class="hs-comment">-- | A tool the provider is told it may call. Carried in the 'Request' so it</span><span>
-</span><span id="line-29"></span><span class="hs-comment">-- actually reaches the model &#8212; the amendment 'reference/Harness.hs' lacked.</span><span>
-</span><span id="line-30"></span><span class="hs-keyword">data</span><span> </span><span id="ToolSpec"><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-var">ToolSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ToolSpec"><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-var">ToolSpec</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="specName"><span class="annot"><span class="annottext">ToolSpec -&gt; String
-</span><a href="Harness.Alphabet.html#specName"><span class="hs-identifier hs-var hs-var">specName</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span> </span><span id="specSchema"><span class="annot"><span class="annottext">ToolSpec -&gt; String
-</span><a href="Harness.Alphabet.html#specSchema"><span class="hs-identifier hs-var hs-var">specSchema</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-special">}</span><span>
-</span><span id="line-31"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147045"><span id="local-6989586621679147050"><span class="annot"><span class="annottext">ToolSpec -&gt; ToolSpec -&gt; Bool
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- | A tool the provider is told it may call. Carried in the 'Request' so it</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- actually reaches the model &#8212; the amendment 'reference/Harness.hs' lacked</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- (its @Render@ carried only a bare prompt, so afforded tools never crossed the</span><span>
+</span><span id="line-52"></span><span class="hs-comment">-- wire). The set of specs offered on a turn is computed by the affordance fold</span><span>
+</span><span id="line-53"></span><span class="hs-comment">-- 'Harness.State.afford', which is why the interface is polynomial rather than a</span><span>
+</span><span id="line-54"></span><span class="hs-comment">-- fixed signature. [established]</span><span>
+</span><span id="line-55"></span><span class="hs-keyword">data</span><span> </span><span id="ToolSpec"><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-var">ToolSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="ToolSpec"><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-var">ToolSpec</span></a></span></span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="specName"><span class="annot"><span class="annottext">ToolSpec -&gt; String
+</span><a href="Harness.Alphabet.html#specName"><span class="hs-identifier hs-var hs-var">specName</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-57"></span><span>    </span><span class="hs-comment">-- ^ The tool's name, e.g. @&quot;read&quot;@ or @&quot;commit&quot;@. This is the key against</span><span>
+</span><span id="line-58"></span><span>    </span><span class="hs-comment">-- which 'Harness.Coalgebra.admit' checks a model's 'Call': a 'tool' whose</span><span>
+</span><span id="line-59"></span><span>    </span><span class="hs-comment">-- name is not among the afforded 'specName's is repaired into a synthetic</span><span>
+</span><span id="line-60"></span><span>    </span><span class="hs-comment">-- error rather than performed.</span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="specSchema"><span class="annot"><span class="annottext">ToolSpec -&gt; String
+</span><a href="Harness.Alphabet.html#specSchema"><span class="hs-identifier hs-var hs-var">specSchema</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-62"></span><span>    </span><span class="hs-comment">-- ^ A description of the tool's argument shape (a JSON-schema-ish blob such</span><span>
+</span><span id="line-63"></span><span>    </span><span class="hs-comment">-- as @&quot;{path:string}&quot;@). Advisory only &#8212; it is shown to the model to shape</span><span>
+</span><span id="line-64"></span><span>    </span><span class="hs-comment">-- its 'args', but the harness does not validate against it here.</span><span>
+</span><span id="line-65"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-66"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147048"><span id="local-6989586621679147053"><span class="annot"><span class="annottext">ToolSpec -&gt; ToolSpec -&gt; Bool
 (ToolSpec -&gt; ToolSpec -&gt; Bool)
 -&gt; (ToolSpec -&gt; ToolSpec -&gt; Bool) -&gt; Eq ToolSpec
 forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
@@ -69,7 +104,7 @@ $c== :: ToolSpec -&gt; ToolSpec -&gt; Bool
 == :: ToolSpec -&gt; ToolSpec -&gt; Bool
 $c/= :: ToolSpec -&gt; ToolSpec -&gt; Bool
 /= :: ToolSpec -&gt; ToolSpec -&gt; Bool
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147054"><span id="local-6989586621679147060"><span id="local-6989586621679147064"><span class="annot"><span class="annottext">Int -&gt; ToolSpec -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147057"><span id="local-6989586621679147063"><span id="local-6989586621679147067"><span class="annot"><span class="annottext">Int -&gt; ToolSpec -&gt; ShowS
 [ToolSpec] -&gt; ShowS
 ToolSpec -&gt; String
 (Int -&gt; ToolSpec -&gt; ShowS)
@@ -82,7 +117,7 @@ $cshow :: ToolSpec -&gt; String
 show :: ToolSpec -&gt; String
 $cshowList :: [ToolSpec] -&gt; ShowS
 showList :: [ToolSpec] -&gt; ShowS
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147067"><span id="local-6989586621679147069"><span class="annot"><span class="annottext">(forall x. ToolSpec -&gt; Rep ToolSpec x)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147070"><span id="local-6989586621679147072"><span class="annot"><span class="annottext">(forall x. ToolSpec -&gt; Rep ToolSpec x)
 -&gt; (forall x. Rep ToolSpec x -&gt; ToolSpec) -&gt; Generic ToolSpec
 forall x. Rep ToolSpec x -&gt; ToolSpec
 forall x. ToolSpec -&gt; Rep ToolSpec x
@@ -93,12 +128,26 @@ from :: forall x. ToolSpec -&gt; Rep ToolSpec x
 $cto :: forall x. Rep ToolSpec x -&gt; ToolSpec
 to :: forall x. Rep ToolSpec x -&gt; ToolSpec
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-32"></span><span>
-</span><span id="line-33"></span><span class="annot"><span class="hs-comment">-- | What the model sees: the projected prompt plus the mode-dependent tools.</span></span><span>
-</span><span id="line-34"></span><span class="hs-keyword">data</span><span> </span><span id="Request"><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-var">Request</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Request"><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-var">Request</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="reqPrompt"><span class="annot"><span class="annottext">Request -&gt; Prompt
-</span><a href="Harness.Alphabet.html#reqPrompt"><span class="hs-identifier hs-var hs-var">reqPrompt</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-type">Prompt</span></a></span><span class="hs-special">,</span><span> </span><span id="reqTools"><span class="annot"><span class="annottext">Request -&gt; [ToolSpec]
-</span><a href="Harness.Alphabet.html#reqTools"><span class="hs-identifier hs-var hs-var">reqTools</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-type">ToolSpec</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-special">}</span><span>
-</span><span id="line-35"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147074"><span id="local-6989586621679147079"><span class="annot"><span class="annottext">Request -&gt; Request -&gt; Bool
+</span><span id="line-67"></span><span>
+</span><span id="line-68"></span><span class="hs-comment">-- | What the model sees on a single turn: the projected prompt plus the tools</span><span>
+</span><span id="line-69"></span><span class="hs-comment">-- afforded at that node. Assembled by 'Harness.State.request', which in</span><span>
+</span><span id="line-70"></span><span class="hs-comment">-- 'Harness.State.Working' mode pairs @project@ with @afford@, and in</span><span>
+</span><span id="line-71"></span><span class="hs-comment">-- 'Harness.State.Summarising' mode appends a summarisation instruction and</span><span>
+</span><span id="line-72"></span><span class="hs-comment">-- offers /no/ tools. A 'Request' is exactly the payload of a 'Render' position</span><span>
+</span><span id="line-73"></span><span class="hs-comment">-- and the thing recorded in the annotation 'Harness.State.Ctx' for analysis.</span><span>
+</span><span id="line-74"></span><span class="hs-keyword">data</span><span> </span><span id="Request"><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-var">Request</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Request"><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-var">Request</span></a></span></span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="reqPrompt"><span class="annot"><span class="annottext">Request -&gt; Prompt
+</span><a href="Harness.Alphabet.html#reqPrompt"><span class="hs-identifier hs-var hs-var">reqPrompt</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-type">Prompt</span></a></span><span>
+</span><span id="line-76"></span><span>    </span><span class="hs-comment">-- ^ The prompt text for this turn, i.e. the 'Harness.State.project'ion of</span><span>
+</span><span id="line-77"></span><span>    </span><span class="hs-comment">-- the transcript (possibly with a trailing summarisation instruction in</span><span>
+</span><span id="line-78"></span><span>    </span><span class="hs-comment">-- 'Harness.State.Summarising' mode).</span><span>
+</span><span id="line-79"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="reqTools"><span class="annot"><span class="annottext">Request -&gt; [ToolSpec]
+</span><a href="Harness.Alphabet.html#reqTools"><span class="hs-identifier hs-var hs-var">reqTools</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#ToolSpec"><span class="hs-identifier hs-type">ToolSpec</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-80"></span><span>    </span><span class="hs-comment">-- ^ The tools offered on this turn. Empty while summarising; otherwise the</span><span>
+</span><span id="line-81"></span><span>    </span><span class="hs-comment">-- mode-dependent affordance set. This list is what 'Harness.Coalgebra.admit'</span><span>
+</span><span id="line-82"></span><span>    </span><span class="hs-comment">-- treats as the ground truth of what the model was permitted to call.</span><span>
+</span><span id="line-83"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-84"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147078"><span id="local-6989586621679147083"><span class="annot"><span class="annottext">Request -&gt; Request -&gt; Bool
 (Request -&gt; Request -&gt; Bool)
 -&gt; (Request -&gt; Request -&gt; Bool) -&gt; Eq Request
 forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
@@ -106,7 +155,7 @@ $c== :: Request -&gt; Request -&gt; Bool
 == :: Request -&gt; Request -&gt; Bool
 $c/= :: Request -&gt; Request -&gt; Bool
 /= :: Request -&gt; Request -&gt; Bool
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147083"><span id="local-6989586621679147089"><span id="local-6989586621679147093"><span class="annot"><span class="annottext">Int -&gt; Request -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147087"><span id="local-6989586621679147093"><span id="local-6989586621679147097"><span class="annot"><span class="annottext">Int -&gt; Request -&gt; ShowS
 [Request] -&gt; ShowS
 Request -&gt; String
 (Int -&gt; Request -&gt; ShowS)
@@ -119,7 +168,7 @@ $cshow :: Request -&gt; String
 show :: Request -&gt; String
 $cshowList :: [Request] -&gt; ShowS
 showList :: [Request] -&gt; ShowS
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147096"><span id="local-6989586621679147098"><span class="annot"><span class="annottext">(forall x. Request -&gt; Rep Request x)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147100"><span id="local-6989586621679147102"><span class="annot"><span class="annottext">(forall x. Request -&gt; Rep Request x)
 -&gt; (forall x. Rep Request x -&gt; Request) -&gt; Generic Request
 forall x. Rep Request x -&gt; Request
 forall x. Request -&gt; Rep Request x
@@ -130,18 +179,30 @@ from :: forall x. Request -&gt; Rep Request x
 $cto :: forall x. Rep Request x -&gt; Request
 to :: forall x. Rep Request x -&gt; Request
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-36"></span><span>
-</span><span id="line-37"></span><span class="hs-keyword">data</span><span> </span><span id="Call"><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-var">Call</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Call"><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-var">Call</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="tool"><span class="annot"><span class="annottext">Call -&gt; String
-</span><a href="Harness.Alphabet.html#tool"><span class="hs-identifier hs-var hs-var">tool</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span> </span><span id="args"><span class="annot"><span class="annottext">Call -&gt; String
-</span><a href="Harness.Alphabet.html#args"><span class="hs-identifier hs-var hs-var">args</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-special">}</span><span>
-</span><span id="line-38"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147104"><span id="local-6989586621679147109"><span class="annot"><span class="annottext">Call -&gt; Call -&gt; Bool
+</span><span id="line-85"></span><span>
+</span><span id="line-86"></span><span class="hs-comment">-- | A tool call the model has asked for: a name and its (unparsed) arguments.</span><span>
+</span><span id="line-87"></span><span class="hs-comment">-- Produced by the model inside a 'Response' and carried in a 'Perform' position</span><span>
+</span><span id="line-88"></span><span class="hs-comment">-- when &#8212; and only when &#8212; 'Harness.Coalgebra.admit' has confirmed the 'tool' is</span><span>
+</span><span id="line-89"></span><span class="hs-comment">-- afforded. An unafforded call is not a 'Refusal' and not a clean 'Response'; it</span><span>
+</span><span id="line-90"></span><span class="hs-comment">-- is repaired in the coalgebra into an error 'Obs' and the run continues (D3\/D12).</span><span>
+</span><span id="line-91"></span><span class="hs-keyword">data</span><span> </span><span id="Call"><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-var">Call</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Call"><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-var">Call</span></a></span></span><span>
+</span><span id="line-92"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="tool"><span class="annot"><span class="annottext">Call -&gt; String
+</span><a href="Harness.Alphabet.html#tool"><span class="hs-identifier hs-var hs-var">tool</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-93"></span><span>    </span><span class="hs-comment">-- ^ The name of the tool to invoke. Checked against the afforded</span><span>
+</span><span id="line-94"></span><span>    </span><span class="hs-comment">-- 'ToolSpec' 'specName's; an unmatched name is the trigger for repair.</span><span>
+</span><span id="line-95"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="args"><span class="annot"><span class="annottext">Call -&gt; String
+</span><a href="Harness.Alphabet.html#args"><span class="hs-identifier hs-var hs-var">args</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-96"></span><span>    </span><span class="hs-comment">-- ^ The raw argument payload the model supplied (typically a JSON string).</span><span>
+</span><span id="line-97"></span><span>    </span><span class="hs-comment">-- Passed opaquely to the world; this module does not parse it.</span><span>
+</span><span id="line-98"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-99"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147108"><span id="local-6989586621679147113"><span class="annot"><span class="annottext">Call -&gt; Call -&gt; Bool
 (Call -&gt; Call -&gt; Bool) -&gt; (Call -&gt; Call -&gt; Bool) -&gt; Eq Call
 forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
 $c== :: Call -&gt; Call -&gt; Bool
 == :: Call -&gt; Call -&gt; Bool
 $c/= :: Call -&gt; Call -&gt; Bool
 /= :: Call -&gt; Call -&gt; Bool
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147113"><span id="local-6989586621679147119"><span id="local-6989586621679147123"><span class="annot"><span class="annottext">Int -&gt; Call -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147117"><span id="local-6989586621679147123"><span id="local-6989586621679147127"><span class="annot"><span class="annottext">Int -&gt; Call -&gt; ShowS
 [Call] -&gt; ShowS
 Call -&gt; String
 (Int -&gt; Call -&gt; ShowS)
@@ -154,7 +215,7 @@ $cshow :: Call -&gt; String
 show :: Call -&gt; String
 $cshowList :: [Call] -&gt; ShowS
 showList :: [Call] -&gt; ShowS
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147126"><span id="local-6989586621679147128"><span class="annot"><span class="annottext">(forall x. Call -&gt; Rep Call x)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147130"><span id="local-6989586621679147132"><span class="annot"><span class="annottext">(forall x. Call -&gt; Rep Call x)
 -&gt; (forall x. Rep Call x -&gt; Call) -&gt; Generic Call
 forall x. Rep Call x -&gt; Call
 forall x. Call -&gt; Rep Call x
@@ -165,16 +226,22 @@ from :: forall x. Call -&gt; Rep Call x
 $cto :: forall x. Rep Call x -&gt; Call
 to :: forall x. Rep Call x -&gt; Call
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-39"></span><span>
-</span><span id="line-40"></span><span class="hs-keyword">newtype</span><span> </span><span id="Obs"><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-var">Obs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Obs"><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-var">Obs</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
-</span><span id="line-41"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147132"><span id="local-6989586621679147136"><span class="annot"><span class="annottext">Obs -&gt; Obs -&gt; Bool
+</span><span id="line-100"></span><span>
+</span><span id="line-101"></span><span class="hs-comment">-- | The world's reply to a performed 'Call' &#8212; the observation fed back into the</span><span>
+</span><span id="line-102"></span><span class="hs-comment">-- next turn. It is the direction of a 'Perform' position: the harness controls</span><span>
+</span><span id="line-103"></span><span class="hs-comment">-- /that/ it performs the call, never /what/ comes back, so the successor state</span><span>
+</span><span id="line-104"></span><span class="hs-comment">-- is a function @Obs -&gt; x@. A synthetic error 'Obs' is also how the coalgebra</span><span>
+</span><span id="line-105"></span><span class="hs-comment">-- reports an unafforded call back to the model. Wrapped in a @newtype@ to keep</span><span>
+</span><span id="line-106"></span><span class="hs-comment">-- a tool observation distinct from arbitrary text.</span><span>
+</span><span id="line-107"></span><span class="hs-keyword">newtype</span><span> </span><span id="Obs"><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-var">Obs</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Obs"><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-var">Obs</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-108"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147135"><span id="local-6989586621679147139"><span class="annot"><span class="annottext">Obs -&gt; Obs -&gt; Bool
 (Obs -&gt; Obs -&gt; Bool) -&gt; (Obs -&gt; Obs -&gt; Bool) -&gt; Eq Obs
 forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
 $c== :: Obs -&gt; Obs -&gt; Bool
 == :: Obs -&gt; Obs -&gt; Bool
 $c/= :: Obs -&gt; Obs -&gt; Bool
 /= :: Obs -&gt; Obs -&gt; Bool
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147140"><span id="local-6989586621679147145"><span id="local-6989586621679147149"><span class="annot"><span class="annottext">Int -&gt; Obs -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147143"><span id="local-6989586621679147148"><span id="local-6989586621679147152"><span class="annot"><span class="annottext">Int -&gt; Obs -&gt; ShowS
 [Obs] -&gt; ShowS
 Obs -&gt; String
 (Int -&gt; Obs -&gt; ShowS)
@@ -187,7 +254,7 @@ $cshow :: Obs -&gt; String
 show :: Obs -&gt; String
 $cshowList :: [Obs] -&gt; ShowS
 showList :: [Obs] -&gt; ShowS
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147152"><span id="local-6989586621679147154"><span class="annot"><span class="annottext">(forall x. Obs -&gt; Rep Obs x)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147155"><span id="local-6989586621679147157"><span class="annot"><span class="annottext">(forall x. Obs -&gt; Rep Obs x)
 -&gt; (forall x. Rep Obs x -&gt; Obs) -&gt; Generic Obs
 forall x. Rep Obs x -&gt; Obs
 forall x. Obs -&gt; Rep Obs x
@@ -198,20 +265,27 @@ from :: forall x. Obs -&gt; Rep Obs x
 $cto :: forall x. Rep Obs x -&gt; Obs
 to :: forall x. Rep Obs x -&gt; Obs
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-42"></span><span>
-</span><span id="line-43"></span><span class="hs-comment">-- | Token usage as reported by the provider. Budget is spent in tokens,</span><span>
-</span><span id="line-44"></span><span class="hs-comment">-- not turns. [established]</span><span>
-</span><span id="line-45"></span><span class="hs-keyword">data</span><span> </span><span id="Usage"><span class="annot"><a href="Harness.Alphabet.html#Usage"><span class="hs-identifier hs-var">Usage</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Usage"><span class="annot"><a href="Harness.Alphabet.html#Usage"><span class="hs-identifier hs-var">Usage</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="inTok"><span class="annot"><span class="annottext">Usage -&gt; Int
-</span><a href="Harness.Alphabet.html#inTok"><span class="hs-identifier hs-var hs-var">inTok</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span class="hs-special">,</span><span> </span><span id="outTok"><span class="annot"><span class="annottext">Usage -&gt; Int
-</span><a href="Harness.Alphabet.html#outTok"><span class="hs-identifier hs-var hs-var">outTok</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span> </span><span class="hs-special">}</span><span>
-</span><span id="line-46"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147160"><span id="local-6989586621679147165"><span class="annot"><span class="annottext">Usage -&gt; Usage -&gt; Bool
+</span><span id="line-109"></span><span>
+</span><span id="line-110"></span><span class="hs-comment">-- | Token usage as reported by the provider for one 'Response'. Budget is spent</span><span>
+</span><span id="line-111"></span><span class="hs-comment">-- in tokens, not turns (see 'Harness.State.budget'): the coalgebra subtracts</span><span>
+</span><span id="line-112"></span><span class="hs-comment">-- @inTok + outTok@ from the remaining budget after each successful turn, so a</span><span>
+</span><span id="line-113"></span><span class="hs-comment">-- verbose turn costs more than a terse one regardless of turn count. [established]</span><span>
+</span><span id="line-114"></span><span class="hs-keyword">data</span><span> </span><span id="Usage"><span class="annot"><a href="Harness.Alphabet.html#Usage"><span class="hs-identifier hs-var">Usage</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Usage"><span class="annot"><a href="Harness.Alphabet.html#Usage"><span class="hs-identifier hs-var">Usage</span></a></span></span><span>
+</span><span id="line-115"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="inTok"><span class="annot"><span class="annottext">Usage -&gt; Int
+</span><a href="Harness.Alphabet.html#inTok"><span class="hs-identifier hs-var hs-var">inTok</span></a></span></span><span>  </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-116"></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ Prompt (input) tokens the provider billed for this turn.</span></span><span>
+</span><span id="line-117"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="outTok"><span class="annot"><span class="annottext">Usage -&gt; Int
+</span><a href="Harness.Alphabet.html#outTok"><span class="hs-identifier hs-var hs-var">outTok</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Int</span></span><span>
+</span><span id="line-118"></span><span>    </span><span class="annot"><span class="hs-comment">-- ^ Completion (output) tokens the provider billed for this turn.</span></span><span>
+</span><span id="line-119"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-120"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147163"><span id="local-6989586621679147168"><span class="annot"><span class="annottext">Usage -&gt; Usage -&gt; Bool
 (Usage -&gt; Usage -&gt; Bool) -&gt; (Usage -&gt; Usage -&gt; Bool) -&gt; Eq Usage
 forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
 $c== :: Usage -&gt; Usage -&gt; Bool
 == :: Usage -&gt; Usage -&gt; Bool
 $c/= :: Usage -&gt; Usage -&gt; Bool
 /= :: Usage -&gt; Usage -&gt; Bool
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147169"><span id="local-6989586621679147175"><span id="local-6989586621679147179"><span class="annot"><span class="annottext">Int -&gt; Usage -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147172"><span id="local-6989586621679147178"><span id="local-6989586621679147182"><span class="annot"><span class="annottext">Int -&gt; Usage -&gt; ShowS
 [Usage] -&gt; ShowS
 Usage -&gt; String
 (Int -&gt; Usage -&gt; ShowS)
@@ -224,7 +298,7 @@ $cshow :: Usage -&gt; String
 show :: Usage -&gt; String
 $cshowList :: [Usage] -&gt; ShowS
 showList :: [Usage] -&gt; ShowS
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147182"><span id="local-6989586621679147184"><span class="annot"><span class="annottext">(forall x. Usage -&gt; Rep Usage x)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147185"><span id="local-6989586621679147187"><span class="annot"><span class="annottext">(forall x. Usage -&gt; Rep Usage x)
 -&gt; (forall x. Rep Usage x -&gt; Usage) -&gt; Generic Usage
 forall x. Rep Usage x -&gt; Usage
 forall x. Usage -&gt; Rep Usage x
@@ -235,12 +309,29 @@ from :: forall x. Usage -&gt; Rep Usage x
 $cto :: forall x. Rep Usage x -&gt; Usage
 to :: forall x. Rep Usage x -&gt; Usage
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-47"></span><span>
-</span><span id="line-48"></span><span class="hs-keyword">data</span><span> </span><span id="Response"><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-var">Response</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Response"><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-var">Response</span></a></span></span><span> </span><span class="hs-special">{</span><span> </span><span id="say"><span class="annot"><span class="annottext">Response -&gt; String
-</span><a href="Harness.Alphabet.html#say"><span class="hs-identifier hs-var hs-var">say</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">,</span><span> </span><span id="calls"><span class="annot"><span class="annottext">Response -&gt; [Call]
-</span><a href="Harness.Alphabet.html#calls"><span class="hs-identifier hs-var hs-var">calls</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span class="hs-special">]</span><span class="hs-special">,</span><span> </span><span id="usage"><span class="annot"><span class="annottext">Response -&gt; Usage
-</span><a href="Harness.Alphabet.html#usage"><span class="hs-identifier hs-var hs-var">usage</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Usage"><span class="hs-identifier hs-type">Usage</span></a></span><span> </span><span class="hs-special">}</span><span>
-</span><span id="line-49"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147191"><span id="local-6989586621679147198"><span class="annot"><span class="annottext">Response -&gt; Response -&gt; Bool
+</span><span id="line-121"></span><span>
+</span><span id="line-122"></span><span class="hs-comment">-- | A successful reply from the oracle: what the model said, any tools it wants</span><span>
+</span><span id="line-123"></span><span class="hs-comment">-- to call, and the token cost. It is the @Right@ half of the 'Render' direction</span><span>
+</span><span id="line-124"></span><span class="hs-comment">-- (@Either Refusal Response@). An empty 'calls' list in 'Harness.State.Working'</span><span>
+</span><span id="line-125"></span><span class="hs-comment">-- mode is how the agent signals it is finished &#8212; the coalgebra turns it into a</span><span>
+</span><span id="line-126"></span><span class="hs-comment">-- @Halt (Done ...)@.</span><span>
+</span><span id="line-127"></span><span class="hs-keyword">data</span><span> </span><span id="Response"><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-var">Response</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Response"><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-var">Response</span></a></span></span><span>
+</span><span id="line-128"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="say"><span class="annot"><span class="annottext">Response -&gt; String
+</span><a href="Harness.Alphabet.html#say"><span class="hs-identifier hs-var hs-var">say</span></a></span></span><span>   </span><span class="hs-glyph">::</span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-129"></span><span>    </span><span class="hs-comment">-- ^ The model's natural-language output for this turn. Recorded in the</span><span>
+</span><span id="line-130"></span><span>    </span><span class="hs-comment">-- transcript as the assistant line, and returned as the final answer when a</span><span>
+</span><span id="line-131"></span><span>    </span><span class="hs-comment">-- turn ends the run.</span><span>
+</span><span id="line-132"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="calls"><span class="annot"><span class="annottext">Response -&gt; [Call]
+</span><a href="Harness.Alphabet.html#calls"><span class="hs-identifier hs-var hs-var">calls</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span class="hs-special">]</span><span>
+</span><span id="line-133"></span><span>    </span><span class="hs-comment">-- ^ The tool calls the model requested, in the order it asked for them.</span><span>
+</span><span id="line-134"></span><span>    </span><span class="hs-comment">-- Empty means &quot;no more tools&quot; &#8212; a completion signal in 'Harness.State.Working'</span><span>
+</span><span id="line-135"></span><span>    </span><span class="hs-comment">-- mode. 'Harness.Coalgebra.admit' preserves this order when performing them.</span><span>
+</span><span id="line-136"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="usage"><span class="annot"><span class="annottext">Response -&gt; Usage
+</span><a href="Harness.Alphabet.html#usage"><span class="hs-identifier hs-var hs-var">usage</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Usage"><span class="hs-identifier hs-type">Usage</span></a></span><span>
+</span><span id="line-137"></span><span>    </span><span class="hs-comment">-- ^ The provider-reported token cost of producing this 'Response', debited</span><span>
+</span><span id="line-138"></span><span>    </span><span class="hs-comment">-- from the budget.</span><span>
+</span><span id="line-139"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-140"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147193"><span id="local-6989586621679147200"><span class="annot"><span class="annottext">Response -&gt; Response -&gt; Bool
 (Response -&gt; Response -&gt; Bool)
 -&gt; (Response -&gt; Response -&gt; Bool) -&gt; Eq Response
 forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
@@ -248,7 +339,7 @@ $c== :: Response -&gt; Response -&gt; Bool
 == :: Response -&gt; Response -&gt; Bool
 $c/= :: Response -&gt; Response -&gt; Bool
 /= :: Response -&gt; Response -&gt; Bool
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147202"><span id="local-6989586621679147210"><span id="local-6989586621679147214"><span class="annot"><span class="annottext">Int -&gt; Response -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147204"><span id="local-6989586621679147212"><span id="local-6989586621679147216"><span class="annot"><span class="annottext">Int -&gt; Response -&gt; ShowS
 [Response] -&gt; ShowS
 Response -&gt; String
 (Int -&gt; Response -&gt; ShowS)
@@ -261,7 +352,7 @@ $cshow :: Response -&gt; String
 show :: Response -&gt; String
 $cshowList :: [Response] -&gt; ShowS
 showList :: [Response] -&gt; ShowS
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147217"><span id="local-6989586621679147219"><span class="annot"><span class="annottext">(forall x. Response -&gt; Rep Response x)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147219"><span id="local-6989586621679147221"><span class="annot"><span class="annottext">(forall x. Response -&gt; Rep Response x)
 -&gt; (forall x. Rep Response x -&gt; Response) -&gt; Generic Response
 forall x. Rep Response x -&gt; Response
 forall x. Response -&gt; Rep Response x
@@ -272,12 +363,24 @@ from :: forall x. Response -&gt; Rep Response x
 $cto :: forall x. Rep Response x -&gt; Response
 to :: forall x. Rep Response x -&gt; Response
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-50"></span><span>
-</span><span id="line-51"></span><span class="hs-comment">-- | The only failures the coalgebra may see. Everything transient (429, 5xx,</span><span>
-</span><span id="line-52"></span><span class="hs-comment">-- socket timeouts, transient decode noise) is the provider's problem and never</span><span>
-</span><span id="line-53"></span><span class="hs-comment">-- gets here (invariant 5).</span><span>
-</span><span id="line-54"></span><span class="hs-keyword">data</span><span> </span><span id="Refusal"><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier hs-var">Refusal</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Overflow"><span class="annot"><a href="Harness.Alphabet.html#Overflow"><span class="hs-identifier hs-var">Overflow</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Malformed"><span class="annot"><a href="Harness.Alphabet.html#Malformed"><span class="hs-identifier hs-var">Malformed</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
-</span><span id="line-55"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147224"><span id="local-6989586621679147231"><span class="annot"><span class="annottext">Refusal -&gt; Refusal -&gt; Bool
+</span><span id="line-141"></span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- | The only failures the coalgebra may see. Everything transient (429, 5xx,</span><span>
+</span><span id="line-143"></span><span class="hs-comment">-- socket timeouts, transient decode noise) is the provider's problem and is</span><span>
+</span><span id="line-144"></span><span class="hs-comment">-- absorbed by @Env@ decorators before it can reach here (invariant 5): a</span><span>
+</span><span id="line-145"></span><span class="hs-comment">-- 'Refusal' is a designed, terminal-or-transformative signal, not an accident of</span><span>
+</span><span id="line-146"></span><span class="hs-comment">-- the network. It is the @Left@ half of the 'Render' direction.</span><span>
+</span><span id="line-147"></span><span class="hs-keyword">data</span><span> </span><span id="Refusal"><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier hs-var">Refusal</span></a></span></span><span>
+</span><span id="line-148"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Overflow"><span class="annot"><a href="Harness.Alphabet.html#Overflow"><span class="hs-identifier hs-var">Overflow</span></a></span></span><span>
+</span><span id="line-149"></span><span>    </span><span class="hs-comment">-- ^ The context window was exceeded. This is the /only/ recoverable</span><span>
+</span><span id="line-150"></span><span>    </span><span class="hs-comment">-- refusal: the coalgebra's 'Harness.Coalgebra.working' continuation responds</span><span>
+</span><span id="line-151"></span><span>    </span><span class="hs-comment">-- by flipping to 'Harness.State.Summarising' mode, which is compaction. It</span><span>
+</span><span id="line-152"></span><span>    </span><span class="hs-comment">-- is not a failure of the run, it is the trigger for the run to compact.</span><span>
+</span><span id="line-153"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Malformed"><span class="annot"><a href="Harness.Alphabet.html#Malformed"><span class="hs-identifier hs-var">Malformed</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-154"></span><span>    </span><span class="hs-comment">-- ^ A terminal decode failure the provider could not repair (payload carries</span><span>
+</span><span id="line-155"></span><span>    </span><span class="hs-comment">-- the diagnostic). Unlike an unafforded 'Call' &#8212; which is repaired into an</span><span>
+</span><span id="line-156"></span><span>    </span><span class="hs-comment">-- 'Obs' and continued &#8212; a 'Malformed' refusal ends the run: the coalgebra</span><span>
+</span><span id="line-157"></span><span>    </span><span class="hs-comment">-- records it and zeroes the budget.</span><span>
+</span><span id="line-158"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147226"><span id="local-6989586621679147233"><span class="annot"><span class="annottext">Refusal -&gt; Refusal -&gt; Bool
 (Refusal -&gt; Refusal -&gt; Bool)
 -&gt; (Refusal -&gt; Refusal -&gt; Bool) -&gt; Eq Refusal
 forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
@@ -285,7 +388,7 @@ $c== :: Refusal -&gt; Refusal -&gt; Bool
 == :: Refusal -&gt; Refusal -&gt; Bool
 $c/= :: Refusal -&gt; Refusal -&gt; Bool
 /= :: Refusal -&gt; Refusal -&gt; Bool
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147235"><span id="local-6989586621679147240"><span id="local-6989586621679147244"><span class="annot"><span class="annottext">Int -&gt; Refusal -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147237"><span id="local-6989586621679147242"><span id="local-6989586621679147246"><span class="annot"><span class="annottext">Int -&gt; Refusal -&gt; ShowS
 [Refusal] -&gt; ShowS
 Refusal -&gt; String
 (Int -&gt; Refusal -&gt; ShowS)
@@ -298,7 +401,7 @@ $cshow :: Refusal -&gt; String
 show :: Refusal -&gt; String
 $cshowList :: [Refusal] -&gt; ShowS
 showList :: [Refusal] -&gt; ShowS
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147247"><span id="local-6989586621679147249"><span class="annot"><span class="annottext">(forall x. Refusal -&gt; Rep Refusal x)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147249"><span id="local-6989586621679147251"><span class="annot"><span class="annottext">(forall x. Refusal -&gt; Rep Refusal x)
 -&gt; (forall x. Rep Refusal x -&gt; Refusal) -&gt; Generic Refusal
 forall x. Rep Refusal x -&gt; Refusal
 forall x. Refusal -&gt; Rep Refusal x
@@ -309,9 +412,22 @@ from :: forall x. Refusal -&gt; Rep Refusal x
 $cto :: forall x. Rep Refusal x -&gt; Refusal
 to :: forall x. Rep Refusal x -&gt; Refusal
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-56"></span><span>
-</span><span id="line-57"></span><span class="hs-keyword">data</span><span> </span><span id="Outcome"><span class="annot"><a href="Harness.Alphabet.html#Outcome"><span class="hs-identifier hs-var">Outcome</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Done"><span class="annot"><a href="Harness.Alphabet.html#Done"><span class="hs-identifier hs-var">Done</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Exhausted"><span class="annot"><a href="Harness.Alphabet.html#Exhausted"><span class="hs-identifier hs-var">Exhausted</span></a></span></span><span> </span><span class="hs-glyph">|</span><span> </span><span id="Stuck"><span class="annot"><a href="Harness.Alphabet.html#Stuck"><span class="hs-identifier hs-var">Stuck</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
-</span><span id="line-58"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147255"><span id="local-6989586621679147262"><span class="annot"><span class="annottext">Outcome -&gt; Outcome -&gt; Bool
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span class="hs-comment">-- | How a run ends. Carried by the terminal 'Halt' position, so an 'Outcome' is</span><span>
+</span><span id="line-161"></span><span class="hs-comment">-- a leaf of the unfolded tree &#8212; it has no direction and thus no successor.</span><span>
+</span><span id="line-162"></span><span class="hs-keyword">data</span><span> </span><span id="Outcome"><span class="annot"><a href="Harness.Alphabet.html#Outcome"><span class="hs-identifier hs-var">Outcome</span></a></span></span><span>
+</span><span id="line-163"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Done"><span class="annot"><a href="Harness.Alphabet.html#Done"><span class="hs-identifier hs-var">Done</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-164"></span><span>    </span><span class="hs-comment">-- ^ The agent finished cleanly. The payload is the final assistant 'say',</span><span>
+</span><span id="line-165"></span><span>    </span><span class="hs-comment">-- reached when a 'Harness.State.Working'-mode 'Response' carries no tool</span><span>
+</span><span id="line-166"></span><span>    </span><span class="hs-comment">-- 'calls'.</span><span>
+</span><span id="line-167"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Exhausted"><span class="annot"><a href="Harness.Alphabet.html#Exhausted"><span class="hs-identifier hs-var">Exhausted</span></a></span></span><span>
+</span><span id="line-168"></span><span>    </span><span class="hs-comment">-- ^ The budget ran out before the agent finished. Emitted when</span><span>
+</span><span id="line-169"></span><span>    </span><span class="hs-comment">-- 'Harness.State.budget' reaches zero (also the sink for a 'Malformed'</span><span>
+</span><span id="line-170"></span><span>    </span><span class="hs-comment">-- refusal, which zeroes the budget).</span><span>
+</span><span id="line-171"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Stuck"><span class="annot"><a href="Harness.Alphabet.html#Stuck"><span class="hs-identifier hs-var">Stuck</span></a></span></span><span> </span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span>
+</span><span id="line-172"></span><span>    </span><span class="hs-comment">-- ^ The agent could make no progress for a non-budget reason (payload</span><span>
+</span><span id="line-173"></span><span>    </span><span class="hs-comment">-- carries the explanation). [design]</span><span>
+</span><span id="line-174"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147258"><span id="local-6989586621679147265"><span class="annot"><span class="annottext">Outcome -&gt; Outcome -&gt; Bool
 (Outcome -&gt; Outcome -&gt; Bool)
 -&gt; (Outcome -&gt; Outcome -&gt; Bool) -&gt; Eq Outcome
 forall a. (a -&gt; a -&gt; Bool) -&gt; (a -&gt; a -&gt; Bool) -&gt; Eq a
@@ -319,7 +435,7 @@ $c== :: Outcome -&gt; Outcome -&gt; Bool
 == :: Outcome -&gt; Outcome -&gt; Bool
 $c/= :: Outcome -&gt; Outcome -&gt; Bool
 /= :: Outcome -&gt; Outcome -&gt; Bool
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147266"><span id="local-6989586621679147273"><span id="local-6989586621679147277"><span class="annot"><span class="annottext">Int -&gt; Outcome -&gt; ShowS
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Eq</span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147269"><span id="local-6989586621679147276"><span id="local-6989586621679147280"><span class="annot"><span class="annottext">Int -&gt; Outcome -&gt; ShowS
 [Outcome] -&gt; ShowS
 Outcome -&gt; String
 (Int -&gt; Outcome -&gt; ShowS)
@@ -332,7 +448,7 @@ $cshow :: Outcome -&gt; String
 show :: Outcome -&gt; String
 $cshowList :: [Outcome] -&gt; ShowS
 showList :: [Outcome] -&gt; ShowS
-</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147280"><span id="local-6989586621679147282"><span class="annot"><span class="annottext">(forall x. Outcome -&gt; Rep Outcome x)
+</span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var hs-var hs-var">Show</span></span></span></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621679147283"><span id="local-6989586621679147285"><span class="annot"><span class="annottext">(forall x. Outcome -&gt; Rep Outcome x)
 -&gt; (forall x. Rep Outcome x -&gt; Outcome) -&gt; Generic Outcome
 forall x. Rep Outcome x -&gt; Outcome
 forall x. Outcome -&gt; Rep Outcome x
@@ -343,15 +459,35 @@ from :: forall x. Outcome -&gt; Rep Outcome x
 $cto :: forall x. Rep Outcome x -&gt; Outcome
 to :: forall x. Rep Outcome x -&gt; Outcome
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-59"></span><span>
-</span><span id="line-60"></span><span class="hs-comment">-- | The interface functor. Closed. A fourth constructor requires a matching</span><span>
-</span><span id="line-61"></span><span class="hs-comment">-- case in 'Harness.Interp.interp' and the law tests, or @-Wincomplete-patterns@</span><span>
-</span><span id="line-62"></span><span class="hs-comment">-- will (correctly) fail the build.</span><span>
-</span><span id="line-63"></span><span class="hs-keyword">data</span><span> </span><span id="HarnessF"><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier hs-var">HarnessF</span></a></span></span><span> </span><span id="local-6989586621679147284"><span class="annot"><a href="#local-6989586621679147284"><span class="hs-identifier hs-type">x</span></a></span></span><span>
-</span><span id="line-64"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Render"><span class="annot"><a href="Harness.Alphabet.html#Render"><span class="hs-identifier hs-var">Render</span></a></span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-type">Request</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier hs-type">Refusal</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-type">Response</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679147284"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-65"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Perform"><span class="annot"><a href="Harness.Alphabet.html#Perform"><span class="hs-identifier hs-var">Perform</span></a></span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-type">Obs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679147284"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-66"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Halt"><span class="annot"><a href="Harness.Alphabet.html#Halt"><span class="hs-identifier hs-var">Halt</span></a></span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Outcome"><span class="hs-identifier hs-type">Outcome</span></a></span><span>
-</span><span id="line-67"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147289"><span id="local-6989586621679147291"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; HarnessF a -&gt; HarnessF b)
+</span><span id="line-175"></span><span>
+</span><span id="line-176"></span><span class="hs-comment">-- | The interface functor: the polynomial whose positions are the harness's</span><span>
+</span><span id="line-177"></span><span class="hs-comment">-- actions and whose directions are the replies it awaits. Unfolding the</span><span>
+</span><span id="line-178"></span><span class="hs-comment">-- coalgebra 'Harness.Coalgebra.step' through this functor gives the denotational</span><span>
+</span><span id="line-179"></span><span class="hs-comment">-- @Cofree HarnessF Ctx@ tree &#8212; though @Cofree@ is a denotation, not a runtime</span><span>
+</span><span id="line-180"></span><span class="hs-comment">-- representation (invariant 3): the implementation carries @S@ and the</span><span>
+</span><span id="line-181"></span><span class="hs-comment">-- coalgebra, never a serialised tree.</span><span>
+</span><span id="line-182"></span><span class="hs-comment">--</span><span>
+</span><span id="line-183"></span><span class="hs-comment">-- Closed. A fourth constructor requires a matching case in 'Harness.Interp.interp'</span><span>
+</span><span id="line-184"></span><span class="hs-comment">-- and the law tests, or @-Wincomplete-patterns@ will (correctly) fail the build</span><span>
+</span><span id="line-185"></span><span class="hs-comment">-- (invariant 1). The @x@ in each direction is the successor node; 'Functor' maps</span><span>
+</span><span id="line-186"></span><span class="hs-comment">-- over those successors and is derived precisely because 'HarnessF' never</span><span>
+</span><span id="line-187"></span><span class="hs-comment">-- mentions @S@.</span><span>
+</span><span id="line-188"></span><span class="hs-keyword">data</span><span> </span><span id="HarnessF"><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier hs-var">HarnessF</span></a></span></span><span> </span><span id="local-6989586621679147287"><span class="annot"><a href="#local-6989586621679147287"><span class="hs-identifier hs-type">x</span></a></span></span><span>
+</span><span id="line-189"></span><span>  </span><span class="hs-glyph">=</span><span> </span><span id="Render"><span class="annot"><a href="Harness.Alphabet.html#Render"><span class="hs-identifier hs-var">Render</span></a></span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-type">Request</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier hs-type">Refusal</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-type">Response</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679147287"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-190"></span><span>    </span><span class="hs-comment">-- ^ Ask the oracle. The 'Request' is the position (prompt + afforded tools);</span><span>
+</span><span id="line-191"></span><span>    </span><span class="hs-comment">-- the direction is @Either Refusal Response -&gt; x@ &#8212; the harness controls the</span><span>
+</span><span id="line-192"></span><span>    </span><span class="hs-comment">-- question, not the answer. This one constructor serves both a task turn and</span><span>
+</span><span id="line-193"></span><span>    </span><span class="hs-comment">-- a summarisation turn; which it is depends on 'Harness.State.mode', not on a</span><span>
+</span><span id="line-194"></span><span>    </span><span class="hs-comment">-- separate alphabet symbol.</span><span>
+</span><span id="line-195"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Perform"><span class="annot"><a href="Harness.Alphabet.html#Perform"><span class="hs-identifier hs-var">Perform</span></a></span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-type">Obs</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679147287"><span class="hs-identifier hs-type">x</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span>    </span><span class="hs-comment">-- ^ Run a tool against the world. The 'Call' is the position; the direction</span><span>
+</span><span id="line-197"></span><span>    </span><span class="hs-comment">-- @Obs -&gt; x@ is the world's reply. The coalgebra only ever emits a 'Perform'</span><span>
+</span><span id="line-198"></span><span>    </span><span class="hs-comment">-- for an /afforded/ 'Call' (invariant of 'Harness.Coalgebra.admit'), so an</span><span>
+</span><span id="line-199"></span><span>    </span><span class="hs-comment">-- unafforded call never reaches the world through this position.</span><span>
+</span><span id="line-200"></span><span>  </span><span class="hs-glyph">|</span><span> </span><span id="Halt"><span class="annot"><a href="Harness.Alphabet.html#Halt"><span class="hs-identifier hs-var">Halt</span></a></span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Outcome"><span class="hs-identifier hs-type">Outcome</span></a></span><span>
+</span><span id="line-201"></span><span>    </span><span class="hs-comment">-- ^ Stop. A leaf: no direction, no successor. The 'Outcome' says how the run</span><span>
+</span><span id="line-202"></span><span>    </span><span class="hs-comment">-- ended.</span><span>
+</span><span id="line-203"></span><span>  </span><span class="hs-keyword">deriving</span><span> </span><span class="annot"><span class="hs-keyword">stock</span></span><span> </span><span class="hs-special">(</span><span id="local-6989586621679147289"><span id="local-6989586621679147291"><span class="annot"><span class="annottext">(forall a b. (a -&gt; b) -&gt; HarnessF a -&gt; HarnessF b)
 -&gt; (forall a b. a -&gt; HarnessF b -&gt; HarnessF a) -&gt; Functor HarnessF
 forall a b. a -&gt; HarnessF b -&gt; HarnessF a
 forall a b. (a -&gt; b) -&gt; HarnessF a -&gt; HarnessF b
@@ -376,4 +512,4 @@ from :: forall x. HarnessF x -&gt; Rep (HarnessF x) x
 $cto :: forall x x. Rep (HarnessF x) x -&gt; HarnessF x
 to :: forall x. Rep (HarnessF x) x -&gt; HarnessF x
 </span><span class="hs-identifier hs-var hs-var hs-var hs-var hs-var hs-var">Generic</span></span></span></span><span class="hs-special">)</span><span>
-</span><span id="line-68"></span></pre></body></html>
+</span><span id="line-204"></span></pre></body></html>

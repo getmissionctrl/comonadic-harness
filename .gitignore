@@ -6,3 +6,4 @@ result-*
 *.o
 .env
 runs/agent-sandbox/
+.claude/worktrees/

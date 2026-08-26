@@ -135,14 +135,14 @@
 </span><span id="line-125"></span><span class="hs-operator">&gt;</span><span> </span><span id="demoHypo"><span class="annot"><span class="annottext">demoHypo :: Hypo
 </span><a href="Harness.Tutorial.html#demoHypo"><span class="hs-identifier hs-var hs-var">demoHypo</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Harness.Path.html#Hypo"><span class="hs-identifier hs-type">Hypo</span></a></span><span>
 </span><span id="line-126"></span><span class="hs-operator">&gt;</span><span>   </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">guessOracle :: Request -&gt; Either Refusal Response
-</span><a href="Harness.Path.html#guessOracle"><span class="hs-identifier hs-var">guessOracle</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-type">Request</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-type">Prompt</span></a></span><span> </span><span id="local-6989586621679148987"><span class="annot"><span class="annottext">[Char]
-</span><a href="#local-6989586621679148987"><span class="hs-identifier hs-var">prompt</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679148988"><span class="annot"><span class="annottext">[ToolSpec]
-</span><a href="#local-6989586621679148988"><span class="hs-identifier hs-var">tools</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><a href="Harness.Path.html#guessOracle"><span class="hs-identifier hs-var">guessOracle</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-type">Request</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.Alphabet.html#Prompt"><span class="hs-identifier hs-type">Prompt</span></a></span><span> </span><span id="local-6989586621679149017"><span class="annot"><span class="annottext">[Char]
+</span><a href="#local-6989586621679149017"><span class="hs-identifier hs-var">prompt</span></a></span></span><span class="hs-special">)</span><span> </span><span id="local-6989586621679149018"><span class="annot"><span class="annottext">[ToolSpec]
+</span><a href="#local-6989586621679149018"><span class="hs-identifier hs-var">tools</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
 </span><span id="line-127"></span><span class="hs-operator">&gt;</span><span>       </span><span class="hs-keyword">if</span><span> </span><span class="annot"><span class="annottext">[ToolSpec] -&gt; Bool
 forall a. [a] -&gt; Bool
 forall (t :: * -&gt; *) a. Foldable t =&gt; t a -&gt; Bool
 </span><span class="hs-identifier hs-var">null</span></span><span> </span><span class="annot"><span class="annottext">[ToolSpec]
-</span><a href="#local-6989586621679148988"><span class="hs-identifier hs-var">tools</span></a></span><span>
+</span><a href="#local-6989586621679149018"><span class="hs-identifier hs-var">tools</span></a></span><span>
 </span><span id="line-128"></span><span class="hs-operator">&gt;</span><span>         </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Response -&gt; Either Refusal Response
 forall a b. b -&gt; Either a b
 </span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; [Call] -&gt; Usage -&gt; Response
@@ -155,7 +155,7 @@ forall a b. b -&gt; Either a b
 </span><span class="hs-string">&quot;read&quot;</span></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; Bool
 forall a. Eq a =&gt; [a] -&gt; [a] -&gt; Bool
 </span><span class="hs-operator hs-var">`isInfixOf`</span></span><span> </span><span class="annot"><span class="annottext">[Char]
-</span><a href="#local-6989586621679148987"><span class="hs-identifier hs-var">prompt</span></a></span><span>
+</span><a href="#local-6989586621679149017"><span class="hs-identifier hs-var">prompt</span></a></span><span>
 </span><span id="line-130"></span><span class="hs-operator">&gt;</span><span>                </span><span class="hs-keyword">then</span><span> </span><span class="annot"><span class="annottext">Response -&gt; Either Refusal Response
 forall a b. b -&gt; Either a b
 </span><span class="hs-identifier hs-var">Right</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">[Char] -&gt; [Call] -&gt; Usage -&gt; Response
@@ -178,11 +178,11 @@ forall a b. b -&gt; Either a b
 </span><span class="hs-number">120</span></span><span> </span><span class="annot"><span class="annottext">Int
 </span><span class="hs-number">30</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
 </span><span id="line-134"></span><span class="hs-operator">&gt;</span><span>   </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">guessWorld :: Call -&gt; Obs
-</span><a href="Harness.Path.html#guessWorld"><span class="hs-identifier hs-var">guessWorld</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679148994"><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148994"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Obs
+</span><a href="Harness.Path.html#guessWorld"><span class="hs-identifier hs-var">guessWorld</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679149024"><span class="annot"><span class="annottext">Call
+</span><a href="#local-6989586621679149024"><span class="hs-identifier hs-var">c</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; Obs
 </span><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-var">Obs</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Call -&gt; [Char]
 </span><a href="Harness.Alphabet.html#tool"><span class="hs-identifier hs-var">tool</span></a></span><span> </span><span class="annot"><span class="annottext">Call
-</span><a href="#local-6989586621679148994"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
+</span><a href="#local-6989586621679149024"><span class="hs-identifier hs-var">c</span></a></span><span> </span><span class="annot"><span class="annottext">[Char] -&gt; [Char] -&gt; [Char]
 forall a. [a] -&gt; [a] -&gt; [a]
 </span><span class="hs-operator hs-var">++</span></span><span> </span><span class="annot"><span class="annottext">[Char]
 </span><span class="hs-string">&quot; -&gt; ok&quot;</span></span><span class="hs-special">)</span><span>

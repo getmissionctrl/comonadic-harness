@@ -1,29 +1,61 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | The provider seam: everything the harness needs from an LLM, and nothing</span><span>
-</span><span id="line-2"></span><span class="hs-comment">-- else. An 'Env''s @oracle@ is built from one of these. Keeping it abstract</span><span>
-</span><span id="line-3"></span><span class="hs-comment">-- lets a pure mock and the real client share a type.</span><span>
-</span><span id="line-4"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Provider.Class.html"><span class="hs-identifier">Provider.Class</span></a></span><span>
-</span><span id="line-5"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Provider.Class.html#Provider"><span class="hs-identifier">Provider</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
-</span><span id="line-6"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Provider.Class.html#providerEnv"><span class="hs-identifier">providerEnv</span></a></span><span>
-</span><span id="line-7"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
-</span><span id="line-8"></span><span>
-</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Alphabet.html"><span class="hs-identifier">Harness.Alphabet</span></a></span><span>
-</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Run.html"><span class="hs-identifier">Harness.Run</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.Run.html#Env"><span class="hs-identifier">Env</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
-</span><span id="line-11"></span><span>
-</span><span id="line-12"></span><span class="hs-comment">-- | Abstract provider: an oracle that talks to a model plus a world that</span><span>
-</span><span id="line-13"></span><span class="hs-comment">-- executes tool calls.</span><span>
-</span><span id="line-14"></span><span class="hs-keyword">data</span><span> </span><span id="Provider"><span class="annot"><a href="Provider.Class.html#Provider"><span class="hs-identifier hs-var">Provider</span></a></span></span><span> </span><span id="local-6989586621679148997"><span class="annot"><a href="#local-6989586621679148997"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Provider"><span class="annot"><a href="Provider.Class.html#Provider"><span class="hs-identifier hs-var">Provider</span></a></span></span><span>
-</span><span id="line-15"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="complete"><span class="annot"><span class="annottext">forall (m :: * -&gt; *).
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- | The provider seam: everything the harness needs from the outside, and</span><span>
+</span><span id="line-2"></span><span class="hs-comment">-- nothing else.</span><span>
+</span><span id="line-3"></span><span class="hs-comment">--</span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- __What.__ A 'Provider' bundles the two &#8212; and only two &#8212; capabilities the</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- coalgebra cannot supply for itself: an /oracle/ that answers a 'Request' (the</span><span>
+</span><span id="line-6"></span><span class="hs-comment">-- model) and a /world/ that executes a 'Call' (the tools). The @oracle@ of a</span><span>
+</span><span id="line-7"></span><span class="hs-comment">-- @Harness.Run.Env@ is built from one of these via 'providerEnv'.</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--</span><span>
+</span><span id="line-9"></span><span class="hs-comment">-- __Why abstract.__ The whole design hinges on the LLM living behind a single</span><span>
+</span><span id="line-10"></span><span class="hs-comment">-- seam and nowhere else. Keeping 'Provider' a plain record &#8212; rather than, say, a</span><span>
+</span><span id="line-11"></span><span class="hs-comment">-- typeclass &#8212; lets a pure mock and the real HTTP client share one type, so the</span><span>
+</span><span id="line-12"></span><span class="hs-comment">-- analyser can drive the very same shape the live driver walks. Swapping a</span><span>
+</span><span id="line-13"></span><span class="hs-comment">-- scripted provider for 'Provider.Ollama.ollamaProvider' is then a local value</span><span>
+</span><span id="line-14"></span><span class="hs-comment">-- substitution, not a change to the coalgebra.</span><span>
+</span><span id="line-15"></span><span class="hs-comment">--</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- __The slogan.__ @complete@ = the oracle, @act@ = the world. Analysis mocks</span><span>
+</span><span id="line-17"></span><span class="hs-comment">-- both; a live run wires both to reality. [design]</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">module</span><span> </span><span class="annot"><a href="Provider.Class.html"><span class="hs-identifier">Provider.Class</span></a></span><span>
+</span><span id="line-19"></span><span>  </span><span class="hs-special">(</span><span> </span><span class="annot"><a href="Provider.Class.html#Provider"><span class="hs-identifier">Provider</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><a href="Provider.Class.html#providerEnv"><span class="hs-identifier">providerEnv</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Alphabet.html"><span class="hs-identifier">Harness.Alphabet</span></a></span><span>
+</span><span id="line-24"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Harness.Run.html"><span class="hs-identifier">Harness.Run</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.Run.html#Env"><span class="hs-identifier">Env</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-25"></span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- | The two capabilities the harness needs from the outside world, parameterised</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- over the effect @m@ (so a pure @'Data.Functor.Identity.Identity'@ mock and an</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- @IO@ client share the type).</span><span>
+</span><span id="line-29"></span><span class="hs-keyword">data</span><span> </span><span id="Provider"><span class="annot"><a href="Provider.Class.html#Provider"><span class="hs-identifier hs-var">Provider</span></a></span></span><span> </span><span id="local-6989586621679149027"><span class="annot"><a href="#local-6989586621679149027"><span class="hs-identifier hs-type">m</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span id="Provider"><span class="annot"><a href="Provider.Class.html#Provider"><span class="hs-identifier hs-var">Provider</span></a></span></span><span>
+</span><span id="line-30"></span><span>  </span><span class="hs-special">{</span><span> </span><span id="complete"><span class="annot"><span class="annottext">forall (m :: * -&gt; *).
 Provider m -&gt; Request -&gt; m (Either Refusal Response)
-</span><a href="Provider.Class.html#complete"><span class="hs-identifier hs-var hs-var">complete</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-type">Request</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679148997"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier hs-type">Refusal</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-type">Response</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-16"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="act"><span class="annot"><span class="annottext">forall (m :: * -&gt; *). Provider m -&gt; Call -&gt; m Obs
-</span><a href="Provider.Class.html#act"><span class="hs-identifier hs-var hs-var">act</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679148997"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-type">Obs</span></a></span><span>
-</span><span id="line-17"></span><span>  </span><span class="hs-special">}</span><span>
-</span><span id="line-18"></span><span>
-</span><span id="line-19"></span><span class="annot"><span class="hs-comment">-- | Lift a 'Provider' into a 'Harness.Run.Env', the seam the harness uses.</span></span><span>
-</span><span id="line-20"></span><span class="annot"><a href="Provider.Class.html#providerEnv"><span class="hs-identifier hs-type">providerEnv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Provider.Class.html#Provider"><span class="hs-identifier hs-type">Provider</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.Run.html#Env"><span class="hs-identifier hs-type">Env</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span>
-</span><span id="line-21"></span><span id="providerEnv"><span class="annot"><span class="annottext">providerEnv :: Provider IO -&gt; Env IO
-</span><a href="Provider.Class.html#providerEnv"><span class="hs-identifier hs-var hs-var">providerEnv</span></a></span></span><span> </span><span id="local-6989586621679149013"><span class="annot"><span class="annottext">Provider IO
-</span><a href="#local-6989586621679149013"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Request -&gt; IO (Either Refusal Response))
+</span><a href="Provider.Class.html#complete"><span class="hs-identifier hs-var hs-var">complete</span></a></span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Request"><span class="hs-identifier hs-type">Request</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679149027"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier hs-type">Refusal</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-type">Response</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span>    </span><span class="hs-comment">-- ^ The oracle. Given the projected 'Request' (prompt plus afforded tools),</span><span>
+</span><span id="line-32"></span><span>    </span><span class="hs-comment">-- answer with a 'Response' or a terminal 'Refusal'. Only 'Overflow' and a</span><span>
+</span><span id="line-33"></span><span>    </span><span class="hs-comment">-- terminal decode failure ('Harness.Alphabet.Malformed') count as refusals;</span><span>
+</span><span id="line-34"></span><span>    </span><span class="hs-comment">-- transient trouble (timeouts, 5xx, socket errors) must be absorbed /inside/</span><span>
+</span><span id="line-35"></span><span>    </span><span class="hs-comment">-- this function and never surfaced as a 'Refusal' (invariant 5).</span><span>
+</span><span id="line-36"></span><span>  </span><span class="hs-special">,</span><span> </span><span id="act"><span class="annot"><span class="annottext">forall (m :: * -&gt; *). Provider m -&gt; Call -&gt; m Obs
+</span><a href="Provider.Class.html#act"><span class="hs-identifier hs-var hs-var">act</span></a></span></span><span>      </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Call"><span class="hs-identifier hs-type">Call</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="#local-6989586621679149027"><span class="hs-identifier hs-type">m</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-type">Obs</span></a></span><span>
+</span><span id="line-37"></span><span>    </span><span class="hs-comment">-- ^ The world. Execute one tool 'Call' and return the 'Obs' the model sees</span><span>
+</span><span id="line-38"></span><span>    </span><span class="hs-comment">-- next turn. A scripted world stubs this; the live world is the sandboxed</span><span>
+</span><span id="line-39"></span><span>    </span><span class="hs-comment">-- executor 'Provider.Tools.sandboxAct'. It must not throw &#8212; an execution</span><span>
+</span><span id="line-40"></span><span>    </span><span class="hs-comment">-- failure is reported /as/ an 'Obs', preserving the harness's</span><span>
+</span><span id="line-41"></span><span>    </span><span class="hs-comment">-- crash-freedom property.</span><span>
+</span><span id="line-42"></span><span>  </span><span class="hs-special">}</span><span>
+</span><span id="line-43"></span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- | Lift a 'Provider' into a @Harness.Run.Env@, the record the driver actually</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- pairs against the unfolded tree.</span><span>
+</span><span id="line-46"></span><span class="hs-comment">--</span><span>
+</span><span id="line-47"></span><span class="hs-comment">-- __Why it exists.__ 'Provider' is the /author-facing/ shape (two named</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- capabilities); @Env@ is the /driver-facing/ shape. They are structurally the</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- same, but keeping them distinct lets 'Provider' grow provider-specific</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- conveniences without the coalgebra ever seeing more than the two fields it</span><span>
+</span><span id="line-51"></span><span class="hs-comment">-- consumes. Specialised to @IO@ because the live seam is effectful. [design]</span><span>
+</span><span id="line-52"></span><span class="annot"><a href="Provider.Class.html#providerEnv"><span class="hs-identifier hs-type">providerEnv</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Provider.Class.html#Provider"><span class="hs-identifier hs-type">Provider</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.Run.html#Env"><span class="hs-identifier hs-type">Env</span></a></span><span> </span><span class="annot"><span class="hs-identifier hs-type">IO</span></span><span>
+</span><span id="line-53"></span><span id="providerEnv"><span class="annot"><span class="annottext">providerEnv :: Provider IO -&gt; Env IO
+</span><a href="Provider.Class.html#providerEnv"><span class="hs-identifier hs-var hs-var">providerEnv</span></a></span></span><span> </span><span id="local-6989586621679149048"><span class="annot"><span class="annottext">Provider IO
+</span><a href="#local-6989586621679149048"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Request -&gt; IO (Either Refusal Response))
 -&gt; (Call -&gt; IO Obs) -&gt; Env IO
 forall (m :: * -&gt; *).
 (Request -&gt; m (Either Refusal Response))
@@ -32,8 +64,8 @@ forall (m :: * -&gt; *).
 forall (m :: * -&gt; *).
 Provider m -&gt; Request -&gt; m (Either Refusal Response)
 </span><a href="Provider.Class.html#complete"><span class="hs-identifier hs-var">complete</span></a></span><span> </span><span class="annot"><span class="annottext">Provider IO
-</span><a href="#local-6989586621679149013"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Provider IO -&gt; Call -&gt; IO Obs
+</span><a href="#local-6989586621679149048"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Provider IO -&gt; Call -&gt; IO Obs
 forall (m :: * -&gt; *). Provider m -&gt; Call -&gt; m Obs
 </span><a href="Provider.Class.html#act"><span class="hs-identifier hs-var">act</span></a></span><span> </span><span class="annot"><span class="annottext">Provider IO
-</span><a href="#local-6989586621679149013"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
-</span><span id="line-22"></span></pre></body></html>
+</span><a href="#local-6989586621679149048"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span></pre></body></html>
