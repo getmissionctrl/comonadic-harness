@@ -5,3 +5,4 @@ result-*
 *.hi
 *.o
 .env
+runs/agent-sandbox/

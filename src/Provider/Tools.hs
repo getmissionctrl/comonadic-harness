@@ -11,6 +11,10 @@
 --     refused rather than followed.
 --   * @bash@ runs with the sandbox as its working directory and a wall-clock
 --     timeout, so a hung or runaway command cannot block the run forever.
+--     /Caveat:/ this is @cwd@-confinement, not a security boundary — the command
+--     runs with the harness's own uid and can read outside the sandbox (e.g.
+--     @cat \/etc\/passwd@). Only @read@\/@write@ are path-confined; @bash@ is
+--     trusted-input territory. [design]
 --   * @commit@ is a @git commit@ in the sandbox's /own/ repository, seeded by
 --     'prepareSandbox' — the surrounding project repo is never touched.
 --
@@ -38,7 +42,7 @@ import System.Directory
   , doesFileExist
   )
 import System.Exit (ExitCode (..))
-import System.FilePath (normalise, takeDirectory, (</>))
+import System.FilePath (isAbsolute, pathSeparator, splitDirectories, takeDirectory, (</>))
 import System.Process (CreateProcess (..), proc, readCreateProcessWithExitCode, shell)
 import System.Timeout (timeout)
 
@@ -127,19 +131,26 @@ commitTool root mmsg = do
 -- Path safety
 -- ---------------------------------------------------------------------------
 
--- | Run the action with a path that is guaranteed to sit inside the sandbox.
--- The candidate's directory is canonicalised and compared against the
--- canonical sandbox root, so a @..@ traversal (or an absolute path) that would
--- leave the sandbox is refused. [established]
+-- | Run the action with a path guaranteed to sit inside the sandbox.
+--
+-- Two layers, because canonicalising alone is not enough: 'canonicalizePath'
+-- leaves @..@ segments /uncollapsed/ when an earlier component does not yet
+-- exist (so @a\/..\/..\/etc@ would slip a naive prefix check while the OS still
+-- resolves the @..@ at write time). So we first refuse, lexically, any absolute
+-- path or any path containing a @..@ segment — that alone confines the path to
+-- the sandbox. We then canonicalise the /full/ candidate and re-check
+-- containment, which additionally defeats a symlink a prior @write@\/@bash@ may
+-- have planted inside the sandbox pointing out. [established]
 withSafePath :: FilePath -> String -> (FilePath -> IO String) -> IO String
 withSafePath root rel k
-  | null rel  = pure "error: empty path"
+  | null rel                         = pure "error: empty path"
+  | isAbsolute rel                   = pure ("error: absolute path not allowed: " ++ rel)
+  | ".." `elem` splitDirectories rel = pure ("error: '..' not allowed in path: " ++ rel)
   | otherwise = do
-      let candidate = normalise (root </> rel)
       croot <- canonicalizePath root
-      cdir  <- canonicalizePath (takeDirectory candidate)
-      if croot == cdir || (croot ++ "/") `isPrefixOf` (cdir ++ "/")
-        then k candidate
+      canon <- canonicalizePath (root </> rel)
+      if croot == canon || (croot ++ [pathSeparator]) `isPrefixOf` canon
+        then k (root </> rel)
         else pure ("error: path escapes sandbox: " ++ rel)
 
 -- ---------------------------------------------------------------------------
