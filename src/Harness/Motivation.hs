@@ -111,13 +111,16 @@ single next action — and @unfold@ it into @Cofree 'HarnessF' 'Ctx'@, the
 lazily-grown tree of every reachable future. Nothing runs; you have built a
 value.
 
-That value has two directions on it, and they are John Boyd's pair. /Creation/
-is the unfold: synthesise the whole branching future from a seed coalgebra, a
-model of what could happen. /Destruction/ is the fold: take that tree apart to
-see what each state's future actually holds. Boyd's argument in /Destruction and
-Creation/ (1976) is that staying adaptive means doing both, forever — you cannot
-analyse without first pulling a whole into parts, and you cannot act without
-assembling parts into a new whole. A harness that can only run forward — create,
+That value has two directions on it, and they map onto an idea from John Boyd —
+the US Air Force strategist best known for the OODA loop (observe, orient,
+decide, act) — set out in his 1976 essay
+<https://e1z.ca/lifeonomics/2023-04-20_ExpertsEcho_John_Boyd/johnboyd_docs/04_Destruction_and_Creation.pdf Destruction and Creation>.
+/Creation/ is the unfold: synthesise the whole branching future from a seed
+coalgebra, a model of what could happen. /Destruction/ is the fold: take that
+tree apart to see what each state's future actually holds. Boyd's argument is
+that staying adaptive means doing both, forever — you cannot analyse without
+first pulling a whole into parts, and you cannot act without assembling parts
+into a new whole. A harness that can only run forward — create,
 never destruct its own futures — cannot govern itself. The canonical loop is all
 creation: it acts, and never inspects.
 

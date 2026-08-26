@@ -111,13 +111,16 @@ single next action &#8212; and @unfold@ it into @Cofree 'HarnessF' 'Ctx'@, the
 lazily-grown tree of every reachable future. Nothing runs; you have built a
 value.
 
-That value has two directions on it, and they are John Boyd's pair. /Creation/
-is the unfold: synthesise the whole branching future from a seed coalgebra, a
-model of what could happen. /Destruction/ is the fold: take that tree apart to
-see what each state's future actually holds. Boyd's argument in /Destruction and
-Creation/ (1976) is that staying adaptive means doing both, forever &#8212; you cannot
-analyse without first pulling a whole into parts, and you cannot act without
-assembling parts into a new whole. A harness that can only run forward &#8212; create,
+That value has two directions on it, and they map onto an idea from John Boyd &#8212;
+the US Air Force strategist best known for the OODA loop (observe, orient,
+decide, act) &#8212; set out in his 1976 essay
+&lt;https://e1z.ca/lifeonomics/2023-04-20_ExpertsEcho_John_Boyd/johnboyd_docs/04_Destruction_and_Creation.pdf Destruction and Creation&gt;.
+/Creation/ is the unfold: synthesise the whole branching future from a seed
+coalgebra, a model of what could happen. /Destruction/ is the fold: take that
+tree apart to see what each state's future actually holds. Boyd's argument is
+that staying adaptive means doing both, forever &#8212; you cannot analyse without
+first pulling a whole into parts, and you cannot act without assembling parts
+into a new whole. A harness that can only run forward &#8212; create,
 never destruct its own futures &#8212; cannot govern itself. The canonical loop is all
 creation: it acts, and never inspects.
 
@@ -133,13 +136,13 @@ of analysis the canonical loop has no words for.
 'Harness.Coalgebra.step', showing the creation seed: a fixed position whose
 successor is a pure function of the reply.
 -}</span></span><span>
-</span><span id="line-136"></span><span>
-</span><span id="line-137"></span><span class="hs-comment">-- | A minimal coalgebra fragment: emit the request, and on reply either halt by</span><span>
-</span><span id="line-138"></span><span class="hs-comment">-- spending the budget or record the (until-now unobserved) response and carry</span><span>
-</span><span id="line-139"></span><span class="hs-comment">-- on. The nondeterminism is entirely in the @Either 'Refusal' 'Response'@</span><span>
-</span><span id="line-140"></span><span class="hs-comment">-- argument &#8212; the position 'Render' is fixed, only the reply varies.</span><span>
-</span><span id="line-141"></span><span class="annot"><a href="Harness.Motivation.html#exampleStep"><span class="hs-identifier hs-type">exampleStep</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier hs-type">HarnessF</span></a></span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span>
-</span><span id="line-142"></span><span id="exampleStep"><span class="annot"><span class="annottext">exampleStep :: S -&gt; HarnessF S
+</span><span id="line-139"></span><span>
+</span><span id="line-140"></span><span class="hs-comment">-- | A minimal coalgebra fragment: emit the request, and on reply either halt by</span><span>
+</span><span id="line-141"></span><span class="hs-comment">-- spending the budget or record the (until-now unobserved) response and carry</span><span>
+</span><span id="line-142"></span><span class="hs-comment">-- on. The nondeterminism is entirely in the @Either 'Refusal' 'Response'@</span><span>
+</span><span id="line-143"></span><span class="hs-comment">-- argument &#8212; the position 'Render' is fixed, only the reply varies.</span><span>
+</span><span id="line-144"></span><span class="annot"><a href="Harness.Motivation.html#exampleStep"><span class="hs-identifier hs-type">exampleStep</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.Alphabet.html#HarnessF"><span class="hs-identifier hs-type">HarnessF</span></a></span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span>
+</span><span id="line-145"></span><span id="exampleStep"><span class="annot"><span class="annottext">exampleStep :: S -&gt; HarnessF S
 </span><a href="Harness.Motivation.html#exampleStep"><span class="hs-identifier hs-var hs-var">exampleStep</span></a></span></span><span> </span><span id="local-6989586621679147651"><span class="annot"><span class="annottext">S
 </span><a href="#local-6989586621679147651"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Request -&gt; (Either Refusal Response -&gt; S) -&gt; HarnessF S
 forall x. Request -&gt; (Either Refusal Response -&gt; x) -&gt; HarnessF x
@@ -148,16 +151,16 @@ forall x. Request -&gt; (Either Refusal Response -&gt; x) -&gt; HarnessF x
 </span><a href="#local-6989586621679147651"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Either Refusal Response -&gt; S
 forall {a}. Either a Response -&gt; S
 </span><a href="#local-6989586621679147653"><span class="hs-identifier hs-var">reply</span></a></span><span>
-</span><span id="line-143"></span><span>  </span><span class="hs-keyword">where</span><span>
-</span><span id="line-144"></span><span>    </span><span id="local-6989586621679147653"><span class="annot"><span class="annottext">reply :: Either a Response -&gt; S
+</span><span id="line-146"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-147"></span><span>    </span><span id="local-6989586621679147653"><span class="annot"><span class="annottext">reply :: Either a Response -&gt; S
 </span><a href="#local-6989586621679147653"><span class="hs-identifier hs-var hs-var">reply</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Left</span></span><span> </span><span class="annot"><span class="annottext">a
 </span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span>  </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">S
 </span><a href="#local-6989586621679147651"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Harness.State.html#budget"><span class="hs-identifier hs-var">budget</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="hs-number">0</span></span><span> </span><span class="hs-special">}</span><span>
-</span><span id="line-145"></span><span>    </span><span class="annot"><a href="#local-6989586621679147653"><span class="hs-identifier hs-var">reply</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679147655"><span class="annot"><span class="annottext">Response
+</span><span id="line-148"></span><span>    </span><span class="annot"><a href="#local-6989586621679147653"><span class="hs-identifier hs-var">reply</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="hs-identifier hs-type">Right</span></span><span> </span><span id="local-6989586621679147655"><span class="annot"><span class="annottext">Response
 </span><a href="#local-6989586621679147655"><span class="hs-identifier hs-var">r</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">S
 </span><a href="#local-6989586621679147651"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-special">{</span><span> </span><span class="annot"><a href="Harness.State.html#transcript"><span class="hs-identifier hs-var">transcript</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><a href="Harness.State.html#Assistant"><span class="hs-identifier hs-type">Assistant</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679147655"><span class="hs-identifier hs-type">r</span></a></span><span> </span><span class="annot"><span class="hs-glyph hs-type">:</span></span><span> </span><span class="annot"><a href="Harness.State.html#transcript"><span class="hs-identifier hs-var">transcript</span></a></span><span> </span><span class="annot"><a href="#local-6989586621679147651"><span class="hs-identifier hs-type">s</span></a></span><span> </span><span class="hs-special">}</span><span>
-</span><span id="line-146"></span><span>
-</span><span id="line-147"></span><span class="annot"><span class="hs-comment">{- $gate
+</span><span id="line-149"></span><span>
+</span><span id="line-150"></span><span class="annot"><span class="hs-comment">{- $gate
 Concretely: write @assess@, a function that scores one node from its own
 future &#8212; how far ahead it halts, whether it terminates at all, which irreversible
 tools it touches, how many compactions it forces. Then @governed = extend (assess h n)@
@@ -172,8 +175,8 @@ the run that follows /by construction/, not by hope. (The comonad operation
 @extend@ is what @governed@ uses; the score at a single node is @assess@, which
 the next section reuses without lifting it over the tree.)
 -}</span></span><span>
-</span><span id="line-162"></span><span>
-</span><span id="line-163"></span><span class="annot"><span class="hs-comment">{- $evolve
+</span><span id="line-165"></span><span>
+</span><span id="line-166"></span><span class="annot"><span class="hs-comment">{- $evolve
 Boyd's loop does not stop at analysis &#8212; the point of destruction is to feed a new
 creation. When the forecast says a coalgebra will not terminate, the harness
 swaps it for a weaker one and unfolds again. @evolve@ builds a chosen coalgebra
@@ -184,8 +187,8 @@ and the comonad supplies the destruction half that makes the trigger computable.
 (@outerLoop@ reads @assess@ on one tree rather than lifting @extend@ over it; the
 rhythm is Boyd's either way.)
 -}</span></span><span>
-</span><span id="line-174"></span><span>
-</span><span id="line-175"></span><span class="annot"><span class="hs-comment">{- $shape
+</span><span id="line-177"></span><span>
+</span><span id="line-178"></span><span class="annot"><span class="hs-comment">{- $shape
 None of this works if analysis is effectful, and that is bought by one decision:
 put the nondeterminism in the /directions/, not the /positions/. A 'Render'
 position is a fixed 'Request'; what the harness does not control is the reply, so
@@ -199,34 +202,34 @@ run tools to enumerate its futures, dissolves: the tree branches on unobserved
 @exampleRun@ makes the point without any effect: given a pure reply, @exampleStep@
 produces a concrete successor state.
 -}</span></span><span>
-</span><span id="line-189"></span><span>
-</span><span id="line-190"></span><span class="hs-comment">-- | Drive 'exampleStep' one step with a supplied (pure) reply. No oracle, no</span><span>
-</span><span id="line-191"></span><span class="hs-comment">-- @IO@: the successor is a function of the reply. The @case@ is exhaustive over</span><span>
-</span><span id="line-192"></span><span class="hs-comment">-- all three constructors on purpose &#8212; the action set is closed, and a wildcard</span><span>
-</span><span id="line-193"></span><span class="hs-comment">-- would hide the day a fourth is added.</span><span>
-</span><span id="line-194"></span><span class="annot"><a href="Harness.Motivation.html#exampleRun"><span class="hs-identifier hs-type">exampleRun</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier hs-type">Refusal</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-type">Response</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span>
-</span><span id="line-195"></span><span id="exampleRun"><span class="annot"><span class="annottext">exampleRun :: S -&gt; Either Refusal Response -&gt; S
+</span><span id="line-192"></span><span>
+</span><span id="line-193"></span><span class="hs-comment">-- | Drive 'exampleStep' one step with a supplied (pure) reply. No oracle, no</span><span>
+</span><span id="line-194"></span><span class="hs-comment">-- @IO@: the successor is a function of the reply. The @case@ is exhaustive over</span><span>
+</span><span id="line-195"></span><span class="hs-comment">-- all three constructors on purpose &#8212; the action set is closed, and a wildcard</span><span>
+</span><span id="line-196"></span><span class="hs-comment">-- would hide the day a fourth is added.</span><span>
+</span><span id="line-197"></span><span class="annot"><a href="Harness.Motivation.html#exampleRun"><span class="hs-identifier hs-type">exampleRun</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="hs-identifier hs-type">Either</span></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Refusal"><span class="hs-identifier hs-type">Refusal</span></a></span><span> </span><span class="annot"><a href="Harness.Alphabet.html#Response"><span class="hs-identifier hs-type">Response</span></a></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><a href="Harness.State.html#S"><span class="hs-identifier hs-type">S</span></a></span><span>
+</span><span id="line-198"></span><span id="exampleRun"><span class="annot"><span class="annottext">exampleRun :: S -&gt; Either Refusal Response -&gt; S
 </span><a href="Harness.Motivation.html#exampleRun"><span class="hs-identifier hs-var hs-var">exampleRun</span></a></span></span><span> </span><span id="local-6989586621679147659"><span class="annot"><span class="annottext">S
 </span><a href="#local-6989586621679147659"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span id="local-6989586621679147660"><span class="annot"><span class="annottext">Either Refusal Response
 </span><a href="#local-6989586621679147660"><span class="hs-identifier hs-var">r</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><span class="annot"><span class="annottext">S -&gt; HarnessF S
 </span><a href="Harness.Motivation.html#exampleStep"><span class="hs-identifier hs-var">exampleStep</span></a></span><span> </span><span class="annot"><span class="annottext">S
 </span><a href="#local-6989586621679147659"><span class="hs-identifier hs-var">s</span></a></span><span> </span><span class="hs-keyword">of</span><span>
-</span><span id="line-196"></span><span>  </span><span class="annot"><a href="Harness.Alphabet.html#Render"><span class="hs-identifier hs-type">Render</span></a></span><span> </span><span class="annot"><span class="annottext">Request
+</span><span id="line-199"></span><span>  </span><span class="annot"><a href="Harness.Alphabet.html#Render"><span class="hs-identifier hs-type">Render</span></a></span><span> </span><span class="annot"><span class="annottext">Request
 </span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679147661"><span class="annot"><span class="annottext">Either Refusal Response -&gt; S
 </span><a href="#local-6989586621679147661"><span class="hs-identifier hs-var">k</span></a></span></span><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Either Refusal Response -&gt; S
 </span><a href="#local-6989586621679147661"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Either Refusal Response
 </span><a href="#local-6989586621679147660"><span class="hs-identifier hs-var">r</span></a></span><span>
-</span><span id="line-197"></span><span>  </span><span class="annot"><a href="Harness.Alphabet.html#Perform"><span class="hs-identifier hs-type">Perform</span></a></span><span> </span><span class="annot"><span class="annottext">Call
+</span><span id="line-200"></span><span>  </span><span class="annot"><a href="Harness.Alphabet.html#Perform"><span class="hs-identifier hs-type">Perform</span></a></span><span> </span><span class="annot"><span class="annottext">Call
 </span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679147663"><span class="annot"><span class="annottext">Obs -&gt; S
 </span><a href="#local-6989586621679147663"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Obs -&gt; S
 </span><a href="#local-6989586621679147663"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">String -&gt; Obs
 </span><a href="Harness.Alphabet.html#Obs"><span class="hs-identifier hs-var">Obs</span></a></span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;&quot;</span></span><span class="hs-special">)</span><span>   </span><span class="hs-comment">-- unreachable for this fragment; kept total</span><span>
-</span><span id="line-198"></span><span>  </span><span class="annot"><a href="Harness.Alphabet.html#Halt"><span class="hs-identifier hs-type">Halt</span></a></span><span> </span><span class="annot"><span class="annottext">Outcome
+</span><span id="line-201"></span><span>  </span><span class="annot"><a href="Harness.Alphabet.html#Halt"><span class="hs-identifier hs-type">Halt</span></a></span><span> </span><span class="annot"><span class="annottext">Outcome
 </span><span class="hs-identifier">_</span></span><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">S
 </span><a href="#local-6989586621679147659"><span class="hs-identifier hs-var">s</span></a></span><span>
-</span><span id="line-199"></span><span>
-</span><span id="line-200"></span><span class="annot"><span class="hs-comment">{- $bisimulation
+</span><span id="line-202"></span><span>
+</span><span id="line-203"></span><span class="annot"><span class="hs-comment">{- $bisimulation
 The second \&quot;no\&quot; was compaction. Collapsing the transcript to stay inside the
 window should be a /coalgebra homomorphism/: @step (compact s) == fmap compact (step s)@.
 Read that as: @s@ and @compact s@ are /bisimilar/ &#8212; they produce the same
@@ -245,18 +248,18 @@ where \&quot;plan mode\&quot; and the real run are the same loop under different
 @irreversible@ is that one shadow as a tiny fold, the same notion
 'Harness.Compaction.respectsBehaviour' checks at scale.
 -}</span></span><span>
-</span><span id="line-219"></span><span>
-</span><span id="line-220"></span><span class="hs-comment">-- | The irreversible actions a transcript performed, as a plain list (read it</span><span>
-</span><span id="line-221"></span><span class="hs-comment">-- as a multiset). A compaction that changes this has changed behaviour, which</span><span>
-</span><span id="line-222"></span><span class="hs-comment">-- is the divergence 'Harness.Compaction.respectsBehaviour' is built to catch.</span><span>
-</span><span id="line-223"></span><span class="annot"><a href="Harness.Motivation.html#irreversible"><span class="hs-identifier hs-type">irreversible</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.State.html#Turn"><span class="hs-identifier hs-type">Turn</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">]</span><span>
-</span><span id="line-224"></span><span id="irreversible"><span class="annot"><span class="annottext">irreversible :: [Turn] -&gt; [String]
+</span><span id="line-222"></span><span>
+</span><span id="line-223"></span><span class="hs-comment">-- | The irreversible actions a transcript performed, as a plain list (read it</span><span>
+</span><span id="line-224"></span><span class="hs-comment">-- as a multiset). A compaction that changes this has changed behaviour, which</span><span>
+</span><span id="line-225"></span><span class="hs-comment">-- is the divergence 'Harness.Compaction.respectsBehaviour' is built to catch.</span><span>
+</span><span id="line-226"></span><span class="annot"><a href="Harness.Motivation.html#irreversible"><span class="hs-identifier hs-type">irreversible</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="annot"><a href="Harness.State.html#Turn"><span class="hs-identifier hs-type">Turn</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="hs-identifier hs-type">String</span></span><span class="hs-special">]</span><span>
+</span><span id="line-227"></span><span id="irreversible"><span class="annot"><span class="annottext">irreversible :: [Turn] -&gt; [String]
 </span><a href="Harness.Motivation.html#irreversible"><span class="hs-identifier hs-var hs-var">irreversible</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">(Turn -&gt; [String]) -&gt; [Turn] -&gt; [String]
 forall (t :: * -&gt; *) a b. Foldable t =&gt; (a -&gt; [b]) -&gt; t a -&gt; [b]
 </span><span class="hs-identifier hs-var">concatMap</span></span><span> </span><span class="annot"><span class="annottext">Turn -&gt; [String]
 </span><a href="#local-6989586621679147667"><span class="hs-identifier hs-var">turnWrites</span></a></span><span>
-</span><span id="line-225"></span><span>  </span><span class="hs-keyword">where</span><span>
-</span><span id="line-226"></span><span>    </span><span id="local-6989586621679147667"><span class="annot"><span class="annottext">turnWrites :: Turn -&gt; [String]
+</span><span id="line-228"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-229"></span><span>    </span><span id="local-6989586621679147667"><span class="annot"><span class="annottext">turnWrites :: Turn -&gt; [String]
 </span><a href="#local-6989586621679147667"><span class="hs-identifier hs-var hs-var">turnWrites</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Harness.State.html#User"><span class="hs-identifier hs-type">User</span></a></span><span> </span><span id="local-6989586621679147674"><span class="annot"><span class="annottext">[(Call, Obs)]
 </span><a href="#local-6989586621679147674"><span class="hs-identifier hs-var">rs</span></a></span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Call -&gt; String
 </span><a href="Harness.Alphabet.html#tool"><span class="hs-identifier hs-var">tool</span></a></span><span> </span><span class="annot"><span class="annottext">Call
@@ -270,14 +273,14 @@ forall a. Eq a =&gt; a -&gt; [a] -&gt; Bool
 forall (t :: * -&gt; *) a. (Foldable t, Eq a) =&gt; a -&gt; t a -&gt; Bool
 </span><span class="hs-operator hs-var">`elem`</span></span><span> </span><span class="annot"><span class="annottext">[String]
 </span><a href="#local-6989586621679147678"><span class="hs-identifier hs-var">writers</span></a></span><span class="hs-special">]</span><span>
-</span><span id="line-227"></span><span>    </span><span class="annot"><a href="#local-6989586621679147667"><span class="hs-identifier hs-var">turnWrites</span></a></span><span> </span><span class="annot"><span class="annottext">Turn
+</span><span id="line-230"></span><span>    </span><span class="annot"><a href="#local-6989586621679147667"><span class="hs-identifier hs-var">turnWrites</span></a></span><span> </span><span class="annot"><span class="annottext">Turn
 </span><span class="hs-identifier">_</span></span><span>         </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
-</span><span id="line-228"></span><span>    </span><span id="local-6989586621679147678"><span class="annot"><span class="annottext">writers :: [String]
+</span><span id="line-231"></span><span>    </span><span id="local-6989586621679147678"><span class="annot"><span class="annottext">writers :: [String]
 </span><a href="#local-6989586621679147678"><span class="hs-identifier hs-var hs-var">writers</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;write&quot;</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">String
 </span><span class="hs-string">&quot;commit&quot;</span></span><span class="hs-special">]</span><span>
-</span><span id="line-229"></span><span>
-</span><span id="line-230"></span><span class="annot"><span class="hs-comment">{- $limits
+</span><span id="line-232"></span><span>
+</span><span id="line-233"></span><span class="annot"><span class="hs-comment">{- $limits
 Honesty about the trade. The comonad supplies the plumbing to attach a forecast
 cheaply; it does not supply a model of the oracle, and the forecast is only as
 good as the hypothesis &#8212; against a crude one it gets the shape of the run right
@@ -295,4 +298,4 @@ cannot: what the agent will do, and that compaction did not change it. The
 canonical harness is the better product; this is the better account of what an
 agent run /is/.
 -}</span></span><span>
-</span><span id="line-248"></span></pre></body></html>
+</span><span id="line-251"></span></pre></body></html>
