@@ -4,7 +4,7 @@ import Test.Hspec hiding (pending)
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck
 import Control.Comonad (duplicate, extract)
-import Control.Comonad.Cofree (Cofree)
+import Control.Comonad.Cofree (Cofree ((:<)))
 import Harness.Alphabet
 import Harness.State
 import Harness.Run (run)
@@ -20,6 +20,27 @@ firstTree :: Hypo -> Int -> Maybe (Cofree HarnessF Ctx)
 firstTree h b = case reachableStates h 20 b of
   ((_, w) : _) -> Just w
   []           -> Nothing
+
+-- | Every 'Perform' node reached under the hypo, paired with the afforded tool
+-- names at that node. The afforded set is read from the node's own 'Ctx'
+-- annotation (@reqTools (ctxRequest c)@, which is @afford s@ at that node — see
+-- 'Harness.State.request'); this is analysis reading the annotation, permitted.
+-- Wildcard-free over 'HarnessF' (invariant 1): 'Render' and 'Halt' contribute
+-- nothing, but are matched explicitly.
+performNodes :: Hypo -> Cofree HarnessF Ctx -> [(String, [String])]
+performNodes h w = concatMap (\(c :< f) -> node c f) (takeWalk h 200 w)
+  where
+    node c (Perform call _) = [(tool call, map specName (reqTools (ctxRequest c)))]
+    node _ (Render _ _)     = []
+    node _ (Halt _)         = []
+
+-- | One 'Perform' observation from 'performNodes' passes the affordance law iff
+-- the performed tool is among the afforded names at that node.
+afforded :: (String, [String]) -> Property
+afforded (performed, tools) =
+  counterexample
+    ("Perform " ++ show performed ++ " unafforded; afforded=" ++ show tools)
+    (performed `elem` tools)
 
 -- | Build an S directly from generated turns. This is NOT a §16.7 violation:
 -- 'project' is a pure function of the transcript, so reachability is irrelevant
@@ -60,13 +81,29 @@ spec = do
             Prompt rest  = project (startStateWith ts)
          in whole === rest ++ renderLine t ++ "\n"
 
-  describe "affordance law (§16.4, D12)" $
-    -- The coalgebra can currently 'Perform' an unafforded call (e.g. a hypo that
-    -- emits @commit@ before any @write@). Task 20's @admit@ pass closes this, at
-    -- which point this becomes a real assertion. Marked pending, not failing, so
-    -- the suite stays green until then.
-    it "probe never emits (Did c) whose tool is unafforded at that node" $
-      pendingWith "holds after Task 20 (admit); the coalgebra can currently Perform an unafforded call"
+  describe "affordance law (§16.4, D12)" $ do
+    -- Real assertion after Task 20's @admit@ pass: every 'Perform' the coalgebra
+    -- emits carries a 'Call' whose 'tool' is afforded at that node. We walk the
+    -- reachable tree and, at each 'Perform' node, read the afforded tool names
+    -- from that node's own 'Ctx' annotation (@reqTools (ctxRequest c)@, which is
+    -- @afford s@ at that node — see 'Harness.State.request') and assert the
+    -- performed tool is among them. Pre-fix this FAILED: a hypo emitting @commit@
+    -- before any @write@ (genHypo can) reached a 'Perform commit' at a node whose
+    -- afforded set excludes @commit@.
+    prop "probe never emits (Did c) whose tool is unafforded at that node" $
+      forAll (Blind <$> genHypo) $ \(Blind h) -> forAll (choose (200, 1200)) $ \b ->
+        case firstTree h b of
+          Nothing -> property True
+          Just w  -> conjoin (map afforded (performNodes h w))
+
+    -- Non-vacuity guard: over a fixed sample the affordance walk must observe at
+    -- least one 'Perform' node (otherwise the prop above proves nothing). We
+    -- assert a positive count and print it. [design]
+    it "affordance walk is non-vacuous: observes Perform nodes across the sample" $ do
+      hs <- generate (vectorOf 200 genHypo)
+      let seen = [ pn | h <- hs, (_, w) <- reachableStates h 20 600, pn <- performNodes h w ]
+      putStrLn ("affordance law: observed " ++ show (length seen) ++ " Perform nodes across sample")
+      length seen `shouldSatisfy` (> 0)
 
   describe "compaction violation rate (E1, expected non-zero for real compact)" $ do
     it "no-op compaction scores 0% (baseline null model)" $ do
