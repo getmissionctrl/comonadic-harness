@@ -86,13 +86,15 @@ runVerbose env h horizon = go (0 :: Int)
             Perform call k -> do
                 o <- world env call
                 let Obs t = o
-                putStrLn ("    PERFORM " ++ tool call ++ " -> " ++ t)
+                -- Show the raw args the model sent for this call — for a @write@
+                -- that is the file body it actually proposed.
+                putStrLn ("    PERFORM " ++ tool call ++ " " ++ args call ++ " -> " ++ t)
                 go (i + 1) (k o)
             Render q k -> do
                 resp <- oracle env q
                 case resp of
                     Left e -> putStrLn ("    ORACLE refused: " ++ show e)
-                    Right x ->
+                    Right x -> do
                         putStrLn
                             ( "    ORACLE "
                                 ++ show (inTok (usage x) + outTok (usage x))
@@ -101,6 +103,12 @@ runVerbose env h horizon = go (0 :: Int)
                                 ++ " "
                                 ++ show (map tool (calls x))
                             )
+                        -- Echo each proposed call with its JSON args, so the
+                        -- model's generated content is visible, not just the
+                        -- tool name.
+                        mapM_
+                            (\cl -> putStrLn ("      call " ++ tool cl ++ " args=" ++ args cl))
+                            (calls x)
                 go (i + 1) (k resp)
 
 pad :: Int -> String -> String

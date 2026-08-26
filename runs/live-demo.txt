@@ -1,0 +1,14 @@
+== live run: model=qwen3:8b numCtx=4096 @ http://hq:11434 ================
+task (seeded as the opening turn): Read the README then write a short notes.md summarising the project and commit it
+(risk column is the harness's pure forecast; oracle lines are the live model)
+0   tok=1200  mode=Working      ctx=1ln tools=["read","bash","write"]        risk=15/T compactions=2
+    ORACLE 900tok ->  ["read"]
+      call read args={"filename":"README.md"}
+1   tok=300   mode=Working      ctx=2ln tools=["read","bash","write"]        risk=7/T compactions=1
+    PERFORM read {"filename":"README.md"} -> read:ok
+2   tok=300   mode=Working      ctx=3ln tools=["read","bash","write"]        risk=6/T compactions=1
+    ORACLE 541tok ->  ["read"]
+      call read args={"file":"README"}
+3   tok=-241  mode=Working      ctx=4ln tools=["read","bash","write"]        risk=1/T compactions=0
+    HALT Exhausted
+live outcome: Exhausted

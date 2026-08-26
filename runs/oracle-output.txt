@@ -5,24 +5,29 @@ Risk {stepsAhead = Sum {getSum = 17}, terminates = Any {getAny = True}, irrevers
 == the run ===================================================
 0   tok=1200  mode=Working      ctx=0ln tools=["read","bash","write"]        risk=17/T compactions=2
     ORACLE 140tok -> orienting ["read"]
+      call read args=README.md
 1   tok=1060  mode=Working      ctx=1ln tools=["read","bash","write"]        risk=16/T compactions=2
-    PERFORM read -> read:ok
+    PERFORM read README.md -> read:ok
 2   tok=1060  mode=Working      ctx=2ln tools=["read","bash","write"]        risk=15/T compactions=2
     ORACLE 180tok -> editing ["write"]
+      call write args=notes.md
 3   tok=880   mode=Working      ctx=3ln tools=["read","bash","write"]        risk=14/T compactions=2
-    PERFORM write -> write:ok
+    PERFORM write notes.md -> write:ok
 4   tok=880   mode=Working      ctx=4ln tools=["read","bash","write","commit"] risk=13/T compactions=2
     ORACLE 200tok -> landing ["commit"]
+      call commit args=wip
 5   tok=680   mode=Working      ctx=5ln tools=["read","bash","write","commit"] risk=12/T compactions=2
-    PERFORM commit -> commit:ok
+    PERFORM commit wip -> commit:ok
 6   tok=680   mode=Working      ctx=6ln tools=["read","bash","write","commit"] risk=11/T compactions=2
     ORACLE refused: Overflow
 7   tok=680   mode=Summarising  ctx=8ln tools=[]                             risk=9/T compactions=1
     ORACLE 320tok -> worked on files, wrote notes, committed []
 8   tok=360   mode=Working      ctx=1ln tools=["read","bash","write"]        risk=8/T compactions=1
     ORACLE 200tok -> landing ["commit"]
+      call commit args=wip
 9   tok=160   mode=Working      ctx=2ln tools=["read","bash","write"]        risk=2/T compactions=0
     ORACLE 200tok -> landing ["commit"]
+      call commit args=wip
 10  tok=-40   mode=Working      ctx=4ln tools=["read","bash","write"]        risk=1/T compactions=0
     HALT Exhausted
 outcome: Exhausted
