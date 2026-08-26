@@ -23,22 +23,22 @@ spec =
       let crashed = [ n | (n, Left _) <- zip [0 :: Int ..] results ]
           outcomes = [ o | Right o <- results ]
           tally p = length (filter p outcomes)
-      -- Reporting the outcome breakdown is what /establishes/ the Haddock claim
-      -- that a hostile run still terminates: every non-crashed seed lands on a
-      -- terminal 'Outcome', and none exhaust the (finite) budget without halting.
+      -- The done/exhausted split is the real evidence: it shows hostile runs
+      -- reach genuine terminal states (a normal 'Done' or a budget 'Exhausted'),
+      -- not that they merely fail to crash. Note 'Stuck' is /structurally/ absent
+      -- here — 'step' only emits 'Done'\/'Exhausted', and the sole 'Stuck' path
+      -- ('Harness.Run.run' on fuel exhaustion) can't fire because @run@ uses
+      -- @maxBound@ fuel. So a real halt is @done + exhausted@, asserted below.
       putStrLn
         ( "hostile oracle: ran " ++ show (length results)
             ++ " seeds, crashes=" ++ show (length crashed)
             ++ "; outcomes done=" ++ show (tally isDone)
-            ++ " exhausted=" ++ show (tally (== Exhausted))
-            ++ " stuck=" ++ show (tally isStuck) )
-      crashed `shouldBe` []
-      length outcomes `shouldBe` length results   -- every seed terminated
+            ++ " exhausted=" ++ show (tally (== Exhausted)) )
+      crashed `shouldBe` []                             -- E4: no exceptions escape
+      (tally isDone + tally (== Exhausted)) `shouldBe` length results  -- all halted cleanly
   where
     isDone (Done _)  = True
     isDone _         = False
-    isStuck (Stuck _) = True
-    isStuck _         = False
 
 -- | Run one hostile seed to termination inside a 'try', forcing the 'Outcome' to
 -- WHNF so a lazily-thrown error is caught here rather than escaping.
