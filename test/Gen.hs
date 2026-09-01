@@ -45,7 +45,7 @@ reachableStates h fuel b = go fuel (startState b)
     go 0 _ = []
     go n s = (s, harness s) : case step s of
       Halt _      -> []
-      Render q k  -> go (n - 1) (k (guessOracle h q))
+      Ask q k  -> go (n - 1) (k (guessOracle h q))
       Perform c k -> go (n - 1) (k (guessWorld h c))
 
 -- | Small random turns, for the prefix-stability law (§16.6).

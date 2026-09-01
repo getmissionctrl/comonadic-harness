@@ -36,12 +36,12 @@ Everything the harness can do is one of three constructors:
 
 ```haskell
 data HarnessF x
-  = Render Request (Either Refusal Response -> x)  -- ask the model
+  = Ask Request (Either Refusal Response -> x)  -- ask the model
   | Perform Call (Obs -> x)                        -- run a tool
   | Halt Outcome                                   -- stop
 ```
 
-`Render` asks the oracle: it carries the `Request` the model sees and a
+`Ask` asks the oracle: it carries the `Request` the model sees and a
 continuation that consumes whatever comes back — a `Refusal` or a `Response`.
 `Perform` runs a tool `Call` against the world and continues with the `Obs` it
 produces. `Halt` stops with an `Outcome`.
@@ -106,7 +106,7 @@ The tool-call cycle
 
 This is the round trip a tool call actually makes. Walk it once:
 
-1. `step` reaches a `Render`, carrying the `Request` — the projected prompt plus
+1. `step` reaches a `Ask`, carrying the `Request` — the projected prompt plus
    the tools currently afforded.
 2. The oracle answers with a `Response` whose `calls` are the tools the model
    asked for (from a live model these are decoded from its `tool_calls`).
@@ -115,7 +115,7 @@ This is the round trip a tool call actually makes. Walk it once:
    unafforded or hallucinated one is repaired into a synthetic error `Obs`
    instead, never crashing.
 5. `Perform` runs one call against the world; the resulting `Obs` is recorded
-   into the transcript, so the model sees it on the next `Render`. Multi-call
+   into the transcript, so the model sees it on the next `Ask`. Multi-call
    responses drain through `pending` one `Perform` at a time.
 
 To watch it without a live model, stand in a pure `Hypo` — a model of the oracle
@@ -153,8 +153,8 @@ Evaluating `demoTrace` gives:
 ]
 ```
 
-Read left to right, that is the cycle: `Asked` (a `Render` went out), `Did` (a
-`Perform` ran the `read`), `Asked` again (the next `Render`, now with the read in
+Read left to right, that is the cycle: `Asked` (a `Ask` went out), `Did` (a
+`Perform` ran the `read`), `Asked` again (the next `Ask`, now with the read in
 the prompt), then `Ended` (the coalgebra `Halt`ed with `Done`). No tool effect
 happened — `guessWorld` stubbed the `read` — but the *shape* of the exchange is
 exactly what a live run walks.

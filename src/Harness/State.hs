@@ -34,7 +34,7 @@ import GHC.Generics (Generic)
 import Harness.Alphabet
 
 -- | Which of the two turn-shapes the harness is currently in. Both go through
--- the single 'Harness.Alphabet.Render' constructor; @Mode@ is the bit that tells
+-- the single 'Harness.Alphabet.Ask' constructor; @Mode@ is the bit that tells
 -- 'request' and 'afford' which one to build, so the alphabet does not need a
 -- separate "summarise" symbol. Flipping the mode is the coalgebra's only
 -- response to an 'Harness.Alphabet.Overflow'.
@@ -90,7 +90,7 @@ data S = S
     -- zero halts the run with 'Harness.Alphabet.Exhausted'. [established]
   , mode :: Mode
     -- ^ The current turn-shape. The single field that lets one
-    -- 'Harness.Alphabet.Render' constructor serve both a task turn and a
+    -- 'Harness.Alphabet.Ask' constructor serve both a task turn and a
     -- summarisation turn.
   }
   deriving stock (Eq, Show, Generic)
@@ -166,7 +166,7 @@ afford s
 -- mode it pairs the plain 'project'ion with the afforded tools. In 'Summarising'
 -- mode the request carries a summarisation instruction appended to the prompt
 -- and __no tools__ — so compaction goes through the same
--- 'Harness.Alphabet.Render' constructor as an ordinary turn, needing no new
+-- 'Harness.Alphabet.Ask' constructor as an ordinary turn, needing no new
 -- alphabet symbol.
 request :: S -> Request
 request s = case mode s of

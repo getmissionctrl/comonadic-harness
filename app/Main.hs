@@ -91,7 +91,7 @@ runVerbose env h horizon = go (0 :: Int)
                 -- that is the file body it actually proposed.
                 putStrLn ("    PERFORM " ++ tool call ++ " " ++ args call ++ " -> " ++ t)
                 go (i + 1) (k o)
-            Render q k -> do
+            Ask q k -> do
                 resp <- oracle env q
                 case resp of
                     Left e -> putStrLn ("    ORACLE refused: " ++ show e)

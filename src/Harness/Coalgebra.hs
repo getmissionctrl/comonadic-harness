@@ -6,11 +6,11 @@
 --
 -- __What lives here.__ 'step' /is/ the control flow — the whole agent loop as
 -- one total function @S -> HarnessF S@. It decides, at every state, which
--- of the three alphabet positions comes next ('Render' to ask the oracle,
+-- of the three alphabet positions comes next ('Ask' to ask the oracle,
 -- 'Perform' to run a tool against the world, or 'Halt' to stop) and how the
 -- state evolves once the /direction/ (the oracle\/world result) comes back.
 -- 'admit' is the repair pass 'step' runs first; 'working' and 'summarising' are
--- the two 'Render' continuations; 'harness' unfolds 'step' into the 'Cofree'
+-- the two 'Ask' continuations; 'harness' unfolds 'step' into the 'Cofree'
 -- denotation.
 --
 -- __Why a coalgebra.__ The state transition is separated from the effect. 'step'
@@ -83,7 +83,7 @@ admit specs = foldr classify ([], [])
 --
 -- * __Budget exhausted__ (@'budget' s <= 0@): 'Halt' with 'Exhausted'. Budget is
 --   spent in tokens, not turns (see 'Harness.Alphabet.Usage'), and this guard is
---   checked before anything else so no further 'Render' can overspend.
+--   checked before anything else so no further 'Ask' can overspend.
 --
 -- * __Some pending calls unafforded__ (@admit@ returns a non-empty reject list):
 --   repair. The rejects are folded into the transcript as error observations and
@@ -99,10 +99,10 @@ admit specs = foldr classify ([], [])
 --   with empty @calls@): 'Halt' with @'Done' ('say' r)@ — the model answered
 --   with prose and asked for nothing, so the run is finished.
 --
--- * __No calls, keep working__ ('Working' otherwise): 'Render' the 'request' and
+-- * __No calls, keep working__ ('Working' otherwise): 'Ask' the 'request' and
 --   continue with 'working' — ask the oracle for the next move.
 --
--- * __No calls, summarising__ ('Summarising'): 'Render' the summarisation
+-- * __No calls, summarising__ ('Summarising'): 'Ask' the summarisation
 --   'request' and continue with 'summarising' — compaction over the same path.
 --
 -- __Admission runs first (D3\/D12).__ Every 'Perform' the coalgebra emits
@@ -119,7 +119,7 @@ admit specs = foldr classify ([], [])
 -- construction). At most one repair pass happens per @step@ entry.
 --
 -- __Overflow → Summarising.__ Note @step@ never flips the mode itself; a
--- 'Render' in 'Working' mode that comes back 'Overflow' is turned into a mode
+-- 'Ask' in 'Working' mode that comes back 'Overflow' is turned into a mode
 -- change by 'working', and the /next/ @step@ then takes the 'Summarising' branch.
 -- The coalgebra is the only thing that can make a state transition, so overflow
 -- handling is a continuation, not an interpreter concern.
@@ -148,8 +148,8 @@ step s
         [] -> case (mode s, transcript s) of
           (Working, Assistant r : _)
             | null (calls r) -> Halt (Done (say r))
-          (Working, _)     -> Render (request s) (working s)
-          (Summarising, _) -> Render (request s) (summarising s)
+          (Working, _)     -> Ask (request s) (working s)
+          (Summarising, _) -> Ask (request s) (summarising s)
   where
     record c o (User rs : ts) = User (rs ++ [(c, o)]) : ts
     record c o ts             = User [(c, o)] : ts
@@ -157,7 +157,7 @@ step s
     -- same 'User'-turn append convention as a performed observation.
     recordAll bad ts = foldl (\acc (c, o) -> record c o acc) ts bad
 
--- | The 'Working'-mode continuation — the direction of the 'Render' that 'step'
+-- | The 'Working'-mode continuation — the direction of the 'Ask' that 'step'
 -- emits while working. It is the function through which an oracle answer
 -- (a 'Refusal' or a 'Response') becomes the next state. Three cases, one per
 -- shape of @'Either' 'Refusal' 'Response'@:
@@ -187,9 +187,9 @@ working s (Right r) =
     & gfield @"pending" .~ calls r
     & gfield @"budget" %~ subtract (inTok (usage r) + outTok (usage r))
 
--- | The 'Summarising'-mode continuation — the direction of the 'Render' 'step'
+-- | The 'Summarising'-mode continuation — the direction of the 'Ask' 'step'
 -- emits while summarising. This is compaction, and it deliberately reuses the
--- ordinary 'Render' path rather than a bespoke constructor: to the alphabet a
+-- ordinary 'Ask' path rather than a bespoke constructor: to the alphabet a
 -- summarisation turn is just another ask (see @Harness.State.request@, which
 -- appends the summarise instruction and offers no tools). Two cases:
 --

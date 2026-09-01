@@ -17,7 +17,7 @@
 -- fuel). Both are /monadic effects layered on top/, not extra 'HarnessF'
 -- constructors — the alphabet stays closed at three.
 --
--- __Invariant 2 stands here too.__ Reading the 'Ctx' annotation at a 'Render'
+-- __Invariant 2 stands here too.__ Reading the 'Ctx' annotation at a 'Ask'
 -- node only /labels/ the emitted event (with the 'Harness.State.Mode'); it never
 -- chooses the successor. The successor is always @k result@ — a function of the
 -- oracle\/world /direction/, never of the annotation. Execution consumes the
@@ -39,13 +39,13 @@ import Harness.State (Ctx (..), Mode)
 -- @['Ev']@. [design]
 data Ev
   = Asked Mode
-    -- ^ A 'Render' went out to the oracle. Carries the 'Harness.State.Mode' read
+    -- ^ A 'Ask' went out to the oracle. Carries the 'Harness.State.Mode' read
     -- from the node's 'Ctx' so that a 'Harness.State.Working' task ask and a
     -- 'Harness.State.Summarising' compaction ask are distinguishable in the
-    -- trace — they share the 'Render' constructor and would otherwise be
+    -- trace — they share the 'Ask' constructor and would otherwise be
     -- indistinguishable.
   | Refused Refusal
-    -- ^ The oracle answered a 'Render' with a 'Refusal' (an 'Overflow' or a
+    -- ^ The oracle answered a 'Ask' with a 'Refusal' (an 'Overflow' or a
     -- 'Malformed' decode). Emitted /in addition to/ the preceding 'Asked', right
     -- after the answer comes back and before the successor is taken; a
     -- successful 'Response' emits no event of its own.
@@ -64,7 +64,7 @@ data Ev
 -- direction, until it 'Halt's or runs out of fuel. Returns @'Just' outcome@ on
 -- halt, @'Nothing'@ if the fuel bound is reached first.
 --
--- __Parameters.__ @askOracle@ discharges a 'Render' (a @'Request'@ becomes an
+-- __Parameters.__ @askOracle@ discharges a 'Ask' (a @'Request'@ becomes an
 -- @'Either' 'Refusal' 'Response'@); @askWorld@ discharges a 'Perform' (a 'Call'
 -- becomes an 'Obs'). Instantiating these two — and the monad @m@ — is what turns
 -- the one interpreter into @run@ (live @IO@) or @probe@ (pure). @fuel@ is the
@@ -78,15 +78,15 @@ data Ev
 --   fuel guard, so a halt exactly at the fuel boundary still counts as a halt.
 -- * __out of fuel__ (@n <= 0@ at a non-'Halt' node): return @'Nothing'@,
 --   emitting nothing. This is the only path that yields @'Nothing'@.
--- * __'Render' q k__: emit @'Asked' (mode)@, run @askOracle q@, emit a
+-- * __'Ask' q k__: emit @'Asked' (mode)@, run @askOracle q@, emit a
 --   @'Refused'@ event iff the answer was a 'Refusal', then recurse on @k r@ with
 --   fuel @n - 1@.
 -- * __'Perform' call k__: emit @'Did' call@, run @askWorld call@, recurse on
 --   @k o@ with fuel @n - 1@.
 --
--- __Gotcha — fuel counts nodes, not turns.__ Every 'Render' and 'Perform' spends
+-- __Gotcha — fuel counts nodes, not turns.__ Every 'Ask' and 'Perform' spends
 -- one unit, including the internal 'Perform's that drain a multi-call response
--- and the extra 'Render' of a summarisation pass. It is a termination bound for
+-- and the extra 'Ask' of a summarisation pass. It is a termination bound for
 -- the pure walk, unrelated to the token @budget@ the coalgebra tracks in the
 -- harness state.
 interp
@@ -100,7 +100,7 @@ interp askOracle askWorld = go
   where
     go _ (_ :< Halt o) = Just o <$ tell [Ended o]
     go n _ | n <= 0 = pure Nothing
-    go n (c :< Render q k) = do
+    go n (c :< Ask q k) = do
       tell [Asked (ctxMode c)]
       r <- askOracle q
       case r of

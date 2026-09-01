@@ -1,6 +1,6 @@
 -- | The pure path a run takes under a hypothesis.
 --
--- __Why this module exists.__ The 'Cofree' denotation branches at every 'Render'
+-- __Why this module exists.__ The 'Cofree' denotation branches at every 'Ask'
 -- and 'Perform' — one child per possible oracle answer, one per possible
 -- observation — because those /directions/ are not under the harness's control.
 -- That branching is the whole tree. Fix a 'Hypo' (a pure stand-in for both the
@@ -36,7 +36,7 @@ data Hypo = Hypo
   { guessOracle :: Request -> Either Refusal Response
     -- ^ The pure oracle: how the model would answer a given 'Request'. A
     -- 'Left' models a 'Refusal' ('Overflow' or 'Malformed'); a 'Right' models a
-    -- 'Response' (its @say@\/@calls@\/@usage@). This is what a 'Render' branches
+    -- 'Response' (its @say@\/@calls@\/@usage@). This is what a 'Ask' branches
     -- on, so it alone decides whether the walk asks for tools, halts, overflows
     -- into summarisation, or dies malformed.
   , guessWorld  :: Call -> Obs
@@ -63,7 +63,7 @@ data Hypo = Hypo
 -- alphabet constructor must break this too:
 --
 -- * __'Halt'__: emit the node, then stop — no successor.
--- * __'Render' q k__: emit the node, follow @k (guessOracle h q)@.
+-- * __'Ask' q k__: emit the node, follow @k (guessOracle h q)@.
 -- * __'Perform' c k__: emit the node, follow @k (guessWorld h c)@.
 --
 -- __Gotcha — fuel counts nodes.__ @go 0@ returns @[]@, so a fuel of @n@ yields at
@@ -74,5 +74,5 @@ takeWalk h fuel = go fuel
     go 0 _ = []
     go n w@(_ :< f) = w : case f of
       Halt _      -> []
-      Render q k  -> go (n - 1) (k (guessOracle h q))
+      Ask q k  -> go (n - 1) (k (guessOracle h q))
       Perform c k -> go (n - 1) (k (guessWorld h c))

@@ -48,7 +48,7 @@ newtype Prompt = Prompt String
 
 -- | A tool the provider is told it may call. Carried in the 'Request' so it
 -- actually reaches the model — the amendment 'reference/Harness.hs' lacked
--- (its @Render@ carried only a bare prompt, so afforded tools never crossed the
+-- (its @Ask@ carried only a bare prompt, so afforded tools never crossed the
 -- wire). The set of specs offered on a turn is computed by the affordance fold
 -- 'Harness.State.afford', which is why the interface is polynomial rather than a
 -- fixed signature. [established]
@@ -69,7 +69,7 @@ data ToolSpec = ToolSpec
 -- afforded at that node. Assembled by 'Harness.State.request', which in
 -- 'Harness.State.Working' mode pairs @project@ with @afford@, and in
 -- 'Harness.State.Summarising' mode appends a summarisation instruction and
--- offers /no/ tools. A 'Request' is exactly the payload of a 'Render' position
+-- offers /no/ tools. A 'Request' is exactly the payload of a 'Ask' position
 -- and the thing recorded in the annotation 'Harness.State.Ctx' for analysis.
 data Request = Request
   { reqPrompt :: Prompt
@@ -120,7 +120,7 @@ data Usage = Usage
   deriving stock (Eq, Show, Generic)
 
 -- | A successful reply from the oracle: what the model said, any tools it wants
--- to call, and the token cost. It is the @Right@ half of the 'Render' direction
+-- to call, and the token cost. It is the @Right@ half of the 'Ask' direction
 -- (@Either Refusal Response@). An empty 'calls' list in 'Harness.State.Working'
 -- mode is how the agent signals it is finished — the coalgebra turns it into a
 -- @Halt (Done ...)@.
@@ -143,7 +143,7 @@ data Response = Response
 -- socket timeouts, transient decode noise) is the provider's problem and is
 -- absorbed by @Env@ decorators before it can reach here (invariant 5): a
 -- 'Refusal' is a designed, terminal-or-transformative signal, not an accident of
--- the network. It is the @Left@ half of the 'Render' direction.
+-- the network. It is the @Left@ half of the 'Ask' direction.
 data Refusal
   = Overflow
     -- ^ The context window was exceeded. This is the /only/ recoverable
@@ -186,7 +186,7 @@ data Outcome
 -- over those successors and is derived precisely because 'HarnessF' never
 -- mentions @S@.
 data HarnessF x
-  = Render Request (Either Refusal Response -> x)
+  = Ask Request (Either Refusal Response -> x)
     -- ^ Ask the oracle. The 'Request' is the position (prompt + afforded tools);
     -- the direction is @Either Refusal Response -> x@ — the harness controls the
     -- question, not the answer. This one constructor serves both a task turn and

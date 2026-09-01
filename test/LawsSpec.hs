@@ -25,13 +25,13 @@ firstTree h b = case reachableStates h 20 b of
 -- names at that node. The afforded set is read from the node's own 'Ctx'
 -- annotation (@reqTools (ctxRequest c)@, which is @afford s@ at that node — see
 -- 'Harness.State.request'); this is analysis reading the annotation, permitted.
--- Wildcard-free over 'HarnessF' (invariant 1): 'Render' and 'Halt' contribute
+-- Wildcard-free over 'HarnessF' (invariant 1): 'Ask' and 'Halt' contribute
 -- nothing, but are matched explicitly.
 performNodes :: Hypo -> Cofree HarnessF Ctx -> [(String, [String])]
 performNodes h w = concatMap (\(c :< f) -> node c f) (takeWalk h 200 w)
   where
     node c (Perform call _) = [(tool call, map specName (reqTools (ctxRequest c)))]
-    node _ (Render _ _)     = []
+    node _ (Ask _ _)     = []
     node _ (Halt _)         = []
 
 -- | One 'Perform' observation from 'performNodes' passes the affordance law iff

@@ -88,7 +88,7 @@ longHypo = Hypo
 -- is the deliverable.
 timeOne :: Int -> IO String
 timeOne target = do
-  -- Each Working cycle spends 1 token and emits Render + Perform (2 nodes), so
+  -- Each Working cycle spends 1 token and emits Ask + Perform (2 nodes), so
   -- budget ~ target/2 gives a path of ~target nodes; the horizon dwarfs it.
   let b = max 1 (target `div` 2)
       n = target * 4 + 100

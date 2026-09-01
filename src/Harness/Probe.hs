@@ -96,7 +96,7 @@ data Risk = Risk
   { stepsAhead :: Sum Int
     -- ^ Number of interpreter events between here and the horizon — the /length/
     -- of the forecast path counted in 'Harness.Interp.Ev's, not tree nodes (a
-    -- refusing 'Render' emits two). How much future is being scored.
+    -- refusing 'Ask' emits two). How much future is being scored.
   , terminates :: Any
     -- ^ @Any True@ iff an 'Harness.Interp.Ended' event occurs within the
     -- horizon, i.e. the machine 'Halt's before fuel runs out. This is the field
@@ -195,8 +195,8 @@ governed h n = extend (assess h n)
 -- __How the counts are derived (mirrors 'Harness.Interp.interp' exactly).__ A
 -- 'Harness.Alphabet.Halt' emits @[Ended o]@ — 1 event, and sets 'terminates'.
 -- A 'Harness.Alphabet.Perform' emits @[Did c]@ — 1 event, plus the tool name if
--- irreversible. A 'Harness.Alphabet.Render' emits @[Asked mode]@ and, /if the
--- oracle guess refuses/, ALSO @[Refused e]@ — so a refusing 'Harness.Alphabet.Render'
+-- irreversible. A 'Harness.Alphabet.Ask' emits @[Asked mode]@ and, /if the
+-- oracle guess refuses/, ALSO @[Refused e]@ — so a refusing 'Harness.Alphabet.Ask'
 -- contributes 2 to 'stepsAhead', and an 'Harness.Alphabet.Overflow' refusal
 -- additionally contributes 1 to 'compactions'.
 --
@@ -212,7 +212,7 @@ localRisk h (_ :< f) = case f of
       { stepsAhead = Sum 1
       , irreversible = [tool c | tool c `elem` ["write", "commit"]]
       }
-  Render q _ -> case guessOracle h q of
+  Ask q _ -> case guessOracle h q of
     -- Asked only: 1 event.
     Right _            -> mempty { stepsAhead = Sum 1 }
     -- Asked + Refused Overflow: 2 events, one of them a compaction.
