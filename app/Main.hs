@@ -19,7 +19,7 @@ import Harness.Alphabet
 import Harness.Coalgebra (harness)
 import Harness.Probe (Hypo (..), Risk (..), assess, probe)
 import Harness.Run (Env (..))
-import Harness.State (Ctx (..), Mode (..), S (..), Turn (..))
+import Harness.State (Ctx (..), Mode (..), S (..), Turn (..), allTools)
 import Provider.Class (Provider (..))
 import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaProvider)
 import Provider.Tools (prepareSandbox, sandboxAct)
@@ -120,7 +120,7 @@ pad n s = s ++ replicate (n - length s) ' '
 -- ---------------------------------------------------------------------------
 
 start :: S
-start = S [] [] 1200 Working
+start = S [] [] 1200 Working allTools
 
 -- ---------------------------------------------------------------------------
 -- Modes

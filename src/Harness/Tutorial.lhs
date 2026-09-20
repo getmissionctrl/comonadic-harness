@@ -24,7 +24,7 @@ the small, fixed set of actions the harness can take.
 > import Control.Comonad.Cofree (Cofree)
 > import Data.List (isInfixOf)
 > import Harness.Alphabet
-> import Harness.State (S (..), Ctx, Mode (Working))
+> import Harness.State (S (..), Ctx, Mode (Working), allTools)
 > import Harness.Coalgebra (harness)
 > import Harness.Interp (Ev)
 > import Harness.Probe (Hypo (..), Risk, assess, governed, probe)
@@ -83,7 +83,7 @@ A start state, and the tree it denotes:
 > -- | An empty starting state: no transcript, no pending calls, a 500-token
 > -- budget, in 'Working' mode.
 > demoStart :: S
-> demoStart = S { transcript = [], pending = [], budget = 500, mode = Working }
+> demoStart = S { transcript = [], pending = [], budget = 500, mode = Working, tools = allTools }
 >
 > -- | The tree of every reachable future from 'demoStart' — a denotation.
 > demoTree :: Cofree HarnessF Ctx

@@ -46,7 +46,7 @@ afforded (performed, tools) =
 -- 'project' is a pure function of the transcript, so reachability is irrelevant
 -- here — we are testing an algebraic law of 'project', not running the coalgebra.
 startStateWith :: [Turn] -> S
-startStateWith ts = S { transcript = ts, pending = [], budget = 1, mode = Working }
+startStateWith ts = S { transcript = ts, pending = [], budget = 1, mode = Working, tools = allTools }
 
 spec :: Spec
 spec = do

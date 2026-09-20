@@ -92,6 +92,9 @@ data S = S
     -- ^ The current turn-shape. The single field that lets one
     -- 'Harness.Alphabet.Ask' constructor serve both a task turn and a
     -- summarisation turn.
+  , tools :: [ToolSpec]
+    -- ^ The tools afforded to THIS session. 'afford' filters this per turn.
+    -- The coding demo seeds @tools = allTools@; other agents supply their own.
   }
   deriving stock (Eq, Show, Generic)
 
@@ -156,8 +159,8 @@ allTools =
 afford :: S -> [ToolSpec]
 afford s
   | mode s == Summarising = []
-  | any wrote (transcript s) = allTools
-  | otherwise = filter ((/= "commit") . specName) allTools
+  | any wrote (transcript s) = tools s
+  | otherwise = filter ((/= "commit") . specName) (tools s)
   where
     wrote (User rs) = any ((== "write") . tool . fst) rs
     wrote _ = False

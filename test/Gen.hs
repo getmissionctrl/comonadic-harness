@@ -17,7 +17,7 @@ import Harness.Probe (Hypo (..))
 
 -- | The genuine initial state — the only hand-written S permitted.
 startState :: Int -> S
-startState b = S { transcript = [], pending = [], budget = b, mode = Working }
+startState b = S { transcript = [], pending = [], budget = b, mode = Working, tools = allTools }
 
 -- | A generated pure oracle/world model. Responses vary by prompt length so
 -- runs actually progress and sometimes overflow.
