@@ -26,6 +26,7 @@ module Harness.Alphabet
   ( Prompt (..)
   , ToolSpec (..)
   , Request (..)
+  , ChatMsg (..)
   , Call (..)
   , Obs (..)
   , Usage (..)
@@ -80,6 +81,13 @@ data Request = Request
     -- ^ The tools offered on this turn. Empty while summarising; otherwise the
     -- mode-dependent affordance set. This list is what 'Harness.Coalgebra.admit'
     -- treats as the ground truth of what the model was permitted to call.
+  , reqMessages :: [ChatMsg]
+    -- ^ The STRUCTURED transcript for this turn (reading order), so a provider
+    -- can send native chat messages (system / assistant-with-tool_calls / tool
+    -- results) instead of the lossy flattened 'reqPrompt'. Empty in
+    -- 'Harness.State.Summarising' mode (compaction legitimately uses the flatten)
+    -- and empty for providers that only consume 'reqPrompt'. Additive: 'reqPrompt'
+    -- and the bisimulation laws stated on it are unchanged.
   }
   deriving stock (Eq, Show, Generic)
 
@@ -105,6 +113,20 @@ data Call = Call
 -- reports an unafforded call back to the model. Wrapped in a @newtype@ to keep
 -- a tool observation distinct from arbitrary text.
 newtype Obs = Obs String
+  deriving stock (Eq, Show, Generic)
+
+-- | A structured transcript entry for native chat transport (see
+-- 'Request.reqMessages'). Provider-neutral: a provider maps these to its own
+-- message type (e.g. Ollama's system\/assistant-with-tool_calls\/tool roles).
+-- This preserves the tool-call structure a capable agentic model expects,
+-- instead of the flattened 'Harness.State.project'ion which is retained only for
+-- compaction and the bisimulation analysis.
+data ChatMsg
+  = MsgUser String          -- ^ the task / compacted context (a 'Summary' turn),
+                            --   rendered as a USER message (chat APIs require a
+                            --   user turn; the seed task is the user's request)
+  | MsgAssistant String [Call] -- ^ the model's text plus the tool calls it made
+  | MsgToolResult Call Obs  -- ^ one tool result, paired with the call it answers
   deriving stock (Eq, Show, Generic)
 
 -- | Token usage as reported by the provider for one 'Response'. Budget is spent

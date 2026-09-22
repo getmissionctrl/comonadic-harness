@@ -173,10 +173,23 @@ afford s
 -- alphabet symbol.
 request :: S -> Request
 request s = case mode s of
-  Working -> Request (project s) (afford s)
+  Working -> Request (project s) (afford s) (toChatMsgs s)
   Summarising ->
     let Prompt p = project s
-     in Request (Prompt (p ++ "\n[summarise the above in one line]")) []
+     in Request (Prompt (p ++ "\n[summarise the above in one line]")) [] []
+
+-- | The structured transcript in reading order, for native chat transport
+-- ('Harness.Alphabet.reqMessages'). A 'Summary' becomes a system message, an
+-- 'Assistant' turn an assistant message carrying its tool 'calls', and a 'User'
+-- batch expands to one tool-result message per (call, obs). This preserves the
+-- tool-call structure the flattened 'project' discards; 'project' remains for
+-- 'Summarising' compaction and the bisimulation analysis.
+toChatMsgs :: S -> [ChatMsg]
+toChatMsgs s = concatMap turnMsgs (reverse (transcript s))
+  where
+    turnMsgs (Summary t)   = [MsgUser t]
+    turnMsgs (Assistant r) = [MsgAssistant (say r) (calls r)]
+    turnMsgs (User rs)     = [ MsgToolResult c o | (c, o) <- rs ]
 
 -- | Quotient 3: the annotation map @S -> Ctx@ used to label every node of the
 -- unfolded tree (@unfold (\\s -> (view s, step s))@ in 'Harness.Coalgebra.harness').

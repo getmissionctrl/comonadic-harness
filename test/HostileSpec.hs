@@ -55,7 +55,7 @@ hostileEnv :: Int -> Env IO
 hostileEnv seed = Env oracle' world'
   where
     world' c = pure (Obs (tool c ++ ":ok"))
-    oracle' (Request (Prompt p) _tools) =
+    oracle' (Request (Prompt p) _tools _) =
       pure (hostileReply ((seed + length (lines p)) `mod` 8))
 
 -- | Eight flavours of hostility, wildcard-free over the alternatives so adding

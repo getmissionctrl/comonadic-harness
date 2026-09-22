@@ -125,7 +125,7 @@ in the prompt, declares itself done (a `Response` with no calls, which halts):
 > -- | A pure stand-in oracle\/world: ask for one @read@, then declare done.
 > demoHypo :: Hypo
 > demoHypo = Hypo
->   { guessOracle = \(Request (Prompt prompt) tools) ->
+>   { guessOracle = \(Request (Prompt prompt) tools _) ->
 >       if null tools
 >         then Right (Response "summarised" [] (Usage 40 10))
 >         else if "read" `isInfixOf` prompt

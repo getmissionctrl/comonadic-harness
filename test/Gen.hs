@@ -27,7 +27,7 @@ genHypo = do
   tokIn      <- choose (80, 200)
   toolChoice <- elements ["read", "write", "bash", "commit"]
   pure Hypo
-    { guessOracle = \(Request (Prompt p) tools) ->
+    { guessOracle = \(Request (Prompt p) tools _) ->
         if null tools
           then Right (Response "summary" [] (Usage 300 20))
           else if length (lines p) >= overflowAt

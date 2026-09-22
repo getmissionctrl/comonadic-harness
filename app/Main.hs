@@ -31,7 +31,7 @@ import Text.Read (readMaybe)
 -- ---------------------------------------------------------------------------
 
 fakeOracle :: Request -> IO (Either Refusal Response)
-fakeOracle (Request (Prompt p) tools)
+fakeOracle (Request (Prompt p) tools _)
     | null tools = pure (Right (Response "worked on files, wrote notes, committed" [] (Usage 300 20)))
     | lns >= 5   = pure (Left Overflow)
     | lns == 0   = pure (Right (Response "orienting" [Call "read" "README.md"] (Usage 100 40)))
@@ -46,7 +46,7 @@ fakeWorld c = pure (Obs (tool c ++ ":ok"))
 hypo :: Hypo
 hypo =
     Hypo
-        { guessOracle = \(Request (Prompt p) tools) ->
+        { guessOracle = \(Request (Prompt p) tools _) ->
             if null tools
                 then Right (Response "summary" [] (Usage 300 20))
                 else
@@ -64,7 +64,7 @@ runVerbose :: Env IO -> Hypo -> Int -> Cofree HarnessF Ctx -> IO Outcome
 runVerbose env h horizon = go (0 :: Int)
   where
     go i w@(c :< f) = do
-        let Request (Prompt p) ts = ctxRequest c
+        let Request (Prompt p) ts _ = ctxRequest c
             r = assess h horizon w
         putStrLn $
             pad 3 (show i)

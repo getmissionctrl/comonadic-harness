@@ -26,14 +26,18 @@ module Provider.Ollama
   ) where
 
 import Control.Concurrent (threadDelay)
-import Data.Aeson (encode)
+import Data.Aeson (decode, encode)
 import Data.ByteString.Lazy.Char8 qualified as BSLC
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 import Data.Ollama.Chat
   ( ChatOps (..)
   , InputTool (..)
+  , assistantMessage
   , chat
   , defaultChatOps
+  , toolMessage
   , userMessage
   )
 import Data.Ollama.Common.Config (OllamaConfig (..), defaultOllamaConfig)
@@ -69,6 +73,11 @@ data OllamaCfg = OllamaCfg
   -- (e.g. 64 or 256) forces the prompt to overflow, which is how we provoke and
   -- study the silent-truncation behaviour that @decodeResp@ turns into
   -- 'Harness.Alphabet.Overflow'.
+  , ocThink   :: Maybe Bool
+  -- ^ Whether the model should \"think\" (reasoning tokens), sent as the chat
+  -- request's @think@ flag. 'Nothing' leaves the model default. Set 'Just' 'False'
+  -- for multi-turn agentic loops where a thinking model's per-turn reasoning is
+  -- the dominant latency and adds little to tool selection.
   }
 
 -- | The house configuration: the @hq@ host, the @qwen3:8b@ model, and Ollama's
@@ -84,6 +93,7 @@ defaultOllamaCfg =
     { ocBaseUrl = "http://hq:11434"
     , ocModel   = "qwen3:8b"
     , ocNumCtx  = 2048
+    , ocThink   = Nothing
     }
 
 -- | Assemble a 'Provider' from a config: a real oracle, and — for now — a stub
@@ -136,12 +146,48 @@ completeWith cfg req = do
 buildChatOps :: OllamaCfg -> Request -> ChatOps
 buildChatOps cfg req =
   let Prompt promptText = reqPrompt req
+      -- Native structured transport (Working mode): map the harness's structured
+      -- turns to system / assistant(tool_calls) / tool messages. Falls back to
+      -- the single flattened user message when 'reqMessages' is empty (the
+      -- Summarising/compaction path, and any provider that only sets reqPrompt).
+      native = concatMap toOllamaMsgs (reqMessages req)
+      msgs   = case native of
+                 (m : ms) -> m :| ms
+                 []       -> userMessage (T.pack promptText) :| []
   in  defaultChatOps
         { modelName = T.pack (ocModel cfg)
-        , messages  = userMessage (T.pack promptText) :| []
+        , messages  = msgs
         , tools     = Just (map toInputTool (reqTools req))
         , options   = Just defaultModelOptions { numCtx = Just (ocNumCtx cfg) }
+        , think     = ocThink cfg
         }
+
+-- | Map one harness 'ChatMsg' to native Ollama 'Message's: a summary/system as a
+-- system message, an assistant turn as an assistant message carrying its
+-- @tool_calls@, and a tool result as a @tool@-role message.
+toOllamaMsgs :: ChatMsg -> [Message]
+toOllamaMsgs (MsgUser t)              = [userMessage (T.pack t)]
+toOllamaMsgs (MsgAssistant sy cs)     =
+  -- An assistant turn that only calls tools has no text, but ollama-haskell
+  -- always serialises 'content' and this model rejects an empty-content message
+  -- (the native protocol's @content: null@ is not expressible here), so use a
+  -- minimal non-empty placeholder when there is no commentary.
+  let txt  = if null sy then "." else T.pack sy
+      base = assistantMessage txt
+  in  [ if null cs then base else base { tool_calls = Just (map toOllamaToolCall cs) } ]
+toOllamaMsgs (MsgToolResult _ (Obs o)) = [toolMessage (T.pack o)]
+
+-- | Rebuild a native 'ToolCall' from a harness 'Call' so a replayed assistant
+-- turn carries the calls it made (the @tool@ results that follow are matched to
+-- them). Arguments are the model's raw JSON re-parsed to the key/value map the
+-- client expects; an unparseable blob degrades to no arguments.
+toOllamaToolCall :: Call -> ToolCall
+toOllamaToolCall c = ToolCall
+  { outputFunction = OutputFunction
+      { outputFunctionName = T.pack (tool c)
+      , arguments          = fromMaybe Map.empty (decode (BSLC.pack (args c)))
+      }
+  }
 
 -- | Convert a harness 'Harness.Alphabet.ToolSpec' into the client's @InputTool@.
 --
@@ -159,17 +205,50 @@ toInputTool t =
     , function = FunctionDef
         { functionName        = T.pack (specName t)
         , functionDescription = Nothing
-        , functionParameters  = Just emptyParams
+        , functionParameters  = Just (schemaOf (specSchema t))
         , functionStrict      = Nothing
         }
     }
+
+-- | Translate a 'ToolSpec' mini-schema (@"{url:string}"@,
+-- @"{path:string,body:string}"@) into a typed 'FunctionParameters' object, so a
+-- strict tool-calling model emits correctly-named arguments instead of guessing.
+-- The old empty-schema advertisement is why a stricter model emitted @{}@.
+schemaOf :: String -> FunctionParameters
+schemaOf spec = FunctionParameters
+  { parameterType        = "object"
+  , parameterProperties  = Just (Map.fromList [ (n, leaf ty) | (n, ty) <- props ])
+  , requiredParams       = Just (map fst props)
+  , additionalProperties = Just False
+  }
   where
-    emptyParams = FunctionParameters
-      { parameterType        = "object"
+    props = parseSpec spec
+    leaf ty = FunctionParameters
+      { parameterType        = ty
       , parameterProperties  = Nothing
       , requiredParams       = Nothing
       , additionalProperties = Nothing
       }
+
+-- | Parse the terse @{k:type,...}@ tool-schema DSL into @[(name, jsonType)]@.
+parseSpec :: String -> [(T.Text, T.Text)]
+parseSpec raw =
+  [ (T.pack (trim k), jsonType (trim (drop 1 v)))
+  | field <- splitComma inner
+  , let (k, v) = break (== ':') field
+  , not (null (trim k))
+  ]
+  where
+    inner = takeWhile (/= '}') (drop 1 (dropWhile (/= '{') raw))
+    trim  = f . f where f = reverse . dropWhile (== ' ')
+    jsonType :: String -> T.Text
+    jsonType ty
+      | ty `elem` ["int", "integer", "number"] = "number"
+      | ty `elem` ["bool", "boolean"]          = "boolean"
+      | otherwise                               = "string"
+    splitComma [] = []
+    splitComma s  = let (a, b) = break (== ',') s
+                    in a : case b of [] -> []; (_ : rest) -> splitComma rest
 
 -- | Decode a successful @ChatResponse@ into our 'Response', or infer
 -- 'Harness.Alphabet.Overflow'.
