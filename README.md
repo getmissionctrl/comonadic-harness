@@ -50,8 +50,9 @@ compaction with its law (`Harness.Compaction`), and evolution
 ```bash
 nix develop .#dev            # GHC + cabal + HLS; deps from the pinned nixpkgs
 cabal build all              # warning-clean under the strict flag set
-cabal test spec              # 11 examples: comonad, agreement, prefix, affordance,
-                             #   compaction-rate, monoidal-scan, hostile-oracle
+cabal test spec              # 24 examples: comonad, agreement, prefix, affordance,
+                             #   compaction-rate, monoidal-scan, hostile-oracle, and
+                             #   the AG-UI event/translate/sink/human-env/server specs
 cabal run demo               # reproduces runs/oracle-output.txt (pure scripted oracle)
 cabal run demo live          # same harness, live against Ollama on localhost:11434,
                              #   printing the full annotated trace (built-in task)
@@ -98,6 +99,42 @@ wiped the earlier `write` from view). The coalgebra's admission pass (T6/D3)
 *repairs* the unafforded call into a synthetic error observation rather than
 performing it — so, unlike a pre-T6 recording, no `PERFORM commit` follows. The
 divergence is the D3 behaviour demonstrated live, not a regression.
+
+## AG-UI server
+
+The harness is also exposed as a strict [AG-UI](https://docs.ag-ui.com) backend,
+so any standard AG-UI client can watch and steer a run in real time over SSE. It
+lives entirely in `Harness.AgUi.*` and a separate `serve` executable — the pure
+comonadic core (`Alphabet`/`State`/`Coalgebra`/`Interp`) is untouched. Emission
+is a tracing `Env` decorator (`Harness.AgUi.Sink.traceEnv`), not a change to the
+alphabet: the same seam that carries retries and backoff (invariant 5) carries
+AG-UI events, and `run` still reads only the shape.
+
+```bash
+cabal run serve            # listens on http://localhost:8080 (or: cabal run serve -- 9000)
+```
+
+Three endpoints:
+
+| method + path | body | what it does |
+|---|---|---|
+| `POST /runs` | `{"task":"…", "mode":"auto"\|"human", "forecast":true\|false}` | start a run; returns `{"runId","threadId"}`. `mode` and `forecast` are optional (default `auto`, `false`) |
+| `GET /runs/{id}/events` | — | SSE out-stream (`text/event-stream`); replays the run's log from the start, then follows it live |
+| `POST /runs/{id}/input` | `{"text":"…"}` | in `human` mode, supply the answer the blocked oracle is waiting on |
+
+Conformance: events are strict AG-UI JSON, one object per SSE frame
+(`data: {json}\n\n`), each with a SCREAMING_SNAKE `type` and camelCase fields —
+`RUN_STARTED`/`RUN_FINISHED`, the `TEXT_MESSAGE_*` and `TOOL_CALL_*` sequences,
+`TOOL_CALL_RESULT`, `STATE_SNAPSHOT`, and `STATE_DELTA` (an RFC-6902 JSON Patch,
+e.g. `[{"op":"replace","path":"/budget","value":900}]`). The harness's own
+signals — `harness.compaction` (an `Overflow` provoked a summarisation) and the
+opt-in `harness.forecast` (`Harness.Probe.assess` predicting the run's future
+before a token is spent) — ride on the standard `CUSTOM` event rather than
+widening the event set.
+
+v1 ships with a deterministic fake provider so the transport runs without a model
+in the loop; wiring the live Ollama factory is a follow-up (see the `TODO(live)`
+in `app-serve/Serve.hs`). A minimal browser page is in `static/smoke.html`.
 
 ## Environment
 
