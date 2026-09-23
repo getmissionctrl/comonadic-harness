@@ -5,6 +5,7 @@ import qualified LawsSpec
 import qualified PerfSpec
 import qualified HostileSpec
 import qualified AgUiEventSpec
+import qualified AgUiTranslateSpec
 
 main :: IO ()
 main = hspec $ do
@@ -12,3 +13,4 @@ main = hspec $ do
   PerfSpec.spec
   HostileSpec.spec
   AgUiEventSpec.spec
+  AgUiTranslateSpec.spec
