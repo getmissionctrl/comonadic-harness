@@ -25,6 +25,22 @@ spec = describe "Harness.AgUi.Server" $ do
       responseStatus resp `shouldSatisfy` statusIsSuccessful
       BL.unpack (responseBody resp) `shouldContain` "runId"
 
+  it "POST /agent (RunAgentInput) streams a full run and closes on RUN_FINISHED" $
+    testWithApplication (mkApp fakeProviderFactory) $ \port -> do
+      mgr <- newManager defaultManagerSettings
+      req0 <- parseRequest ("POST http://localhost:" ++ show port ++ "/agent")
+      let req = req0
+            { requestBody = RequestBodyLBS
+                "{\"threadId\":\"t-1\",\"runId\":\"r-1\",\"messages\":[{\"id\":\"m1\",\"role\":\"user\",\"content\":\"hi\"}]}"
+            , requestHeaders = [("Content-Type", "application/json"), ("Accept", "text/event-stream")]
+            }
+      -- httpLbs reads the SSE body to completion; the endpoint closes it on RUN_FINISHED
+      resp <- httpLbs req mgr
+      let body = BL.unpack (responseBody resp)
+      body `shouldContain` "RUN_STARTED"
+      body `shouldContain` "RUN_FINISHED"
+      body `shouldContain` "\"runId\":\"r-1\""
+
   it "GET /runs/{id}/events streams a RUN_STARTED frame" $
     testWithApplication (mkApp fakeProviderFactory) $ \port -> do
       mgr <- newManager defaultManagerSettings

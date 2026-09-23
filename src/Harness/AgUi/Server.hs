@@ -23,14 +23,15 @@ import Control.Concurrent (forkIO)
 import Control.Concurrent.STM
 import Control.Monad (void, when)
 import Control.Monad.IO.Class (liftIO)
-import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.:?), (.!=), (.=), encode)
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), eitherDecode, object, withObject, (.:), (.:?), (.!=), (.=), encode)
 import qualified Data.ByteString.Builder as BB
 import qualified Data.Map.Strict as Map
 import Data.Text (Text, pack, unpack)
-import Network.HTTP.Types (status200, status404)
+import Network.HTTP.Types (status200, status204, status400, status404)
+import qualified Network.HTTP.Types.Header as H
 import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp as Warp
-import Servant
+import Servant hiding (respond)
 
 import Harness.Alphabet
 import Harness.State (S (..), Mode (..), Turn (..))
@@ -40,7 +41,7 @@ import Harness.Probe (assess)
 import Harness.Run (Env (..), run)
 import Harness.AgUi.Event
 import Harness.AgUi.Sink
-import Harness.AgUi.Translate (RunState, initRunState, runStartEvents, runFinishEvents, forecastEvent)
+import Harness.AgUi.Translate (runStartEvents, runFinishEvents, forecastEvent)
 import Harness.AgUi.HumanEnv
 
 -- | Build the per-run behaviour 'Env' (provider + world) for a run id. Injected
@@ -48,13 +49,13 @@ import Harness.AgUi.HumanEnv
 -- transport is oblivious to which.
 type ProviderFactory = RunId -> IO (Env IO)
 
--- | Everything the transport needs to reach a live run: its event log (for SSE),
--- its input slot (for the human oracle), and the threaded 'RunState' the tracing
--- decorator mutates.
+-- | Everything the transport needs to reach a live run: its event log (for SSE)
+-- and its input slot (for a human-driven oracle). The threaded @RunState@ that
+-- the tracing decorator mutates is a private @TVar@ closed over by the run
+-- thread, not stored here — nothing outside the run reads it.
 data RunHandle = RunHandle
-  { rhLog   :: EventLog
-  , rhSlot  :: InputSlot
-  , rhState :: TVar RunState
+  { rhLog  :: EventLog
+  , rhSlot :: InputSlot
   }
 
 -- | The set of live runs, keyed by run id.
@@ -93,20 +94,40 @@ type JsonApi =
 jsonApi :: Proxy JsonApi
 jsonApi = Proxy
 
--- | Build the full WAI application: the Servant JSON API, with @GET
--- /runs/{id}/events@ intercepted and routed to the raw SSE handler.
+-- | Build the full WAI application. Three raw routes are intercepted before
+-- Servant: @GET /runs/{id}/events@ (our own two-step SSE), and the standard
+-- AG-UI @POST /agent@ (single-POST-SSE, what an off-the-shelf AG-UI client
+-- speaks) with its @OPTIONS@ CORS preflight. Everything else is the Servant
+-- JSON API.
 mkApp :: ProviderFactory -> IO Wai.Application
 mkApp factory = do
   reg <- Registry <$> newTVarIO Map.empty
   let jsonApp = serve jsonApi (startH factory reg :<|> inputH reg)
-  pure (router reg jsonApp)
+  pure (router factory reg jsonApp)
 
--- | Route @GET /runs/{id}/events@ to the SSE handler; everything else to Servant.
-router :: Registry -> Wai.Application -> Wai.Application
-router reg jsonApp req respond =
+-- | Route the raw endpoints; delegate the rest to Servant.
+router :: ProviderFactory -> Registry -> Wai.Application -> Wai.Application
+router factory reg jsonApp req respond =
   case (Wai.requestMethod req, Wai.pathInfo req) of
-    ("GET", ["runs", rid, "events"]) -> sseH reg rid req respond
-    _                                -> jsonApp req respond
+    ("GET",     ["runs", rid, "events"]) -> sseH reg rid req respond
+    ("POST",    ["agent"])               -> aguiH factory reg req respond
+    ("OPTIONS", ["agent"])               -> respond (Wai.responseLBS status204 preflightHeaders "")
+    _                                    -> jsonApp req respond
+
+-- | Permissive CORS. The smoke-test frontend is served from a different origin
+-- (the Vite dev server), so the browser preflights @POST /agent@ and expects an
+-- @Access-Control-Allow-Origin@ on the response. v1 allows any origin — this is
+-- a local demo transport, not an authenticated surface.
+allowOrigin :: H.Header
+allowOrigin = ("Access-Control-Allow-Origin", "*")
+
+-- | Headers answering the CORS preflight for @POST /agent@.
+preflightHeaders :: H.ResponseHeaders
+preflightHeaders =
+  [ allowOrigin
+  , ("Access-Control-Allow-Methods", "POST, OPTIONS")
+  , ("Access-Control-Allow-Headers", "Content-Type")
+  ]
 
 -- | @POST /runs@: mint an id, register the run, spawn its thread, return the id.
 -- The thread emits @RUN_STARTED@ + snapshot, drives the run through the tracing
@@ -121,7 +142,7 @@ startH factory (Registry regv) sr = liftIO $ do
   rid <- atomically $ do
     m <- readTVar regv
     let rid = pack ("run-" <> show (Map.size m))
-    writeTVar regv (Map.insert rid (RunHandle logv slot stv) m)
+    writeTVar regv (Map.insert rid (RunHandle logv slot) m)
     pure rid
   inner <- factory rid
   let sink = logSink logv
@@ -190,6 +211,80 @@ sseH (Registry regv) rid _req respond = do
            ]
     frame e = BB.byteString "data: " <> BB.lazyByteString (encode e) <> BB.byteString "\n\n"
 
+-- | The subset of a standard AG-UI @RunAgentInput@ this server reads: the
+-- client-minted @threadId@\/@runId@ (echoed back so the client's event
+-- verification correlates), and the seed task extracted from the message
+-- history. The harness seeds a fresh run from a task rather than replaying a
+-- message list, so v1 takes the latest user message as the task and ignores the
+-- rest; @tools@\/@context@\/@state@ are accepted and dropped. [design]
+data RunAgentInput = RunAgentInput Text Text Text  -- threadId, runId, task
+
+instance FromJSON RunAgentInput where
+  parseJSON = withObject "RunAgentInput" $ \o -> do
+    tid  <- o .:? "threadId" .!= "thread-0"
+    rid  <- o .:? "runId" .!= "run-0"
+    msgs <- o .:? "messages" .!= []
+    pure (RunAgentInput tid rid (lastUserText msgs))
+
+-- | One AG-UI message, reduced to role + text content. Content that is not a
+-- plain string (multi-part content) collapses to empty — enough for the smoke
+-- test, which sends plain user text.
+data Msg = Msg Text Text
+
+instance FromJSON Msg where
+  parseJSON = withObject "Msg" $ \o -> do
+    role <- o .:? "role" .!= ""
+    c    <- o .:? "content"
+    pure (Msg role (contentText c))
+
+-- | Extract plain-text content, or empty for absent\/structured content.
+contentText :: Maybe Value -> Text
+contentText (Just (String t)) = t
+contentText _                 = ""
+
+-- | The content of the last @user@ message, or empty if there is none.
+lastUserText :: [Msg] -> Text
+lastUserText = foldl (\acc (Msg role content) -> if role == "user" then content else acc) ""
+
+-- | @POST /agent@: the standard AG-UI HTTP transport. Accepts a @RunAgentInput@,
+-- starts a run, and streams the AG-UI events back __on this same response__ as
+-- @text/event-stream@ (unlike our two-step @POST /runs@ + @GET events@ pair).
+-- This is the shape an off-the-shelf AG-UI client (assistant-ui, CopilotKit,
+-- the @\@ag-ui/client@ @HttpAgent@) speaks. The stream closes on @RUN_FINISHED@.
+aguiH :: ProviderFactory -> Registry -> Wai.Application
+aguiH factory (Registry regv) req respond = do
+  body <- Wai.strictRequestBody req
+  case eitherDecode body of
+    Left _ -> respond (Wai.responseLBS status400 [allowOrigin, jsonCT] "{\"error\":\"bad RunAgentInput\"}")
+    Right (RunAgentInput tid rid task') -> do
+      logv <- newEventLog
+      slot <- newInputSlot
+      let seeded = S { transcript = [Summary (unpack task')]
+                     , pending = [], budget = 1200, mode = Working, tools = [] }
+      stv <- newTVarIO (initRunState (budget seeded) (mode seeded))
+      atomically (modifyTVar' regv (Map.insert rid (RunHandle logv slot)))
+      inner <- factory rid
+      let sink = logSink logv
+          env  = traceEnv sink stv inner
+      void $ forkIO $ do
+        mapM_ sink (runStartEvents tid rid (budget seeded) (tools seeded) (mode seeded))
+        o <- run env (harness seeded)
+        mapM_ sink (runFinishEvents rid o)
+      respond $ Wai.responseStream status200 [allowOrigin, sseCT, noCache] $ \write flush -> do
+        let loop cursor = do
+              (evs, cursor') <- atomically (readFrom logv cursor)
+              mapM_ (\e -> write (frame e) >> flush) evs
+              -- close the stream once the terminal event has been sent
+              if any isFinished evs then pure () else loop cursor'
+        loop 0
+  where
+    jsonCT  = ("Content-Type", "application/json")
+    sseCT   = ("Content-Type", "text/event-stream")
+    noCache = ("Cache-Control", "no-cache")
+    frame e = BB.byteString "data: " <> BB.lazyByteString (encode e) <> BB.byteString "\n\n"
+    isFinished RunFinished{} = True
+    isFinished _             = False
+
 -- | Run the app on a port (production entry uses this).
 serve' :: Int -> ProviderFactory -> IO ()
 serve' port factory = mkApp factory >>= Warp.run port
@@ -201,3 +296,4 @@ fakeProviderFactory _ = pure Env
   { oracle = \_ -> pure (Right (Response "hi" [] (Usage 1 1)))
   , world  = \_ -> pure (Obs "")
   }
+
