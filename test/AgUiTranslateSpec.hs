@@ -1,8 +1,10 @@
 module AgUiTranslateSpec (spec) where
 
 import Test.Hspec
+import qualified Data.Monoid
 import Harness.Alphabet
 import Harness.State (Mode (..))
+import Harness.Probe (Risk (..))
 import Harness.AgUi.Event
 import Harness.AgUi.Translate
 
@@ -45,3 +47,9 @@ spec = describe "Harness.AgUi.Translate" $ do
         (_, st1) = oracleEvents (resp "" [Call "read" "{}"]) st0
         (evs, _) = worldEvents (Obs "file contents") st1
     map evType evs `shouldBe` ["TOOL_CALL_RESULT"]
+
+  it "forecastEvent emits a CUSTOM harness.forecast with the risk fields" $ do
+    let risk = Risk (Data.Monoid.Sum 5) (Data.Monoid.Any True) ["write"] (Data.Monoid.Sum 1)
+    case forecastEvent risk of
+      Custom name _ -> name `shouldBe` "harness.forecast"
+      _             -> expectationFailure "expected a Custom event"

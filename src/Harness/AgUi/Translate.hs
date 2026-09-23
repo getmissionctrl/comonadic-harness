@@ -14,12 +14,15 @@ module Harness.AgUi.Translate
   , refusalEvents
   , worldEvents
   , runFinishEvents
+  , forecastEvent
   ) where
 
 import Data.Aeson (Value, object, toJSON, (.=))
+import Data.Monoid (Any (..), Sum (..))
 import Data.Text (Text, pack)
 import Harness.Alphabet
 import Harness.State (Mode (..))
+import Harness.Probe (Risk (..))
 import Harness.AgUi.Event
 
 -- | The id\/budget\/mode threading state for a single run's event construction.
@@ -123,6 +126,20 @@ worldEvents (Obs o) st = case rsLastTC st of
 -- a client can render (status plus answer\/reason).
 runFinishEvents :: RunId -> Outcome -> [AgUiEvent]
 runFinishEvents r o = [RunFinished r (outcomeValue o)]
+
+-- | The harness's own pure forecast as a @CUSTOM@ AG-UI event — the
+-- differentiator primitive. Where the standard event stream reports what the run
+-- /has/ done, this reports what 'Harness.Probe.assess' predicts it /will/ do:
+-- how many steps ahead, whether it terminates, which irreversible tools it will
+-- reach, and how many compactions it will provoke. Rides on @CUSTOM@ so it does
+-- not widen the standard AG-UI event set.
+forecastEvent :: Risk -> AgUiEvent
+forecastEvent r = Custom "harness.forecast" (object
+  [ "stepsAhead"   .= getSum (stepsAhead r)
+  , "terminates"   .= getAny (terminates r)
+  , "irreversible" .= irreversible r
+  , "compactions"  .= getSum (compactions r)
+  ])
 
 -- | The JSON shape of an 'Outcome' embedded in @RUN_FINISHED@.
 outcomeValue :: Outcome -> Value

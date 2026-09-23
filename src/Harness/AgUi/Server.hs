@@ -21,7 +21,7 @@ module Harness.AgUi.Server
 
 import Control.Concurrent (forkIO)
 import Control.Concurrent.STM
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.:?), (.!=), (.=), encode)
 import qualified Data.ByteString.Builder as BB
@@ -35,10 +35,12 @@ import Servant
 import Harness.Alphabet
 import Harness.State (S (..), Mode (..), Turn (..))
 import Harness.Coalgebra (harness)
+import Harness.Path (Hypo (..))
+import Harness.Probe (assess)
 import Harness.Run (Env (..), run)
 import Harness.AgUi.Event
 import Harness.AgUi.Sink
-import Harness.AgUi.Translate (RunState, initRunState, runStartEvents, runFinishEvents)
+import Harness.AgUi.Translate (RunState, initRunState, runStartEvents, runFinishEvents, forecastEvent)
 import Harness.AgUi.HumanEnv
 
 -- | Build the per-run behaviour 'Env' (provider + world) for a run id. Injected
@@ -62,13 +64,14 @@ newtype Registry = Registry (TVar (Map.Map RunId RunHandle))
 -- (@"auto"@ — the provider answers every turn; @"human"@ — a person answers via
 -- @POST /runs/{id}/input@). Defaults to @"auto"@.
 data StartReq = StartReq
-  { task    :: Text
-  , runMode :: Text
+  { task     :: Text
+  , runMode  :: Text
+  , forecast :: Bool
   }
 
 instance FromJSON StartReq where
   parseJSON = withObject "StartReq" $ \o ->
-    StartReq <$> o .: "task" <*> (o .:? "mode" .!= "auto")
+    StartReq <$> o .: "task" <*> (o .:? "mode" .!= "auto") <*> (o .:? "forecast" .!= False)
 
 -- | Response body of @POST /runs@: the minted run id, echoed as the thread id.
 newtype StartResp = StartResp RunId
@@ -130,9 +133,29 @@ startH factory (Registry regv) sr = liftIO $ do
         _       -> traceEnv sink stv inner
   void $ forkIO $ do
     mapM_ sink (runStartEvents rid rid (budget seeded) (tools seeded) (mode seeded))
+    -- Opt-in: emit the harness's own pure forecast for this run's seed before a
+    -- single token is spent. Off by default; the client asks with "forecast":true.
+    when (forecast sr) $ sink (forecastEvent (assess defaultHypo 40 (harness seeded)))
     o <- run env (harness seeded)
     mapM_ sink (runFinishEvents rid o)
   pure (StartResp rid)
+
+-- | A crude pure stand-in for the oracle\/world used only to compute the opt-in
+-- @harness.forecast@ at run start. It mirrors the demo's @hypo@ (@app/Main.hs@):
+-- summarise when offered no tools, overflow once the prompt grows past a few
+-- lines, otherwise propose a @write@. It is deliberately crude — the forecast is
+-- only ever as good as the 'Hypo' (BRIEF §5), and a better model of the oracle
+-- is a separate, harder problem.
+defaultHypo :: Hypo
+defaultHypo = Hypo
+  { guessOracle = \(Request (Prompt p) ts _) ->
+      if null ts
+        then Right (Response "summary" [] (Usage 300 20))
+        else if length (lines p) >= 5
+               then Left Overflow
+               else Right (Response "guess" [Call "write" "g.txt"] (Usage 120 40))
+  , guessWorld = \c -> Obs (tool c)
+  }
 
 -- | @POST /runs/{id}/input@: fill the run's input slot with a text 'Response',
 -- unblocking a human-driven oracle. 404 if the run id is unknown.
