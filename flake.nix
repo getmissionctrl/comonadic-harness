@@ -15,7 +15,7 @@
       in {
         packages.default = harness;
         # Cabal dev/test shell: GHC with every lib+test dep of the package
-        # (via `.env`) plus tooling. `ollama` is NOT here — it runs on hq.
+        # (via `.env`) plus tooling. `ollama` is NOT here — it runs separately.
         devShells.dev = harness.env.overrideAttrs (old: {
           nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [
             pkgs.cabal-install

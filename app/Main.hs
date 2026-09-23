@@ -4,7 +4,7 @@
 -- @runs\/oracle-output.txt@ using a fake oracle and world.
 --
 -- @cabal run demo live [--model M] [--ctx N] your task words...@: runs against
--- the real Ollama provider on hq, printing the same annotated trace as the
+-- the real Ollama provider, printing the same annotated trace as the
 -- scripted demo but driven by the live model. The trailing words become the
 -- initial task (seeded as the opening transcript turn, so the first prompt is
 -- non-empty); @--model@\/@--ctx@ tune the provider. Defaults: @qwen3:8b@,
