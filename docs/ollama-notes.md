@@ -1,6 +1,6 @@
 # Ollama notes
 
-Filled from live observation against `http://hq:11434` on 2026-08-26.
+Filled from live observation against `<my-ollama>` on 2026-08-26.
 
     Server version: 0.32.13 (from /api/version; `ollama --version` not run directly)
     Client library: ollama-haskell 0.2.1.0
