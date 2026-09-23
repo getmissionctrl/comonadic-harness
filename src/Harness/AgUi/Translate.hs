@@ -123,9 +123,11 @@ worldEvents (Obs o) st = case rsLastTC st of
   Nothing         -> ([], st)
 
 -- | The terminal @RUN_FINISHED@ for an 'Outcome', carrying a small result object
--- a client can render (status plus answer\/reason).
-runFinishEvents :: RunId -> Outcome -> [AgUiEvent]
-runFinishEvents r o = [RunFinished r (outcomeValue o)]
+-- a client can render (status plus answer\/reason). Carries the @threadId@ as
+-- well as the @runId@ because the AG-UI schema requires both on the terminal
+-- event (a client that verifies events rejects the run otherwise).
+runFinishEvents :: ThreadId -> RunId -> Outcome -> [AgUiEvent]
+runFinishEvents t r o = [RunFinished t r (outcomeValue o)]
 
 -- | The harness's own pure forecast as a @CUSTOM@ AG-UI event — the
 -- differentiator primitive. Where the standard event stream reports what the run

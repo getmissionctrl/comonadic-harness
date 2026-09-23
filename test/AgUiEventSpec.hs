@@ -25,6 +25,15 @@ spec = describe "Harness.AgUi.Event ToJSON wire shapes" $ do
     enc (ToolCallStart "tc-1" "read")
       `shouldBe` object ["type" .= ("TOOL_CALL_START" :: String), "toolCallId" .= ("tc-1" :: String), "toolCallName" .= ("read" :: String)]
 
+  it "RunFinished carries threadId and runId (AG-UI requires both on the terminal event)" $
+    enc (RunFinished "thread-1" "run-1" (Data.Aeson.object ["status" .= ("done" :: String)]))
+      `shouldBe` object
+        [ "type" .= ("RUN_FINISHED" :: String)
+        , "threadId" .= ("thread-1" :: String)
+        , "runId" .= ("run-1" :: String)
+        , "result" .= object ["status" .= ("done" :: String)]
+        ]
+
   it "StateDelta carries an RFC-6902 patch array under delta" $
     enc (StateDelta [PatchReplace "/budget" (Data.Aeson.toJSON (900 :: Int))])
       `shouldBe` object ["type" .= ("STATE_DELTA" :: String), "delta" .= [object ["op" .= ("replace" :: String), "path" .= ("/budget" :: String), "value" .= (900 :: Int)]]]

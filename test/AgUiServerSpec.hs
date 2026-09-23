@@ -40,6 +40,9 @@ spec = describe "Harness.AgUi.Server" $ do
       body `shouldContain` "RUN_STARTED"
       body `shouldContain` "RUN_FINISHED"
       body `shouldContain` "\"runId\":\"r-1\""
+      -- AG-UI requires threadId on RUN_STARTED and RUN_FINISHED; a verifying
+      -- client (assistant-ui) rejects the run without it
+      body `shouldContain` "\"threadId\":\"t-1\""
 
   it "GET /runs/{id}/events streams a RUN_STARTED frame" $
     testWithApplication (mkApp fakeProviderFactory) $ \port -> do

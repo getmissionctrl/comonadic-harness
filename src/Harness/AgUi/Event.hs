@@ -52,7 +52,7 @@ instance ToJSON Patch where
 -- widening the standard event set.
 data AgUiEvent
   = RunStarted ThreadId RunId
-  | RunFinished RunId Value              -- ^ result payload (e.g. the outcome)
+  | RunFinished ThreadId RunId Value     -- ^ threadId, runId, result payload
   | RunError Text                        -- ^ message
   | StepStarted Text                     -- ^ stepName
   | StepFinished Text                    -- ^ stepName
@@ -71,7 +71,7 @@ data AgUiEvent
 instance ToJSON AgUiEvent where
   toJSON = \case
     RunStarted t r         -> object ["type" .= ("RUN_STARTED" :: Text), "threadId" .= t, "runId" .= r]
-    RunFinished r res      -> object ["type" .= ("RUN_FINISHED" :: Text), "runId" .= r, "result" .= res]
+    RunFinished t r res    -> object ["type" .= ("RUN_FINISHED" :: Text), "threadId" .= t, "runId" .= r, "result" .= res]
     RunError m             -> object ["type" .= ("RUN_ERROR" :: Text), "message" .= m]
     StepStarted n          -> object ["type" .= ("STEP_STARTED" :: Text), "stepName" .= n]
     StepFinished n         -> object ["type" .= ("STEP_FINISHED" :: Text), "stepName" .= n]

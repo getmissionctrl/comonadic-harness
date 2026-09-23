@@ -158,7 +158,7 @@ startH factory (Registry regv) sr = liftIO $ do
     -- single token is spent. Off by default; the client asks with "forecast":true.
     when (forecast sr) $ sink (forecastEvent (assess defaultHypo 40 (harness seeded)))
     o <- run env (harness seeded)
-    mapM_ sink (runFinishEvents rid o)
+    mapM_ sink (runFinishEvents rid rid o)
   pure (StartResp rid)
 
 -- | A crude pure stand-in for the oracle\/world used only to compute the opt-in
@@ -269,7 +269,7 @@ aguiH factory (Registry regv) req respond = do
       void $ forkIO $ do
         mapM_ sink (runStartEvents tid rid (budget seeded) (tools seeded) (mode seeded))
         o <- run env (harness seeded)
-        mapM_ sink (runFinishEvents rid o)
+        mapM_ sink (runFinishEvents tid rid o)
       respond $ Wai.responseStream status200 [allowOrigin, sseCT, noCache] $ \write flush -> do
         let loop cursor = do
               (evs, cursor') <- atomically (readFrom logv cursor)
