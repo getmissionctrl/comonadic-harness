@@ -114,12 +114,13 @@ AG-UI events, and `run` still reads only the shape.
 cabal run serve            # listens on http://localhost:8080 (or: cabal run serve -- 9000)
 ```
 
-Three endpoints:
+Endpoints:
 
 | method + path | body | what it does |
 |---|---|---|
-| `POST /runs` | `{"task":"…", "mode":"auto"\|"human", "forecast":true\|false}` | start a run; returns `{"runId","threadId"}`. `mode` and `forecast` are optional (default `auto`, `false`) |
-| `GET /runs/{id}/events` | — | SSE out-stream (`text/event-stream`); replays the run's log from the start, then follows it live |
+| `POST /agent` | a standard AG-UI `RunAgentInput` (`threadId`, `runId`, `messages`, …) | **the standard AG-UI transport.** Starts a run and streams the events back *on the same response* (`text/event-stream`), closing on `RUN_FINISHED`. This is what an off-the-shelf AG-UI client (assistant-ui, CopilotKit, `@ag-ui/client`) speaks. Sends permissive CORS |
+| `POST /runs` | `{"task":"…", "mode":"auto"\|"human", "forecast":true\|false}` | our own two-step start; returns `{"runId","threadId"}`. `mode` and `forecast` are optional (default `auto`, `false`) |
+| `GET /runs/{id}/events` | — | two-step SSE out-stream; replays the run's log from the start, then follows it live |
 | `POST /runs/{id}/input` | `{"text":"…"}` | in `human` mode, supply the answer the blocked oracle is waiting on |
 
 Conformance: events are strict AG-UI JSON, one object per SSE frame
@@ -134,7 +135,14 @@ widening the event set.
 
 v1 ships with a deterministic fake provider so the transport runs without a model
 in the loop; wiring the live Ollama factory is a follow-up (see the `TODO(live)`
-in `app-serve/Serve.hs`). A minimal browser page is in `static/smoke.html`.
+in `app-serve/Serve.hs`).
+
+**UI smoke test.** `web/` is a minimal [assistant-ui](https://www.assistant-ui.com)
+React app that drives the harness through `POST /agent` using the real
+`@ag-ui/client` `HttpAgent` — proving the backend interoperates with a genuine
+off-the-shelf AG-UI client, not just our own JS. `web/smoke.mjs` runs it headless
+(Playwright) and asserts the harness's streamed reply renders. See `web/README.md`.
+A dependency-free browser page for the two-step endpoints is in `static/smoke.html`.
 
 ## Environment
 
