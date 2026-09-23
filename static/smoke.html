@@ -1,0 +1,14 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>AG-UI harness smoke test</title></head>
+<body>
+<button id="start">Start run</button>
+<pre id="out"></pre>
+<script>
+document.getElementById('start').onclick = async () => {
+  const r = await fetch('/runs', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({task:'hello'})});
+  const {runId} = await r.json();
+  const es = new EventSource('/runs/' + runId + '/events');
+  es.onmessage = (e) => { document.getElementById('out').textContent += e.data + "\n"; };
+};
+</script>
+</body></html>

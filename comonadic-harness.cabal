@@ -81,6 +81,12 @@ executable demo
   main-is:          Main.hs
   build-depends:    base, comonadic-harness, comonad, free
 
+executable serve
+  import:           warnings, exts
+  hs-source-dirs:   app-serve
+  main-is:          Serve.hs
+  build-depends:    base, comonadic-harness
+
 test-suite spec
   import:           warnings, exts
   type:             exitcode-stdio-1.0
