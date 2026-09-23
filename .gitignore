@@ -7,3 +7,7 @@ result-*
 .env
 runs/agent-sandbox/
 .claude/worktrees/
+
+# internal workflow/planning artifacts — not library source
+docs/superpowers/
+runs/live-demo.txt

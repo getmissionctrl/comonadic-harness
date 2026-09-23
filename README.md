@@ -66,7 +66,7 @@ README): `read`/`write` are path-confined (a `..`/absolute escape is refused),
 `bash` runs there with a 10s timeout, and `commit` is a git commit in that
 sandbox — the project repo is never touched. So the agent genuinely reads the
 README, writes a file, and commits; a completed run ends `Done` with the model's
-summary (see `runs/live-demo.txt`).
+summary.
 
 The task is seeded as the opening transcript turn (an empty prompt is what real
 Ollama rejects). Flags: `--model M`, `--ctx N` (a small `--ctx` provokes the
