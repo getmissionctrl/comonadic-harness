@@ -36,6 +36,11 @@ library
     Harness.Compaction
     Harness.Evolve
     Harness.Tutorial
+    Harness.AgUi.Event
+    Harness.AgUi.Translate
+    Harness.AgUi.Sink
+    Harness.AgUi.HumanEnv
+    Harness.AgUi.Server
     Provider.Class
     Provider.Ollama
     Provider.Tools
@@ -59,6 +64,16 @@ library
     -- Ollama chat endpoint. Tool/affordance/MCP semantics live in the harness,
     -- not delegated to the library. [design]
     , ollama-haskell >= 0.2 && < 0.3
+    -- AG-UI streaming transport (Harness.AgUi.*): the tracing decorator's STM
+    -- event log, the Servant JSON API for starting/steering runs, and the
+    -- WAI/Warp SSE out-stream. Kept off the pure core — these appear only under
+    -- Harness.AgUi and app-serve.
+    , stm
+    , servant
+    , servant-server
+    , warp
+    , wai
+    , http-types
 
 executable demo
   import:           warnings, exts
