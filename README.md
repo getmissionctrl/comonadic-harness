@@ -133,9 +133,16 @@ opt-in `harness.forecast` (`Harness.Probe.assess` predicting the run's future
 before a token is spent) — ride on the standard `CUSTOM` event rather than
 widening the event set.
 
-v1 ships with a deterministic fake provider so the transport runs without a model
-in the loop; wiring the live Ollama factory is a follow-up (see the `TODO(live)`
-in `app-serve/Serve.hs`).
+The `serve` executable runs a **live agent**: the oracle is Ollama
+(`Provider.Ollama`, a Qwen model on a configurable host) and the world routes
+`scrape_url` to the Firecrawl API (`Provider.Research`) and `read`/`write`/
+`bash`/`commit` to the sandbox (`Provider.Tools`) — so a browser driving
+`POST /agent` gets a genuine local-LLM agent that can read the web and edit
+files in a throwaway repo. Configuration comes from the environment (optionally a
+git-ignored `.env`): `OLLAMA_BASE_URL` (default `http://hq:11434`), `OLLAMA_MODEL`
+(default `qwen3:8b`), `OLLAMA_NUM_CTX`, `BUDGET`, and `FIRECRAWL_API_KEY` for the
+scrape tool. Secrets are never committed. (For a model-free transport check, the
+prior fake provider is still available via `Harness.AgUi.Server.serve'`.)
 
 **UI smoke test.** `web/` is a minimal [assistant-ui](https://www.assistant-ui.com)
 React app that drives the harness through `POST /agent` using the real

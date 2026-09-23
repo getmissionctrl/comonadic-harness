@@ -12,10 +12,16 @@ assistant-ui both build on) at the Haskell server's `POST /agent` endpoint via
 ## What it exercises
 
 Browser → `POST /agent` (a standard `RunAgentInput`) → the server streams AG-UI
-events back on that same response (`RUN_STARTED` → `TEXT_MESSAGE_*` →
-`RUN_FINISHED`) → assistant-ui validates and renders them. The v1 server ships a
-fake provider that answers `"hi"`, so a sent task comes back as an assistant
-bubble saying `hi`.
+events back on that same response (`RUN_STARTED` → `TOOL_CALL_*` /
+`TEXT_MESSAGE_*` → `RUN_FINISHED`) → assistant-ui validates and renders them.
+
+The `serve` executable runs a **live agent** (Ollama + real tools:
+`read`/`write`/`bash`/`commit` in a sandbox, plus `scrape_url` via Firecrawl), so
+a task like *"scrape https://example.com and tell me what the page is"* produces
+a real `scrape_url` tool call and a model-written answer, rendered live. See the
+repo `README.md` for the `.env` config (`OLLAMA_BASE_URL`, `OLLAMA_MODEL`,
+`FIRECRAWL_API_KEY`). `live-smoke.mjs` drives this end-to-end in headless
+Chromium.
 
 ## Run it by hand
 

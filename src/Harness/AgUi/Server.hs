@@ -14,8 +14,12 @@
 -- 'harness' unfold and only decorates the seams.
 module Harness.AgUi.Server
   ( ProviderFactory
+  , ServeConfig (..)
+  , defaultServeConfig
   , mkApp
+  , mkAppWith
   , serve'
+  , serveWith
   , fakeProviderFactory
   ) where
 
@@ -48,6 +52,22 @@ import Harness.AgUi.HumanEnv
 -- so tests supply a fake and production supplies Ollama + sandbox tools; the
 -- transport is oblivious to which.
 type ProviderFactory = RunId -> IO (Env IO)
+
+-- | How the server seeds and drives each run: the provider 'ProviderFactory',
+-- the tools every run is afforded ('scfTools' — empty for the fake, the real
+-- read\/write\/bash\/commit\/scrape_url set for a live agent), and the starting
+-- token 'scfBudget'. Injected so the transport stays oblivious to whether it is
+-- driving a stub or a live model against real tools.
+data ServeConfig = ServeConfig
+  { scfFactory :: ProviderFactory
+  , scfTools   :: [ToolSpec]
+  , scfBudget  :: Int
+  }
+
+-- | A config for the deterministic fake: no tools, a small budget. Matches the
+-- pre-config behaviour so existing callers ('mkApp'\/'serve'') are unchanged.
+defaultServeConfig :: ProviderFactory -> ServeConfig
+defaultServeConfig f = ServeConfig f [] 1200
 
 -- | Everything the transport needs to reach a live run: its event log (for SSE)
 -- and its input slot (for a human-driven oracle). The threaded @RunState@ that
@@ -100,17 +120,21 @@ jsonApi = Proxy
 -- speaks) with its @OPTIONS@ CORS preflight. Everything else is the Servant
 -- JSON API.
 mkApp :: ProviderFactory -> IO Wai.Application
-mkApp factory = do
+mkApp = mkAppWith . defaultServeConfig
+
+-- | Build the WAI application from a full 'ServeConfig' (tools + budget + factory).
+mkAppWith :: ServeConfig -> IO Wai.Application
+mkAppWith cfg = do
   reg <- Registry <$> newTVarIO Map.empty
-  let jsonApp = serve jsonApi (startH factory reg :<|> inputH reg)
-  pure (router factory reg jsonApp)
+  let jsonApp = serve jsonApi (startH cfg reg :<|> inputH reg)
+  pure (router cfg reg jsonApp)
 
 -- | Route the raw endpoints; delegate the rest to Servant.
-router :: ProviderFactory -> Registry -> Wai.Application -> Wai.Application
-router factory reg jsonApp req respond =
+router :: ServeConfig -> Registry -> Wai.Application -> Wai.Application
+router cfg reg jsonApp req respond =
   case (Wai.requestMethod req, Wai.pathInfo req) of
     ("GET",     ["runs", rid, "events"]) -> sseH reg rid req respond
-    ("POST",    ["agent"])               -> aguiH factory reg req respond
+    ("POST",    ["agent"])               -> aguiH cfg reg req respond
     ("OPTIONS", ["agent"])               -> respond (Wai.responseLBS status204 preflightHeaders "")
     _                                    -> jsonApp req respond
 
@@ -132,12 +156,13 @@ preflightHeaders =
 -- | @POST /runs@: mint an id, register the run, spawn its thread, return the id.
 -- The thread emits @RUN_STARTED@ + snapshot, drives the run through the tracing
 -- decorator, then emits @RUN_FINISHED@.
-startH :: ProviderFactory -> Registry -> StartReq -> Handler StartResp
-startH factory (Registry regv) sr = liftIO $ do
+startH :: ServeConfig -> Registry -> StartReq -> Handler StartResp
+startH cfg (Registry regv) sr = liftIO $ do
+  let factory = scfFactory cfg
   logv <- newEventLog
   slot <- newInputSlot
   let seeded = S { transcript = [Summary (unpack (task sr))]
-                 , pending = [], budget = 1200, mode = Working, tools = [] }
+                 , pending = [], budget = scfBudget cfg, mode = Working, tools = scfTools cfg }
   stv <- newTVarIO (initRunState (budget seeded) (mode seeded))
   rid <- atomically $ do
     m <- readTVar regv
@@ -251,16 +276,17 @@ lastUserText = foldl (\acc (Msg role content) -> if role == "user" then content 
 -- @text/event-stream@ (unlike our two-step @POST /runs@ + @GET events@ pair).
 -- This is the shape an off-the-shelf AG-UI client (assistant-ui, CopilotKit,
 -- the @\@ag-ui/client@ @HttpAgent@) speaks. The stream closes on @RUN_FINISHED@.
-aguiH :: ProviderFactory -> Registry -> Wai.Application
-aguiH factory (Registry regv) req respond = do
+aguiH :: ServeConfig -> Registry -> Wai.Application
+aguiH cfg (Registry regv) req respond = do
   body <- Wai.strictRequestBody req
   case eitherDecode body of
     Left _ -> respond (Wai.responseLBS status400 [allowOrigin, jsonCT] "{\"error\":\"bad RunAgentInput\"}")
     Right (RunAgentInput tid rid task') -> do
+      let factory = scfFactory cfg
       logv <- newEventLog
       slot <- newInputSlot
       let seeded = S { transcript = [Summary (unpack task')]
-                     , pending = [], budget = 1200, mode = Working, tools = [] }
+                     , pending = [], budget = scfBudget cfg, mode = Working, tools = scfTools cfg }
       stv <- newTVarIO (initRunState (budget seeded) (mode seeded))
       atomically (modifyTVar' regv (Map.insert rid (RunHandle logv slot)))
       inner <- factory rid
@@ -285,9 +311,13 @@ aguiH factory (Registry regv) req respond = do
     isFinished RunFinished{} = True
     isFinished _             = False
 
--- | Run the app on a port (production entry uses this).
+-- | Run the fake-config app on a port.
 serve' :: Int -> ProviderFactory -> IO ()
-serve' port factory = mkApp factory >>= Warp.run port
+serve' port factory = serveWith port (defaultServeConfig factory)
+
+-- | Run the app on a port with a full 'ServeConfig' (production entry uses this).
+serveWith :: Int -> ServeConfig -> IO ()
+serveWith port cfg = mkAppWith cfg >>= Warp.run port
 
 -- | A deterministic fake provider for tests: answers once with a text response
 -- carrying no tool calls, which the coalgebra reads as completion.
