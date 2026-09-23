@@ -86,8 +86,8 @@ test-suite spec
   type:             exitcode-stdio-1.0
   hs-source-dirs:   test
   main-is:          Main.hs
-  other-modules:    Gen, LawsSpec, PerfSpec, HostileSpec, AgUiEventSpec, AgUiTranslateSpec
+  other-modules:    Gen, LawsSpec, PerfSpec, HostileSpec, AgUiEventSpec, AgUiTranslateSpec, AgUiSinkSpec
   build-depends:
       base, comonadic-harness, hspec, QuickCheck
     , comonad, free, containers
-    , aeson, bytestring
+    , aeson, bytestring, stm
