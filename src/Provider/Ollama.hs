@@ -61,7 +61,7 @@ import Provider.Class (Provider (..))
 -- leave the rest at 'defaultOllamaCfg'.
 data OllamaCfg = OllamaCfg
   { ocBaseUrl :: String
-  -- ^ Base URL of the Ollama server, e.g. @\"http:\/\/hq:11434\"@. Passed
+  -- ^ Base URL of the Ollama server, e.g. @\"http:\/\/localhost:11434\"@. Passed
   -- through to the client as its @hostUrl@; no trailing path is appended here.
   , ocModel   :: String
   -- ^ The model tag, e.g. @\"qwen3:8b\"@. Sent as the request's @modelName@.
@@ -80,8 +80,8 @@ data OllamaCfg = OllamaCfg
   -- the dominant latency and adds little to tool selection.
   }
 
--- | The house configuration: the @hq@ host, the @qwen3:8b@ model, and Ollama's
--- own default 2048-token context.
+-- | The house configuration: a local Ollama server, the @qwen3:8b@ model, and
+-- Ollama's own default 2048-token context.
 --
 -- __Why these values.__ They are the ones recorded as tested in
 -- @docs\/ollama-notes.md@, so a run left at the default reproduces the documented
@@ -90,7 +90,7 @@ data OllamaCfg = OllamaCfg
 defaultOllamaCfg :: OllamaCfg
 defaultOllamaCfg =
   OllamaCfg
-    { ocBaseUrl = "http://hq:11434"
+    { ocBaseUrl = "http://localhost:11434"
     , ocModel   = "qwen3:8b"
     , ocNumCtx  = 2048
     , ocThink   = Nothing

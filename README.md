@@ -53,7 +53,7 @@ cabal build all              # warning-clean under the strict flag set
 cabal test spec              # 11 examples: comonad, agreement, prefix, affordance,
                              #   compaction-rate, monoidal-scan, hostile-oracle
 cabal run demo               # reproduces runs/oracle-output.txt (pure scripted oracle)
-cabal run demo live          # same harness, live against Ollama on hq:11434,
+cabal run demo live          # same harness, live against Ollama on localhost:11434,
                              #   printing the full annotated trace (built-in task)
 # give it your own task (trailing words); flags tune the run:
 cabal run demo live -- --ctx 8192 --budget 10000 read README.md then write notes.md summarising it and commit
