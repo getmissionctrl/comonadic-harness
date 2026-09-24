@@ -140,8 +140,11 @@ data Behaviour = Behaviour
 -- that permuting the /independent/ calls within a single turn is not counted as
 -- a divergence: pi runs a turn's calls in parallel, so the trace is a list of
 -- multisets, not a list of ordered events (§16.2). @'Harness.Interp.Refused'@
--- events are dropped from the turn grouping — a refusal is not a tool call and
--- carries no name to compare. [established]
+-- and @'Harness.Interp.Repaired'@ events are dropped from the turn grouping — a
+-- refusal is not a tool call, and a repaired call never reached the world, so
+-- neither carries a performed-tool name to compare. Repairs contribute to none
+-- of the four axes, so surfacing them in the trace leaves the compaction rates
+-- unchanged. [established]
 observe :: [Ev] -> Behaviour
 observe evs = Behaviour
   { bHalt = Last (listToMaybe [o | Ended o <- evs])
@@ -156,6 +159,9 @@ observe evs = Behaviour
         go acc (Asked _ : rest) = sort acc : go [] rest
         go acc (Did c : rest)   = go (tool c : acc) rest
         go acc (Refused _ : rest) = go acc rest
+        -- A repaired call is not a performed tool, so it contributes to no turn
+        -- set (nor to any other axis): the compaction rates are unchanged by it.
+        go acc (Repaired _ _ : rest) = go acc rest
         go acc (Ended _ : _)    = [sort acc]
         go acc []               = [sort acc]
 

@@ -25,6 +25,8 @@ module Harness.State
   , project
   , allTools
   , afford
+  , admit
+  , settle
   , request
   , view
   , renderLine
@@ -116,6 +118,12 @@ data Ctx = Ctx
   , ctxMode :: Mode
     -- ^ The 'mode' at this node, letting a trace distinguish task turns from
     -- summarisation turns (as 'Harness.Interp.Ev' does).
+  , ctxRepaired :: [(Call, Obs)]
+    -- ^ The pending calls this node rejected as unafforded (D3\/D12), each paired
+    -- with its synthetic error 'Obs'. Populated by 'view' from 'settle', so the
+    -- annotation matches what actually went on the wire (review1 #6a). Read by
+    -- analysis (and the trace labeller) only — it never steers execution
+    -- (invariant 2). Empty at a node with no repair.
   }
   deriving stock (Eq, Show, Generic)
 
@@ -179,6 +187,57 @@ afford s
     wrote (User rs) = any (\(c, Obs o) -> tool c == "write" && not ("error: " `isPrefixOf` o)) rs
     wrote _ = False
 
+-- | The admission pass. Split the model's pending calls into those the current
+-- node affords (safe to 'Harness.Alphabet.Perform') and those it does not,
+-- pairing each rejected 'Call' with a synthetic error 'Obs' so the model sees
+-- its own mistake on the next turn (D3\/D12).
+--
+-- __Why it lives here.__ It depends only on 'afford' and 'pending', both in this
+-- module, and both the coalgebra ('Harness.Coalgebra.step', which drains the
+-- afforded calls) and the annotation ('view', which surfaces the rejects for
+-- analysis) must classify pending calls the /same/ way. Keeping the single
+-- source of that classification here — rather than in @Coalgebra@ — lets 'view'
+-- reuse it without an import cycle (@State@ must not import @Coalgebra@). [design]
+--
+-- __Why a model needs it.__ A live model can ask for a tool it was never offered
+-- — a hallucinated name, a schema-invalid call, or a tool gated behind a
+-- precondition it has not met (@commit@ before any @write@; see 'afford'). Such a
+-- call is neither a 'Harness.Alphabet.Refusal' (the provider did answer) nor a
+-- clean 'Harness.Alphabet.Response' to act on, yet the alphabet is closed at
+-- three constructors and we refuse to grow it for this. So the mismatch is
+-- repaired: the bad call becomes an ordinary observation carrying an error
+-- string, and the run continues rather than crashing or stalling. [design]
+--
+-- __Gotcha — order-preserving.__ @foldr@ keeps the original call order in both
+-- partitions, so the afforded calls that survive are performed in exactly the
+-- sequence the model asked for: no reordering, no dropping, no deduplication.
+-- The membership test is by tool /name/ only ('specName'), not by argument
+-- schema — an afforded name with malformed @args@ still reaches the world.
+-- [design]
+admit :: [ToolSpec] -> [Call] -> ([Call], [(Call, Obs)])
+admit specs = foldr classify ([], [])
+  where
+    classify c (ok, bad)
+      | tool c `elem` map specName specs = (c : ok, bad)
+      | otherwise = (ok, (c, Obs ("error: tool not afforded: " ++ tool c)) : bad)
+
+-- | Apply one admission pass: fold rejected (unafforded) calls into the
+-- transcript as error observations and narrow 'pending' to the afforded calls.
+-- Idempotent (a settled state has no rejects), so it is safe to apply at every
+-- node without looping. Returns the settled state and the rejects it recorded,
+-- so both the coalgebra (which drains the afforded calls) and the annotation
+-- (which surfaces the rejects for analysis) work from the same partition —
+-- the single source of the repair (review1 #6). [design]
+settle :: S -> (S, [(Call, Obs)])
+settle s = case admit (afford s) (pending s) of
+  (_,  []) -> (s, [])
+  (ok, bad) ->
+    ( s { transcript = recordAll bad (transcript s), pending = ok }, bad )
+  where
+    record c o (User rs : ts) = User (rs ++ [(c, o)]) : ts
+    record c o ts             = User [(c, o)] : ts
+    recordAll bad ts = foldl (\acc (c, o) -> record c o acc) ts bad
+
 -- | Assemble the 'Harness.Alphabet.Request' for the current turn. In 'Working'
 -- mode it pairs the plain 'project'ion with the afforded tools. In 'Summarising'
 -- mode the request carries a summarisation instruction appended to the prompt
@@ -210,5 +269,13 @@ toChatMsgs s = concatMap turnMsgs (reverse (transcript s))
 -- It exposes only what analysis is permitted to read — the pending 'request',
 -- the remaining 'budget', and the 'mode' — and deliberately withholds the rest
 -- of @S@, keeping execution and analysis on their separate sides of invariant 2.
+--
+-- __Repair honesty.__ 'view' first 'settle's the state, so the 'ctxRequest' it
+-- exposes is the /repaired/ request — the one 'Harness.Coalgebra.step' actually
+-- emits — and 'ctxRepaired' names the rejected calls that settling folded in.
+-- The pre-repair annotation would have disagreed with the wire (review1 #6a).
+-- Note @'mode' s' == 'mode' s@ ('settle' never changes the mode), so the mode
+-- label is unaffected.
 view :: S -> Ctx
-view s = Ctx (request s) (budget s) (mode s)
+view s = let (s', rejects) = settle s
+          in Ctx (request s') (budget s') (mode s') rejects

@@ -9,9 +9,9 @@
 -- of the three alphabet positions comes next ('Ask' to ask the oracle,
 -- 'Perform' to run a tool against the world, or 'Halt' to stop) and how the
 -- state evolves once the /direction/ (the oracle\/world result) comes back.
--- 'admit' is the repair pass 'step' runs first; 'working' and 'summarising' are
--- the two 'Ask' continuations; 'harness' unfolds 'step' into the 'Cofree'
--- denotation.
+-- 'Harness.State.settle' is the repair pass 'step' runs first; 'working' and
+-- 'summarising' are the two 'Ask' continuations; 'harness' unfolds 'step' into
+-- the 'Cofree' denotation.
 --
 -- __Why a coalgebra.__ The state transition is separated from the effect. 'step'
 -- names the successor as a pure function of an as-yet-unknown result; the
@@ -39,39 +39,6 @@ import Optics.Generic (gfield)
 import Harness.Alphabet
 import Harness.State
 
--- | The admission pass. Split the model's pending calls into those the current
--- node affords (safe to 'Perform') and those it does not, pairing each rejected
--- 'Call' with a synthetic error 'Obs' so the model sees its own mistake on the
--- next turn (D3\/D12).
---
--- __Why it exists.__ A live model can ask for a tool it was never offered — a
--- hallucinated name, a call that is schema-invalid, or a tool gated behind a
--- precondition it has not met (@commit@ before any @write@; see
--- @Harness.State.afford@). Such a call is neither a 'Refusal' (the provider did
--- answer) nor a clean 'Response' to act on, yet the alphabet is closed at three
--- constructors and we refuse to grow it for this. So the mismatch is repaired
--- /in the coalgebra/: the bad call becomes an ordinary observation carrying an
--- error string, and the run continues rather than crashing or stalling. [design]
---
--- __How it is used.__ 'step' calls @admit ('afford' s) ('pending' s)@ before it
--- emits anything. The first component (the afforded calls) becomes the new
--- 'pending' queue drained one 'Perform' at a time; the second (the rejects) is
--- folded into the transcript as error observations. See 'step' for the
--- termination argument.
---
--- __Gotcha — order-preserving.__ @foldr@ keeps the original call order in both
--- partitions, so the afforded calls that survive are performed in exactly the
--- sequence the model asked for: no reordering, no dropping, no deduplication.
--- The membership test is by tool /name/ only ('specName'), not by argument
--- schema — an afforded name with malformed @args@ still reaches the world.
--- [design]
-admit :: [ToolSpec] -> [Call] -> ([Call], [(Call, Obs)])
-admit specs = foldr classify ([], [])
-  where
-    classify c (ok, bad)
-      | tool c `elem` map specName specs = (c : ok, bad)
-      | otherwise = (ok, (c, Obs ("error: tool not afforded: " ++ tool c)) : bad)
-
 -- | Tokens to debit for one successful turn. Clamps each component to >= 0 (a
 -- buggy or hostile provider cannot REFILL the budget) and enforces a minimum of
 -- 1, so every successful turn strictly decreases the budget. That minimum is
@@ -94,11 +61,6 @@ spend u = max 1 (max 0 (inTok u) + max 0 (outTok u))
 --   spent in tokens, not turns (see 'Harness.Alphabet.Usage'), and this guard is
 --   checked before anything else so no further 'Ask' can overspend.
 --
--- * __Some pending calls unafforded__ (@admit@ returns a non-empty reject list):
---   repair. The rejects are folded into the transcript as error observations and
---   'pending' is narrowed to the afforded calls, then we re-enter @step@ on that
---   repaired state — a pure state transition with no oracle\/world direction.
---
 -- * __Afforded call waiting__ (@ok@ is @c : cs@): emit @'Perform' c@. In its
 --   direction the returned 'Obs' is @record@ed into the transcript and the
 --   remaining calls @cs@ stay 'pending', so a multi-call response drains one
@@ -114,18 +76,17 @@ spend u = max 1 (max 0 (inTok u) + max 0 (outTok u))
 -- * __No calls, summarising__ ('Summarising'): 'Ask' the summarisation
 --   'request' and continue with 'summarising' — compaction over the same path.
 --
--- __Admission runs first (D3\/D12).__ Every 'Perform' the coalgebra emits
--- carries a 'Call' whose 'tool' is afforded at that node. An unafforded call
--- never reaches the world — its synthetic error 'Obs' is folded into the
--- transcript as a 'User' turn (the same append convention 'Perform' uses for
--- real observations), 'pending' is narrowed to the afforded calls, and we
--- re-enter @step@ on that repaired state.
---
--- __Why re-entry terminates.__ The repair carries no oracle\/world direction, so
--- it is not an infinite emit loop: the afforded partition is strictly shorter
--- than @pending s@ whenever any call was rejected, and on the very next entry
--- @admit@ returns no rejections (the surviving calls are all afforded by
--- construction). At most one repair pass happens per @step@ entry.
+-- __Admission runs first (D3\/D12).__ 'step' 'Harness.State.settle's the state
+-- /once/ up front: every 'Perform' the coalgebra emits then carries a 'Call'
+-- whose 'tool' is afforded at that node. An unafforded call never reaches the
+-- world — its synthetic error 'Obs' is folded into the transcript as a 'User'
+-- turn (the same append convention 'Perform' uses for real observations) and
+-- 'pending' is narrowed to the afforded calls. Because 'Harness.State.settle' is
+-- idempotent, this single pass suffices — 'step' does /not/ re-enter itself
+-- (the earlier self-recursion left the node's annotation describing the
+-- pre-repair state while the wire carried the repaired one; review1 #6a). The
+-- same 'Harness.State.settle' feeds 'Harness.State.view', so annotation and wire
+-- agree by construction.
 --
 -- __Overflow → Summarising.__ Note @step@ never flips the mode itself; a
 -- 'Ask' in 'Working' mode that comes back 'Overflow' is turned into a mode
@@ -139,32 +100,23 @@ spend u = max 1 (max 0 (inTok u) + max 0 (outTok u))
 -- arise in 'Working' mode from an 'Assistant' response's @calls@, and the mode
 -- is not flipped to 'Summarising' while any call is still pending. [established]
 step :: S -> HarnessF S
-step s
-  | budget s <= 0 = Halt Exhausted
-  | otherwise = case admit (afford s) (pending s) of
-      -- Some pending calls are unafforded: repair them into synthetic
-      -- observations and re-enter with the afforded calls only.
-      (ok, bad@(_ : _)) ->
-        step $
-          s & gfield @"transcript" %~ recordAll bad
-            & gfield @"pending" .~ ok
-      -- All pending calls (if any) are afforded: proceed as before.
-      (ok, []) -> case ok of
-        (c : cs) ->
-          Perform c $ \o ->
-            s & gfield @"transcript" %~ record c o
-              & gfield @"pending" .~ cs
-        [] -> case (mode s, transcript s) of
-          (Working, Assistant r : _)
-            | null (calls r) -> Halt (Done (say r))
-          (Working, _)     -> Ask (request s) (working s)
-          (Summarising, _) -> Ask (request s) (summarising s)
+step s0 =
+  let (s, _rejects) = settle s0
+   in if budget s <= 0
+        then Halt Exhausted
+        else case pending s of
+          (c : cs) ->
+            Perform c $ \o ->
+              s & gfield @"transcript" %~ record c o
+                & gfield @"pending" .~ cs
+          [] -> case (mode s, transcript s) of
+            (Working, Assistant r : _)
+              | null (calls r) -> Halt (Done (say r))
+            (Working, _)     -> Ask (request s) (working s)
+            (Summarising, _) -> Ask (request s) (summarising s)
   where
     record c o (User rs : ts) = User (rs ++ [(c, o)]) : ts
     record c o ts             = User [(c, o)] : ts
-    -- Fold the rejected @(Call, Obs)@ pairs into the transcript, reusing the
-    -- same 'User'-turn append convention as a performed observation.
-    recordAll bad ts = foldl (\acc (c, o) -> record c o acc) ts bad
 
 -- | The 'Working'-mode continuation — the direction of the 'Ask' that 'step'
 -- emits while working. It is the function through which an oracle answer

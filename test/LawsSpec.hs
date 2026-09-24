@@ -9,7 +9,7 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Writer (runWriter, tell)
 import Harness.Alphabet
 import Harness.Fault (ProviderError)
-import Harness.Interp (Ev, interp)
+import Harness.Interp (Ev (..), interp)
 import Harness.State
 import Harness.Run (Env (..), run)
 import Harness.Path (Hypo (..))
@@ -156,6 +156,24 @@ spec = do
                     , world  = \c -> pure (Obs (tool c ++ ":ok")) }
       res <- run env (harness (startState 50))
       res `shouldBe` Right Exhausted
+
+  describe "repair honesty: annotation matches the wire (review1 #6a)" $
+    it "at a node with an unafforded pending call, ctxRequest reflects the repaired state" $ do
+      let s = (startState 1000) { pending = [Call "commit" "{}"] }  -- commit before any write: unafforded
+          (c :< sh) = harness s
+      -- the node's annotation records the repair, and its request is the repaired one
+      map (tool . fst) (ctxRepaired c) `shouldContain` ["commit"]
+      case sh of
+        Ask q _ -> ctxRequest c `shouldBe` q     -- annotation request == the request actually emitted
+        _       -> pure ()
+
+  describe "repair honesty: repairs appear in the trace (review1 #6b)" $
+    it "a repaired call shows up as a Repaired event under probe" $ do
+      h <- generate genHypo
+      let s   = (startState 1000) { pending = [Call "commit" "{}"] }
+          evs = probe h 50 (harness s)
+      any (\e -> case e of Repaired (Call "commit" _) _ -> True; _ -> False) evs
+        `shouldBe` True
 
   describe "compaction violation rate (E1, expected non-zero for real compact)" $ do
     it "no-op compaction scores 0% (baseline null model)" $ do

@@ -42,6 +42,7 @@ module Harness.Interp
   ) where
 
 import Control.Comonad.Cofree (Cofree ((:<)))
+import Control.Monad (forM_)
 import Control.Monad.Writer (MonadWriter, tell)
 import Harness.Alphabet
 import Harness.State (Ctx (..), Mode)
@@ -67,6 +68,13 @@ data Ev
     -- ^ A 'Perform' ran a tool 'Call' against the world. Emitted before the
     -- 'Obs' comes back, so the trace records the call that was attempted even if
     -- the world action then throws in @IO@.
+  | Repaired Call Obs
+    -- ^ A pending 'Call' this node rejected as unafforded, paired with the
+    -- synthetic error 'Obs' the coalgebra folded in (review1 #6b). Read from the
+    -- node's 'Harness.State.ctxRepaired' annotation to /label/ the trace
+    -- (invariant-2-legal: it does not choose a successor), so a trace can tell
+    -- \"the model behaved\" from \"the model hallucinated tools and was
+    -- corrected\". Emitted before the node's own shape event(s).
   | Ended Outcome
     -- ^ The walk reached a 'Halt' and stopped with this 'Outcome'. Terminal:
     -- the last event of any trace that halted rather than running out of fuel.
@@ -87,17 +95,22 @@ data Ev
 -- walk terminates.
 --
 -- __The three cases (exhaustive, wildcard-free over 'HarnessF', invariant 1).__
--- Adding a fourth alphabet constructor must break /this/ build:
+-- Adding a fourth alphabet constructor must break /this/ build. Each real arm
+-- runs @onNode@, then emits the node's repairs (a @'Repaired'@ per
+-- 'Harness.State.ctxRepaired' entry, read from the annotation) before its own
+-- event(s):
 --
--- * __'Halt' o__: emit @'Ended' o@ and return @'Just' o@. Checked before the
---   fuel guard, so a halt exactly at the fuel boundary still counts as a halt.
+-- * __'Halt' o__: emit the node's repairs, then @'Ended' o@ and return
+--   @'Just' o@. Checked before the fuel guard, so a halt exactly at the fuel
+--   boundary still counts as a halt.
 -- * __out of fuel__ (@n <= 0@ at a non-'Halt' node): return @'Nothing'@,
---   emitting nothing. This is the only path that yields @'Nothing'@.
--- * __'Ask' q k__: emit @'Asked' (mode)@, run @askOracle q@, emit a
---   @'Refused'@ event iff the answer was a 'Refusal', then recurse on @k r@ with
---   fuel @n - 1@.
--- * __'Perform' call k__: emit @'Did' call@, run @askWorld call@, recurse on
---   @k o@ with fuel @n - 1@.
+--   emitting nothing (no repairs either). This is the only path that yields
+--   @'Nothing'@.
+-- * __'Ask' q k__: emit the node's repairs, then @'Asked' (mode)@, run
+--   @askOracle q@, emit a @'Refused'@ event iff the answer was a 'Refusal', then
+--   recurse on @k r@ with fuel @n - 1@.
+-- * __'Perform' call k__: emit the node's repairs, then @'Did' call@, run
+--   @askWorld call@, recurse on @k o@ with fuel @n - 1@.
 --
 -- __Gotcha — fuel counts nodes, not turns.__ Every 'Ask' and 'Perform' spends
 -- one unit, including the internal 'Perform's that drain a multi-call response
@@ -125,18 +138,24 @@ interp
   -> m (Maybe Outcome)
 interp onNode askOracle askWorld = go
   where
-    go _ node@(_ :< Halt o) = onNode node >> (Just o <$ tell [Ended o])
+    -- Surface the node's repairs (read from the annotation, invariant-2-legal)
+    -- before the shape's own event(s), so the trace records calls that were
+    -- rejected as unafforded (review1 #6b).
+    repairs c = forM_ (ctxRepaired c) (\(cl, o) -> tell [Repaired cl o])
+    go _ node@(c :< Halt o) = onNode node >> repairs c >> (Just o <$ tell [Ended o])
     go n _ | n <= 0 = pure Nothing
     go n node@(c :< Ask q k) = do
       onNode node
+      repairs c
       tell [Asked (ctxMode c)]
       r <- askOracle q
       case r of
         Left e  -> tell [Refused e]
         Right _ -> pure ()
       go (n - 1) (k r)
-    go n node@(_ :< Perform call k) = do
+    go n node@(c :< Perform call k) = do
       onNode node
+      repairs c
       tell [Did call]
       o <- askWorld call
       go (n - 1) (k o)
