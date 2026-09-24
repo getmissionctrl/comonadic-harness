@@ -201,7 +201,7 @@ spec = do
       any (\e -> case e of Repaired (Call "commit" _) _ -> True; _ -> False) evs
         `shouldBe` True
 
-  describe "admit validates arguments (D3, review1 #6)" $
+  describe "admit validates arguments (D3, review1 #6)" $ do
     it "a schema-invalid write is repaired, not performed" $ do
       -- Deterministic halt-hypo: after the invalid write is repaired, the run
       -- must not go on to perform a (valid) write. A random hypo can emit a
@@ -212,6 +212,17 @@ spec = do
           evs = probe h 50 (harness s)
       any (\e -> case e of Repaired (Call "write" _) _ -> True; _ -> False) evs `shouldBe` True
       all (\e -> case e of Did (Call "write" _) -> False; _ -> True) evs `shouldBe` True
+
+    it "a write using synonym keys is admitted, not repaired" $ do
+      -- The sandbox executor accepts synonym argument keys (filename/content),
+      -- so the admission gate must too, or a valid write is silently repaired.
+      let h   = Hypo { guessOracle = \_ -> Right (Response "done" [] (Usage 1 1))
+                     , guessWorld  = \c -> Obs (tool c) }
+          s   = (startState 1000)
+                  { pending = [Call "write" "{\"filename\":\"f\",\"content\":\"x\"}"] }
+          evs = probe h 50 (harness s)
+      any (\e -> case e of Did (Call "write" _) -> True; _ -> False) evs `shouldBe` True
+      all (\e -> case e of Repaired (Call "write" _) _ -> False; _ -> True) evs `shouldBe` True
 
   describe "replay safety groundwork (D4)" $
     it "read is ReplaySafe; write/commit ReplayUnsafe; unknown otherwise" $ do

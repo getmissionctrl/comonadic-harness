@@ -59,6 +59,7 @@ import System.Process
 import System.Timeout (timeout)
 
 import Harness.Alphabet (Call (..), Obs (..))
+import Harness.Schema (keySynonyms)
 
 -- | Prepare the sandbox directory so a live run has somewhere real to work.
 --
@@ -125,10 +126,10 @@ sandboxAct root c = do
 -- through the default world — the opt-in must be explicit. [design]
 dispatch :: FilePath -> String -> Args -> IO String
 dispatch root tl a = case tl of
-  "read"   -> readTool root (arg ["path", "filename", "file", "filepath"] a)
-  "write"  -> writeTool root (arg ["path", "filename", "file", "filepath"] a)
-                             (arg ["body", "content", "text", "data"] a)
-  "commit" -> commitTool root (arg ["msg", "message", "m"] a)
+  "read"   -> readTool root (arg (keySynonyms "path") a)
+  "write"  -> writeTool root (arg (keySynonyms "path") a)
+                             (arg (keySynonyms "body") a)
+  "commit" -> commitTool root (arg (keySynonyms "msg") a)
   "bash"   -> pure "error: shell disabled (use trustedShellWorld to opt in)"
   other    -> pure ("error: unknown tool " ++ other)
 

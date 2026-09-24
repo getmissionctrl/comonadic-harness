@@ -6,6 +6,7 @@
 module Harness.Schema
   ( schemaFields
   , requiredKeys
+  , keySynonyms
   ) where
 
 -- | Parse @"{k1:t1,k2:t2}"@ into @[(k1,t1),(k2,t2)]@ (names and json-ish types).
@@ -31,3 +32,17 @@ schemaFields raw =
 -- decide, per tool, how strict argument validation must be.
 requiredKeys :: String -> [String]
 requiredKeys = map fst . schemaFields
+
+-- | The argument keys a canonical schema field will accept, __single-sourced__
+-- so that the admission gate ('Harness.State.admit'\/@argsSatisfy@) and the
+-- sandbox executor ('Provider.Tools') agree on what counts as a present field.
+-- A local model does not reliably use the schema's canonical name — it emits
+-- @{"filename":…}@ or @{"content":…}@ where the schema said @path@\/@body@ — so
+-- both layers accept the same synonym set. Without this the gate would repair a
+-- perfectly good @write@ that used @filename@\/@content@ before it ever reached
+-- the world. The canonical name is always first and always included. [design]
+keySynonyms :: String -> [String]
+keySynonyms "path" = ["path", "filename", "file", "filepath"]
+keySynonyms "body" = ["body", "content", "text", "data"]
+keySynonyms "msg"  = ["msg", "message", "m"]
+keySynonyms k      = [k]

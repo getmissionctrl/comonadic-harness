@@ -40,7 +40,7 @@ import Data.ByteString.Lazy.Char8 qualified as BSLC
 import Data.List (isPrefixOf)
 import GHC.Generics (Generic)
 import Harness.Alphabet
-import Harness.Schema (requiredKeys)
+import Harness.Schema (requiredKeys, keySynonyms)
 
 -- | Which of the two turn-shapes the harness is currently in. Both go through
 -- the single 'Harness.Alphabet.Ask' constructor; @Mode@ is the bit that tells
@@ -250,16 +250,22 @@ admit specs = foldr classify ([], [])
 -- tools), strict where it matters (a multi-field tool needs a JSON object naming
 -- its fields). A tool with no declared fields accepts anything; a single-field
 -- tool accepts any non-empty payload (bare strings included); a multi-field tool
--- requires a JSON object containing each declared key. This is the argument gate
--- of 'admit' (D3, review1 #6): the "third thing" — a rejected call becomes an
--- error 'Obs', neither a 'Harness.Alphabet.Refusal' nor a clean
--- 'Harness.Alphabet.Response'. [design]
+-- requires a JSON object that supplies each declared field under __any of its
+-- accepted synonyms__ ('Harness.Schema.keySynonyms') — so a @write@ that emits
+-- @{"filename":…,"content":…}@ (which the sandbox executor accepts) is admitted
+-- rather than repaired. The synonym set is single-sourced with
+-- 'Provider.Tools' via 'Harness.Schema.keySynonyms' so the gate and the world
+-- cannot disagree on what a valid call is. This is the argument gate of 'admit'
+-- (D3, review1 #6): the "third thing" — a rejected call becomes an error 'Obs',
+-- neither a 'Harness.Alphabet.Refusal' nor a clean 'Harness.Alphabet.Response'.
+-- [design]
 argsSatisfy :: ToolSpec -> Call -> Bool
 argsSatisfy spec c = case requiredKeys (specSchema spec) of
   []    -> True
   [_]   -> not (null (args c))
   keys  -> case decode (BSLC.pack (args c)) of
-             Just (Object o) -> all (\k -> KM.member (K.fromString k) o) keys
+             Just (Object o) ->
+               all (\k -> any (\syn -> KM.member (K.fromString syn) o) (keySynonyms k)) keys
              _               -> False
 
 -- | Apply one admission pass: fold rejected (unafforded) calls into the

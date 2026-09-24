@@ -62,8 +62,11 @@ data ToolSpec = ToolSpec
     -- error rather than performed.
   , specSchema :: String
     -- ^ A description of the tool's argument shape (a JSON-schema-ish blob such
-    -- as @"{path:string}"@). Advisory only — it is shown to the model to shape
-    -- its 'args', but the harness does not validate against it here.
+    -- as @"{path:string}"@). Not merely advisory: it is shown to the model to
+    -- shape its 'args', /and/ 'Harness.State.admit' validates a call's arguments
+    -- against it (via @argsSatisfy@\/'Harness.Schema.requiredKeys'), repairing a
+    -- multi-field call that supplies none of a required field's accepted keys.
+    -- 'Provider.Ollama' also builds its typed tool advertisement from it.
   }
   deriving stock (Eq, Show, Generic)
 
