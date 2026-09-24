@@ -22,6 +22,7 @@
 module Provider.Ollama
   ( OllamaCfg (..)
   , defaultOllamaCfg
+  , ollamaOracle
   , ollamaProvider
   , streamingComplete
   , overflowByEstimate
@@ -103,27 +104,31 @@ defaultOllamaCfg =
     , ocThink   = Nothing
     }
 
--- | Assemble a 'Provider' from a config: a real oracle, and — for now — a stub
--- world.
+-- | The oracle half only — the model, with no world. Pair with an explicit
+-- world (e.g. 'Provider.Tools.sandboxAct') to build a 'Provider', or use it
+-- directly as an 'Harness.Run.Env' oracle. There is deliberately no bundled
+-- world: a live oracle with silent no-op tools is a footgun (F6).
 --
--- __What.__ @complete@ is wired to @completeWith@, the live HTTP oracle. @act@
--- is a placeholder that echoes @\"\<tool\>:ok\"@ without doing anything: this
--- module owns the /oracle/ half of the seam only. A live run that wants real
--- tool effects pairs this provider's @complete@ with
--- 'Provider.Tools.sandboxAct' as its world (see @Harness.Run.Env@), rather than
--- using this stub. [design]
+-- __Monad.__ Polymorphic in @m@ (not specialised to @IO@) so the live oracle
+-- can ride the interpreter's error channel: a transport fault is raised as a
+-- @'ProviderError'@ rather than a 'Refusal' (invariant 5), which needs a
+-- @'MonadError' 'ProviderError'@ context — in practice @Harness.Run.Live@.
+ollamaOracle
+  :: (MonadIO m, MonadError ProviderError m)
+  => OllamaCfg -> Request -> m (Either Refusal Response)
+ollamaOracle = completeWith
+
+-- | Build a live 'Provider' from a config and an EXPLICIT world. There is no
+-- default no-op world (F6): the caller must choose what @act@ does, so a live
+-- run cannot silently acknowledge tool calls without performing them.
 --
--- __Monad.__ Polymorphic in @m@ (not specialised to @IO@) so the live oracle can
--- ride the interpreter's error channel: @completeWith@ raises a transport fault
--- as a @'ProviderError'@ rather than a 'Refusal' (invariant 5), which needs a
--- @'MonadError' 'ProviderError'@ context — in practice @Harness.Run.Live@. The
--- stub @act@ is total and monad-agnostic.
-ollamaProvider :: (MonadIO m, MonadError ProviderError m) => OllamaCfg -> Provider m
-ollamaProvider cfg =
-  Provider
-    { complete = completeWith cfg
-    , act      = \c -> pure (Obs (tool c ++ ":ok"))  -- stub; the live world is Provider.Tools.sandboxAct
-    }
+-- __Monad.__ Polymorphic in @m@ for the same reason as 'ollamaOracle': the
+-- oracle half needs @'MonadError' 'ProviderError'@; the world @w@ supplied by
+-- the caller must be lawful in the same monad.
+ollamaProvider
+  :: (MonadIO m, MonadError ProviderError m)
+  => OllamaCfg -> (Call -> m Obs) -> Provider m
+ollamaProvider cfg w = Provider { complete = completeWith cfg, act = w }
 
 -- ---------------------------------------------------------------------------
 -- Internal: oracle

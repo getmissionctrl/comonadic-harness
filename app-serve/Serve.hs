@@ -3,7 +3,7 @@
 -- | Production entry point for the AG-UI server, wired to a __live__ Ollama
 -- model against real tools.
 --
--- The oracle is 'Provider.Ollama.ollamaProvider' (Qwen on the configured host);
+-- The oracle is 'Provider.Ollama.ollamaOracle' (Qwen on the configured host);
 -- the world routes @scrape_url@ to Firecrawl ('Provider.Research') and the
 -- filesystem tools (@read@\/@write@\/@bash@\/@commit@) to the sandbox
 -- ('Provider.Tools.sandboxAct'). So a browser driving @POST /agent@ gets a
@@ -37,8 +37,7 @@ import Harness.Alphabet
 import Harness.Fault (ProviderError (..))
 import Harness.Run (Env (..), Live)
 import Harness.State (allTools)
-import Provider.Class (Provider (..))
-import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaProvider, streamingComplete)
+import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaOracle, streamingComplete)
 import Provider.Research (scrapeUrl, scrapeUrlSpec, urlArg)
 import Provider.Tools (prepareSandbox, sandboxAct)
 import Harness.AgUi.Event (AgUiEvent (..), RunId)
@@ -114,7 +113,7 @@ main = do
 -- real path and keeps the error channel intact via 'run'.
 ioOracle :: OllamaCfg -> Request -> IO (Either Refusal Response)
 ioOracle cfg req = do
-  (res, _evs) <- runWriterT (runExceptT (complete (ollamaProvider cfg :: Provider Live) req))
+  (res, _evs) <- runWriterT (runExceptT (ollamaOracle cfg req :: Live (Either Refusal Response)))
   pure $ case res of
     Left (ProviderUnavailable e) -> Left (Malformed ("provider unavailable: " <> e))
     Right r                      -> r

@@ -23,8 +23,7 @@ import Harness.Fault (ProviderError (..))
 import Harness.Probe (Hypo (..), Risk (..), assess, probe)
 import Harness.Run (Env (..), Live)
 import Harness.State (Ctx (..), Mode (..), S (..), Turn (..), allTools)
-import Provider.Class (Provider (..))
-import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaProvider)
+import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaOracle)
 import Provider.Tools (prepareSandbox, sandboxAct)
 import System.Environment (getArgs)
 import Text.Read (readMaybe)
@@ -195,8 +194,10 @@ live args = do
         -- proper 'interp'-based walk, so for now we unwrap each 'Live' oracle call
         -- to IO here, mapping a transport fault to a visible 'Malformed' refusal
         -- rather than threading the error channel through the hand-written loop.
+        -- 'ollamaOracle' is the oracle half only; 'sandboxAct' below supplies
+        -- the explicit world — there is no bundled no-op world (F6).
         liveOracle q = do
-          (res, _evs) <- runWriterT (runExceptT (complete (ollamaProvider cfg :: Provider Live) q))
+          (res, _evs) <- runWriterT (runExceptT (ollamaOracle cfg q :: Live (Either Refusal Response)))
           pure $ case res of
             Left (ProviderUnavailable e) -> Left (Malformed ("provider unavailable: " ++ e))
             Right r                      -> r
