@@ -105,3 +105,4 @@ test-suite spec
     , aeson, bytestring, stm, mtl
     , warp, http-client, http-types
     , temporary
+    , directory, filepath

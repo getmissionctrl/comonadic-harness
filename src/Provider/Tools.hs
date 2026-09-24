@@ -23,6 +23,8 @@ module Provider.Tools
   ( prepareSandbox
   , sandboxAct
   , trustedShellWorld
+  , parseArgs
+  , arg
   ) where
 
 import Control.Exception (SomeException, try)
