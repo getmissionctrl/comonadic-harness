@@ -49,10 +49,12 @@ module Harness.Probe
 
 import Control.Comonad (extend)
 import Control.Comonad.Cofree (Cofree ((:<)))
-import Control.Monad.Writer (execWriter)
+import Control.Monad.Except (runExceptT)
+import Control.Monad.Writer (runWriter)
 import Data.Monoid (Sum (..), Any (..))
 import GHC.Generics (Generic, Generically (..))
 import Harness.Alphabet
+import Harness.Fault (ProviderError)
 import Harness.Interp (Ev (..), interp)
 import Harness.Path (Hypo (..), takeWalk)
 import Harness.Run (Env (..))
@@ -67,9 +69,13 @@ import Harness.State (Ctx)
 -- lifting each into @pure@, and — where 'Harness.Run.run' discards the trace and keeps the
 -- 'Outcome' — 'probe' does the opposite: it keeps the @[Ev]@ trace.
 --
--- __How.__ One line, because it is 'Harness.Interp.interp' in the @Writer [Ev]@
--- monad; @Control.Monad.Writer.execWriter@ runs it purely and returns just the
--- accumulated trace. The depth bound @n@ is the horizon: without it a
+-- __How.__ One line, because it is 'Harness.Interp.interp' in a pure
+-- @'Control.Monad.Except.ExceptT' 'ProviderError' ('Control.Monad.Writer.Writer' [Ev])@;
+-- @Control.Monad.Writer.runWriter@ recovers the accumulated trace and the
+-- error result is discarded. The 'ProviderError' channel is present only to
+-- satisfy the shared interpreter's constraint: a 'Hypo' is a /pure/ stand-in
+-- with no transport, so it never raises one — the analyser deliberately cannot
+-- fault (invariant 5). The depth bound @n@ is the horizon: without it a
 -- non-halting hypothetical future would diverge, whereas analysis must be
 -- finite. [established]
 --
@@ -79,7 +85,9 @@ import Harness.State (Ctx)
 -- a crude forecast.
 probe :: Hypo -> Int -> Cofree HarnessF Ctx -> [Ev]
 probe h n w =
-  execWriter (interp (pure . guessOracle h) (pure . guessWorld h) n w)
+  let (_res :: Either ProviderError (Maybe Outcome), evs) =
+        runWriter (runExceptT (interp (pure . guessOracle h) (pure . guessWorld h) n w))
+   in evs
 
 -- | A forward-looking score of a node's __own future__ under a hypothesis: how
 -- far it runs, whether it terminates, which irreversible tools it will touch,

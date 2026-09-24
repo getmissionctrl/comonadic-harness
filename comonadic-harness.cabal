@@ -30,6 +30,7 @@ library
     Harness.State
     Harness.Coalgebra
     Harness.Path
+    Harness.Fault
     Harness.Interp
     Harness.Run
     Harness.Probe
@@ -83,24 +84,24 @@ executable demo
   import:           warnings, exts
   hs-source-dirs:   app
   main-is:          Main.hs
-  build-depends:    base, comonadic-harness, comonad, free
+  build-depends:    base, comonadic-harness, comonad, free, mtl
 
 executable serve
   import:           warnings, exts
   hs-source-dirs:   app-serve
   main-is:          Serve.hs
-  build-depends:    base, comonadic-harness, text, http-client, http-client-tls, stm
+  build-depends:    base, comonadic-harness, text, http-client, http-client-tls, stm, mtl
 
 test-suite spec
   import:           warnings, exts
   type:             exitcode-stdio-1.0
   hs-source-dirs:   test
   main-is:          Main.hs
-  other-modules:    Gen, LawsSpec, PerfSpec, HostileSpec, ToolsSpec, AgUiEventSpec, AgUiTranslateSpec, AgUiSinkSpec, AgUiHumanEnvSpec, AgUiServerSpec
+  other-modules:    Gen, LawsSpec, PerfSpec, HostileSpec, ProviderSpec, ToolsSpec, AgUiEventSpec, AgUiTranslateSpec, AgUiSinkSpec, AgUiHumanEnvSpec, AgUiServerSpec
   ghc-options:      -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base, comonadic-harness, hspec, QuickCheck
     , comonad, free, containers
-    , aeson, bytestring, stm
+    , aeson, bytestring, stm, mtl
     , warp, http-client, http-types
     , temporary

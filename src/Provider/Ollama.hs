@@ -28,6 +28,8 @@ module Provider.Ollama
 
 import Control.Concurrent (threadDelay)
 import Control.Monad (when)
+import Control.Monad.Except (MonadError, throwError)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson (decode, encode)
 import Data.IORef (modifyIORef', newIORef, readIORef, writeIORef)
 import Data.ByteString.Lazy.Char8 qualified as BSLC
@@ -57,6 +59,7 @@ import Data.Ollama.Common.Types
 import Data.Ollama.Common.Utils (defaultModelOptions)
 import Data.Text qualified as T
 import Harness.Alphabet
+import Harness.Fault (ProviderError (..))
 import Provider.Class (Provider (..))
 
 -- | Everything the provider needs to reach a specific model on a specific
@@ -108,7 +111,13 @@ defaultOllamaCfg =
 -- tool effects pairs this provider's @complete@ with
 -- 'Provider.Tools.sandboxAct' as its world (see @Harness.Run.Env@), rather than
 -- using this stub. [design]
-ollamaProvider :: OllamaCfg -> Provider IO
+--
+-- __Monad.__ Polymorphic in @m@ (not specialised to @IO@) so the live oracle can
+-- ride the interpreter's error channel: @completeWith@ raises a transport fault
+-- as a @'ProviderError'@ rather than a 'Refusal' (invariant 5), which needs a
+-- @'MonadError' 'ProviderError'@ context — in practice @Harness.Run.Live@. The
+-- stub @act@ is total and monad-agnostic.
+ollamaProvider :: (MonadIO m, MonadError ProviderError m) => OllamaCfg -> Provider m
 ollamaProvider cfg =
   Provider
     { complete = completeWith cfg
@@ -124,19 +133,26 @@ ollamaProvider cfg =
 --
 -- __How.__ @buildChatOps@ projects our 'Request' onto the client's @ChatOps@;
 -- @withLocalRetry@ shields the call so a timeout or 5xx is retried rather than
--- escaping; then the result is folded to @Either Refusal Response@. A hard
--- client error that survives retry becomes 'Harness.Alphabet.Malformed' (a
--- terminal refusal), and a successful reply is handed to @decodeResp@, which may
--- still infer 'Harness.Alphabet.Overflow'. Nothing transient reaches the caller
--- — invariant 5. [established]
-completeWith :: OllamaCfg -> Request -> IO (Either Refusal Response)
+-- escaping; then the result is folded. A /transient/ fault that survives retry
+-- ('HttpError'\/'TimeoutError') is raised on the error channel as a
+-- @'ProviderError'@ — it is transport failure, not a verdict, so it must not
+-- reach the coalgebra as a 'Refusal' (invariant 5); @Harness.Run.run@ surfaces
+-- it to the caller and the state stays resumable. Every /other/ hard client
+-- error is a genuine, terminal model\/decode failure and becomes
+-- 'Harness.Alphabet.Malformed'. A successful reply is handed to @decodeResp@,
+-- which may still infer 'Harness.Alphabet.Overflow'. [established]
+completeWith
+  :: (MonadIO m, MonadError ProviderError m)
+  => OllamaCfg -> Request -> m (Either Refusal Response)
 completeWith cfg req = do
   let ops      = buildChatOps cfg req
       ollamaCfg = defaultOllamaConfig { hostUrl = T.pack (ocBaseUrl cfg) }
-  result <- withLocalRetry 3 (chat ops (Just ollamaCfg))
-  pure $ case result of
-    Left err   -> Left (Malformed (show err))
-    Right resp -> decodeResp req resp
+  result <- liftIO (withLocalRetry 3 (chat ops (Just ollamaCfg)))
+  case result of
+    Left err
+      | isTransient err -> throwError (ProviderUnavailable (show err))
+      | otherwise       -> pure (Left (Malformed (show err)))
+    Right resp          -> pure (decodeResp req resp)
 
 -- | A __streaming__ oracle: identical to 'completeWith' in what it returns, but
 -- it calls @onDelta@ with each text fragment as the model emits it, so a caller

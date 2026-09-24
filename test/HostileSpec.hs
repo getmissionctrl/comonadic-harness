@@ -4,7 +4,7 @@ import Test.Hspec
 import Control.Exception (SomeException, evaluate, try)
 import Harness.Alphabet
 import Harness.Coalgebra (harness)
-import Harness.Run (Env (..), run)
+import Harness.Run (Env (..), Live, run)
 import Gen (startState)
 
 -- | E4: under a maximally hostile oracle, the harness NEVER crashes — it always
@@ -41,17 +41,25 @@ spec =
     isDone _         = False
 
 -- | Run one hostile seed to termination inside a 'try', forcing the 'Outcome' to
--- WHNF so a lazily-thrown error is caught here rather than escaping.
+-- WHNF so a lazily-thrown error is caught here rather than escaping. 'run' now
+-- returns @'Either' 'Harness.Fault.ProviderError' 'Outcome'@; the hostile oracle
+-- only ever returns 'Refusal'\/'Response' (it never raises on the error channel),
+-- so a @'Left'@ provider fault would be a genuine surprise — 'unwrap' turns it
+-- into an 'error', caught by the same 'try' as any other crash and reported as a
+-- failed seed.
 runSeed :: Int -> IO (Either SomeException Outcome)
 runSeed seed =
   try @SomeException
-    (run (hostileEnv seed) (harness (startState 400)) >>= evaluate)
+    (run (hostileEnv seed) (harness (startState 400)) >>= evaluate . unwrap)
+  where
+    unwrap (Right o) = o
+    unwrap (Left e)  = error ("unexpected provider error: " ++ show e)
 
 -- | A hostile environment. The world is benign (it only ever sees afforded calls
 -- — the coalgebra guarantees it); all the malice is in the oracle, which cycles
 -- through adversarial responses keyed by the seed and the running prompt length
 -- so successive turns differ.
-hostileEnv :: Int -> Env IO
+hostileEnv :: Int -> Env Live
 hostileEnv seed = Env oracle' world'
   where
     world' c = pure (Obs (tool c ++ ":ok"))

@@ -43,9 +43,10 @@ import Servant hiding (respond)
 import Harness.Alphabet
 import Harness.State (S (..), Mode (..), Turn (..))
 import Harness.Coalgebra (harness)
+import Harness.Fault (ProviderError (..))
 import Harness.Path (Hypo (..))
 import Harness.Probe (assess)
-import Harness.Run (Env (..), run)
+import Harness.Run (Env (..), hoistEnv, run)
 import Harness.AgUi.Event
 import Harness.AgUi.Sink
 import Harness.AgUi.Translate (RunState, runStartEvents, runFinishEvents, forecastEvent)
@@ -241,8 +242,8 @@ startH cfg (Registry regv) sr = liftIO $ do
     -- Opt-in: emit the harness's own pure forecast for this run's seed before a
     -- single token is spent. Off by default; the client asks with "forecast":true.
     when (forecast sr) $ sink (forecastEvent (assess defaultHypo 40 (harness seeded)))
-    o <- run env (harness seeded)
-    mapM_ sink (runFinishEvents rid rid o)
+    res <- run (hoistEnv env) (harness seeded)
+    mapM_ sink (finishEvents rid rid res)
   pure (StartResp rid)
 
 -- | A crude pure stand-in for the oracle\/world used only to compute the opt-in
@@ -261,6 +262,19 @@ defaultHypo = Hypo
                else Right (Response "guess" [Call "write" "g.txt"] (Usage 120 40))
   , guessWorld = \c -> Obs (tool c)
   }
+
+-- | Translate a run's result into its terminal AG-UI events. A @'Right' o@ is a
+-- clean 'Outcome' and finishes normally. A @'Left'@ is a
+-- @'Harness.Fault.ProviderError'@ — the provider was unavailable, so no verdict
+-- was reached (invariant 5): emit a @RUN_ERROR@ describing the fault, then a
+-- @RUN_FINISHED@ carrying a 'Stuck' payload so the SSE stream's terminal-event
+-- guard ('isFinished' in 'aguiH') still closes the connection cleanly rather
+-- than hanging a client that waits for a finish. [design]
+finishEvents :: Text -> RunId -> Either ProviderError Outcome -> [AgUiEvent]
+finishEvents t r (Right o) = runFinishEvents t r o
+finishEvents t r (Left (ProviderUnavailable msg)) =
+  RunError (pack ("provider unavailable: " <> msg))
+    : runFinishEvents t r (Stuck ("provider unavailable: " <> msg))
 
 -- | @POST /runs/{id}/input@: fill the run's input slot with a text 'Response',
 -- unblocking a human-driven oracle. 404 if the run id is unknown.
@@ -366,8 +380,8 @@ aguiH cfg (Registry regv) req respond = do
         Nothing    -> traceEnv sink stv <$> scfFactory cfg rid
       void $ forkIO $ do
         mapM_ sink (runStartEvents tid rid (budget seeded) (tools seeded) (mode seeded))
-        o <- run env (harness seeded)
-        mapM_ sink (runFinishEvents tid rid o)
+        res <- run (hoistEnv env) (harness seeded)
+        mapM_ sink (finishEvents tid rid res)
       respond $ Wai.responseStream status200 [allowOrigin, sseCT, noCache] $ \write flush -> do
         let loop cursor = do
               (evs, cursor') <- atomically (readFrom logv cursor)

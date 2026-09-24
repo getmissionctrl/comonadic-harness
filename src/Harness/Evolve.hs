@@ -30,8 +30,9 @@ module Harness.Evolve
 import Control.Comonad.Cofree (Cofree, unfold)
 import Data.Monoid (Any (..))
 import Harness.Alphabet
+import Harness.Fault (ProviderError)
 import Harness.State (Ctx, S)
-import Harness.Run (Env, run)
+import Harness.Run (Env, Live, run)
 import Harness.Probe (Hypo, Risk (..), assess)
 
 -- | Unfold a chosen coalgebra from a seed into a fresh denotation tree.
@@ -82,13 +83,22 @@ evolve v k = unfold (\s -> (v s, k s))
 -- machine that merely happens to halt. Only 'assess' (pure) is consulted for
 -- candidates that are rejected; the live 'Env' is touched exactly once, for the
 -- one machine that is chosen.
+--
+-- __The 'Left' result.__ 'Harness.Run.run' now returns
+-- @'Either' 'ProviderError' 'Outcome'@, and 'outerLoop' propagates it verbatim:
+-- a provider-unavailable fault is /not/ a clean outcome and must not be folded
+-- into one (invariant 5), so the chosen machine's transport failure rides out to
+-- the caller, who may resume it. Propagating rather than mapping to @'Stuck'@ is
+-- the lower-churn choice here: 'outerLoop' has no callers in this codebase (only
+-- the reference driver), so widening the result type costs nothing downstream.
+-- [design]
 outerLoop
-  :: Env IO
+  :: Env Live
   -> Hypo
   -> [(S -> Ctx, S -> HarnessF S)]
   -> S
-  -> IO Outcome
-outerLoop _ _ [] _ = pure (Stuck "no coalgebra left")
+  -> IO (Either ProviderError Outcome)
+outerLoop _ _ [] _ = pure (Right (Stuck "no coalgebra left"))
 outerLoop env h ((v, k) : rest) s =
   let w = evolve v k s
    in if getAny (terminates (assess h 32 w))

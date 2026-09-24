@@ -71,8 +71,12 @@ spec = do
         case firstTree h b of
           Nothing -> property True
           Just w  -> ioProperty $ do
+            -- 'run' now returns @Either ProviderError Outcome@. A 'Hypo' is a pure
+            -- stand-in that never faults, so the live side is always @Right@;
+            -- project it back to @Maybe Outcome@ to match the prober's verdict.
             o <- run (liftHypo h) w
-            pure (outcomeOf (probe h 200 w) === Just o)
+            let ran = case o of Right x -> Just x; Left _ -> Nothing
+            pure (outcomeOf (probe h 200 w) === ran)
 
   describe "prefix stability (protects prompt caching, §16.6)" $
     prop "project (t:ts) == project ts <> renderLine t <> newline" $

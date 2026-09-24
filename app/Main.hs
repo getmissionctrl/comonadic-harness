@@ -14,11 +14,14 @@
 module Main (main) where
 
 import Control.Comonad.Cofree (Cofree ((:<)))
+import Control.Monad.Except (runExceptT)
+import Control.Monad.Writer (runWriterT)
 import Data.Monoid (Any (..), Sum (..))
 import Harness.Alphabet
 import Harness.Coalgebra (harness)
+import Harness.Fault (ProviderError (..))
 import Harness.Probe (Hypo (..), Risk (..), assess, probe)
-import Harness.Run (Env (..))
+import Harness.Run (Env (..), Live)
 import Harness.State (Ctx (..), Mode (..), S (..), Turn (..), allTools)
 import Provider.Class (Provider (..))
 import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaProvider)
@@ -186,8 +189,18 @@ live args = do
     let o    = parseLive args
         task = if null (loTask o) then defaultTask else loTask o
         cfg  = defaultOllamaCfg { ocModel = loModel o, ocNumCtx = loCtx o }
-        -- Real oracle (Ollama) + real sandboxed world (Provider.Tools).
-        env  = Env (complete (ollamaProvider cfg)) (sandboxAct sandboxDir)
+        -- Real oracle (Ollama) + real sandboxed world (Provider.Tools). The
+        -- oracle now lives in 'Live' (it can raise a 'ProviderError'); this demo
+        -- runner ('runVerbose') is a plain-IO loop that T10 will replace with a
+        -- proper 'interp'-based walk, so for now we unwrap each 'Live' oracle call
+        -- to IO here, mapping a transport fault to a visible 'Malformed' refusal
+        -- rather than threading the error channel through the hand-written loop.
+        liveOracle q = do
+          (res, _evs) <- runWriterT (runExceptT (complete (ollamaProvider cfg :: Provider Live) q))
+          pure $ case res of
+            Left (ProviderUnavailable e) -> Left (Malformed ("provider unavailable: " ++ e))
+            Right r                      -> r
+        env  = Env liveOracle (sandboxAct sandboxDir)
         seeded = start { transcript = [Summary task], budget = loBudget o }
     prepareSandbox sandboxDir "README.md"
     putStrLn

@@ -23,6 +23,7 @@ module Harness.AgUi.Sink
 
 import Control.Concurrent.STM
 import Control.Monad (unless)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy.Char8 as BL
 import Harness.Run (Env (..))
@@ -68,7 +69,13 @@ jsonlSink fp e = BL.appendFile fp (encode e <> "\n")
 -- 'RunState' (budget, mode, ids) threaded through a 'TVar' so ids stay stable
 -- and state deltas accurate across concurrent emission. The inner 'Env' supplies
 -- the actual behaviour (a live provider, or the suspendable human env).
-traceEnv :: Sink -> TVar RunState -> Env IO -> Env IO
+--
+-- __Monad.__ Polymorphic in @m@ (needing only 'MonadIO', to run the sink and the
+-- STM state-thread via 'liftIO') so it decorates an 'Env' in whatever monad a
+-- run walks in — in practice @Harness.Run.Live@, whose 'ExceptT' transport
+-- channel passes straight through the inner seam untouched: a decorator emits
+-- events /around/ a reply, it does not intercept a fault.
+traceEnv :: MonadIO m => Sink -> TVar RunState -> Env m -> Env m
 traceEnv sink stVar inner = Env
   { oracle = \q -> do
       r <- oracle inner q
@@ -81,7 +88,7 @@ traceEnv sink stVar inner = Env
       pure o
   }
   where
-    emit f = do
+    emit f = liftIO $ do
       evs <- atomically $ do
         st <- readTVar stVar
         let (evs, st') = f st

@@ -48,6 +48,9 @@ data Provider m = Provider
 -- capabilities); @Env@ is the /driver-facing/ shape. They are structurally the
 -- same, but keeping them distinct lets 'Provider' grow provider-specific
 -- conveniences without the coalgebra ever seeing more than the two fields it
--- consumes. Specialised to @IO@ because the live seam is effectful. [design]
-providerEnv :: Provider IO -> Env IO
+-- consumes. Monad-polymorphic (like 'Env'): it merely repackages the two fields,
+-- so it imposes no @IO@ specialisation of its own — a live 'Provider' in
+-- @Harness.Run.Live@ becomes a @Harness.Run.Env Live@, a pure mock stays pure.
+-- [design]
+providerEnv :: Provider m -> Env m
 providerEnv p = Env (complete p) (act p)
