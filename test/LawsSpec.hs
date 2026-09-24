@@ -96,6 +96,9 @@ spec = do
           Nothing -> property True
           Just w  -> conjoin (map afforded (performNodes h w))
 
+    it "bash is not in the default tool catalogue" $
+      map specName allTools `shouldNotContain` ["bash"]
+
     -- Non-vacuity guard: over a fixed sample the affordance walk must observe at
     -- least one 'Perform' node (otherwise the prop above proves nothing). We
     -- assert a positive count and print it. [design]

@@ -138,14 +138,19 @@ renderLine (Summary t)   = "S: " ++ t
 project :: S -> Prompt
 project s = Prompt (unlines (map renderLine (reverse (transcript s))))
 
--- | The full catalogue of tools the harness can ever offer. 'afford' selects a
+-- | The default catalogue of tools the harness can offer. 'afford' selects a
 -- subset of this list per turn; nothing outside it is ever afforded. Kept as a
 -- flat constant so the affordance /policy/ lives entirely in 'afford' rather
 -- than being smeared across construction sites.
+--
+-- __Safety__: @bash@ is deliberately excluded from this catalogue. Running
+-- arbitrary shell commands as the harness uid escapes the path sandbox and
+-- gives the model unrestricted execution. @bash@ will be re-introduced behind
+-- an explicit opt-in world constructor in a later task; it must never be
+-- reachable by default. [design]
 allTools :: [ToolSpec]
 allTools =
   [ ToolSpec "read" "{path:string}"
-  , ToolSpec "bash" "{cmd:string}"
   , ToolSpec "write" "{path:string,body:string}"
   , ToolSpec "commit" "{msg:string}"
   ]
