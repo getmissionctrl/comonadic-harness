@@ -191,16 +191,24 @@ spec = do
 
   describe "repair honesty: repairs appear in the trace (review1 #6b)" $
     it "a repaired call shows up as a Repaired event under probe" $ do
-      h <- generate genHypo
-      let s   = (startState 1000) { pending = [Call "commit" "{}"] }
+      -- A deterministic hypo that halts (no tool calls) so the only tool-related
+      -- event is the repaired one — a random hypo could emit further calls and
+      -- make the assertion non-deterministic.
+      let h   = Hypo { guessOracle = \_ -> Right (Response "done" [] (Usage 1 1))
+                     , guessWorld  = \c -> Obs (tool c) }
+          s   = (startState 1000) { pending = [Call "commit" "{}"] }
           evs = probe h 50 (harness s)
       any (\e -> case e of Repaired (Call "commit" _) _ -> True; _ -> False) evs
         `shouldBe` True
 
   describe "admit validates arguments (D3, review1 #6)" $
     it "a schema-invalid write is repaired, not performed" $ do
-      h <- generate genHypo
-      let s   = (startState 1000) { pending = [Call "write" "not json"] }  -- write needs {path,body}
+      -- Deterministic halt-hypo: after the invalid write is repaired, the run
+      -- must not go on to perform a (valid) write. A random hypo can emit a
+      -- schema-valid write later in the walk, which made this test flaky.
+      let h   = Hypo { guessOracle = \_ -> Right (Response "done" [] (Usage 1 1))
+                     , guessWorld  = \c -> Obs (tool c) }
+          s   = (startState 1000) { pending = [Call "write" "not json"] }  -- write needs {path,body}
           evs = probe h 50 (harness s)
       any (\e -> case e of Repaired (Call "write" _) _ -> True; _ -> False) evs `shouldBe` True
       all (\e -> case e of Did (Call "write" _) -> False; _ -> True) evs `shouldBe` True
