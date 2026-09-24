@@ -35,10 +35,33 @@ const UserMessage: FC = () => (
   </MessagePrimitive.Root>
 );
 
+// Renders a tool call (name + args, then its result once it lands). Without this
+// a tool-only turn shows nothing until the next turn's text streams — the harness
+// emits TOOL_CALL_START/ARGS/END and TOOL_CALL_RESULT, but MessagePrimitive.Content
+// has no default UI for tool parts.
+const clip = (s: string, n = 600) => (s.length > n ? s.slice(0, n) + " …[+" + (s.length - n) + " chars]" : s);
+
+const ToolFallback: FC<any> = ({ toolName, argsText, args, result, status }) => {
+  const running = status?.type !== "complete" && result === undefined;
+  const argStr = argsText || (args ? JSON.stringify(args) : "");
+  const resStr =
+    result === undefined ? "" : typeof result === "string" ? result : JSON.stringify(result, null, 2);
+  return (
+    <div style={{ border: "1px solid #d1d5db", borderRadius: 8, padding: 8, margin: "4px 0", fontFamily: "ui-monospace, monospace", fontSize: 13, background: "#f9fafb" }}>
+      <div style={{ fontWeight: 600 }}>
+        🔧 {toolName}({clip(argStr, 200)}) {running ? "· running…" : "· done"}
+      </div>
+      {resStr && (
+        <pre style={{ margin: "6px 0 0", whiteSpace: "pre-wrap", color: "#374151" }}>{clip(resStr)}</pre>
+      )}
+    </div>
+  );
+};
+
 const AssistantMessage: FC = () => (
-  <MessagePrimitive.Root style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-    <div style={bubble(false)}>
-      <MessagePrimitive.Content />
+  <MessagePrimitive.Root style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", width: "100%" }}>
+    <div style={{ ...bubble(false), maxWidth: "90%" }}>
+      <MessagePrimitive.Content components={{ tools: { Fallback: ToolFallback } }} />
     </div>
   </MessagePrimitive.Root>
 );
