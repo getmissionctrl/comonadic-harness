@@ -7,6 +7,7 @@
 module Harness.AgUi.Translate
   ( RunState
   , initRunState
+  , initRunStateFor
   , modeOf
   , budgetOf
   , runStartEvents
@@ -35,11 +36,23 @@ data RunState = RunState
   , rsMode    :: Mode
   , rsNext    :: Int          -- ^ monotonic counter for message\/tool ids
   , rsLastTC  :: Maybe (ToolCallId, MessageId)  -- ^ most recent tool call awaiting a result
+  , rsPrefix  :: Text         -- ^ per-run id prefix (the run id) so minted message\/tool
+                              --   ids are unique /across/ runs in one thread — an AG-UI
+                              --   client keys messages by id, so a fresh run reusing
+                              --   @msg-0@ would overwrite the previous run's message
+                              --   instead of appending a new one.
   }
 
--- | The initial 'RunState' for a run seeded with the given budget and mode.
+-- | The initial 'RunState' with no id prefix — minted ids are the bare @msg-0@,
+-- @tc-0@, … Used by the pure translate tests, where cross-run uniqueness is moot.
 initRunState :: Int -> Mode -> RunState
-initRunState b m = RunState b m 0 Nothing
+initRunState = initRunStateFor ""
+
+-- | The initial 'RunState' for a specific run: minted ids are prefixed with the
+-- run id (@\<rid\>-msg-0@, …) so they never collide with another run's ids in the
+-- same thread. An empty run id degrades to 'initRunState' (no prefix).
+initRunStateFor :: RunId -> Int -> Mode -> RunState
+initRunStateFor rid b m = RunState b m 0 Nothing (if rid == "" then "" else rid <> "-")
 
 -- | The current mode threaded through the state (read by tests and callers that
 -- need to know whether a compaction has flipped the run into 'Summarising').
@@ -52,7 +65,7 @@ budgetOf = rsBudget
 
 -- | Mint a fresh, monotonic id with the given prefix and advance the counter.
 mint :: Text -> RunState -> (Text, RunState)
-mint prefix st = (prefix <> pack (show (rsNext st)), st { rsNext = rsNext st + 1 })
+mint prefix st = (rsPrefix st <> prefix <> pack (show (rsNext st)), st { rsNext = rsNext st + 1 })
 
 -- | A @STATE_DELTA@ replacing @/budget@ with the given remaining token count.
 budgetDelta :: Int -> AgUiEvent

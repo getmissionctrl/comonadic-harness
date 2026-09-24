@@ -15,6 +15,8 @@
 module Harness.AgUi.Server
   ( ProviderFactory
   , EnvBuilder
+  , RunOpts (..)
+  , defaultRunOpts
   , ServeConfig (..)
   , defaultServeConfig
   , mkApp
@@ -54,13 +56,25 @@ import Harness.AgUi.HumanEnv
 -- transport is oblivious to which.
 type ProviderFactory = RunId -> IO (Env IO)
 
--- | Build a run's 'Env' given its event 'Sink' and threaded 'RunState'. Unlike a
--- 'ProviderFactory' (which the tracing decorator wraps to derive events /after/
--- each turn), an 'EnvBuilder' is handed the sink directly, so it can emit events
--- __during__ a turn — this is what token streaming needs: the oracle pushes
--- @TEXT_MESSAGE_CONTENT@ deltas as the model produces them. A builder owns all
--- emission for its runs (the server does not also wrap it with 'traceEnv').
-type EnvBuilder = Sink -> TVar RunState -> RunId -> IO (Env IO)
+-- | Per-run options a client can steer that are not part of the harness state:
+-- currently just whether the model should \"think\" (emit reasoning tokens). Set
+-- by the @POST \/config@ control endpoint and read once per run, so a builder can
+-- vary provider behaviour without a new 'ServeConfig'.
+newtype RunOpts = RunOpts { roThink :: Bool }
+
+-- | The default run options: thinking off (the multi-turn agentic default, where
+-- per-turn reasoning is the dominant latency).
+defaultRunOpts :: RunOpts
+defaultRunOpts = RunOpts False
+
+-- | Build a run's 'Env' given the per-run 'RunOpts', its event 'Sink' and
+-- threaded 'RunState'. Unlike a 'ProviderFactory' (which the tracing decorator
+-- wraps to derive events /after/ each turn), an 'EnvBuilder' is handed the sink
+-- directly, so it can emit events __during__ a turn — this is what token
+-- streaming needs: the oracle pushes @TEXT_MESSAGE_CONTENT@ deltas as the model
+-- produces them. A builder owns all emission for its runs (the server does not
+-- also wrap it with 'traceEnv').
+type EnvBuilder = RunOpts -> Sink -> TVar RunState -> RunId -> IO (Env IO)
 
 -- | How the server seeds and drives each run: the provider 'ProviderFactory',
 -- the tools every run is afforded ('scfTools' — empty for the fake, the real
@@ -74,13 +88,17 @@ data ServeConfig = ServeConfig
   , scfTools      :: [ToolSpec]
   , scfBudget     :: Int
   , scfEnvBuilder :: Maybe EnvBuilder
+  , scfThinkVar   :: Maybe (TVar Bool)
+  -- ^ When 'Just', the server exposes @POST \/config@ so a client can toggle
+  -- \"thinking\" for subsequent runs; each run reads the current value into its
+  -- 'RunOpts'. 'Nothing' disables the control endpoint (the fake and the tests).
   }
 
 -- | A config for the deterministic fake: no tools, a small budget, no streaming
--- builder. Matches the pre-config behaviour so existing callers
--- ('mkApp'\/'serve'') are unchanged.
+-- builder, no control endpoint. Matches the pre-config behaviour so existing
+-- callers ('mkApp'\/'serve'') are unchanged.
 defaultServeConfig :: ProviderFactory -> ServeConfig
-defaultServeConfig f = ServeConfig f [] 1200 Nothing
+defaultServeConfig f = ServeConfig f [] 1200 Nothing Nothing
 
 -- | Everything the transport needs to reach a live run: its event log (for SSE)
 -- and its input slot (for a human-driven oracle). The threaded @RunState@ that
@@ -149,7 +167,32 @@ router cfg reg jsonApp req respond =
     ("GET",     ["runs", rid, "events"]) -> sseH reg rid req respond
     ("POST",    ["agent"])               -> aguiH cfg reg req respond
     ("OPTIONS", ["agent"])               -> respond (Wai.responseLBS status204 preflightHeaders "")
+    ("POST",    ["config"])              -> configH cfg req respond
+    ("OPTIONS", ["config"])              -> respond (Wai.responseLBS status204 preflightHeaders "")
     _                                    -> jsonApp req respond
+
+-- | @POST \/config@: toggle a run-time control. The only control today is
+-- @{"think": true|false}@, which flips 'scfThinkVar' so subsequent runs read it
+-- into their 'RunOpts'. 404 when no control var is configured (the fake\/tests);
+-- 400 on a body without a @think@ boolean. Deliberately a separate, global
+-- control rather than per-message state: this is a single-user local demo, and it
+-- avoids rebuilding the client's agent (which would drop the conversation).
+configH :: ServeConfig -> Wai.Application
+configH cfg req respond = case scfThinkVar cfg of
+  Nothing -> respond (Wai.responseLBS status404 [allowOrigin, jsonCT] "{\"error\":\"no config\"}")
+  Just tv -> do
+    body <- Wai.strictRequestBody req
+    case eitherDecode body of
+      Right (ConfigReq think) -> do
+        atomically (writeTVar tv think)
+        respond (Wai.responseLBS status200 [allowOrigin, jsonCT] (encode (object ["think" .= think])))
+      Left _ -> respond (Wai.responseLBS status400 [allowOrigin, jsonCT] "{\"error\":\"expected {think:bool}\"}")
+  where jsonCT = ("Content-Type", "application/json")
+
+-- | Request body of @POST \/config@.
+newtype ConfigReq = ConfigReq Bool
+instance FromJSON ConfigReq where
+  parseJSON = withObject "ConfigReq" $ \o -> ConfigReq <$> o .: "think"
 
 -- | Permissive CORS. The smoke-test frontend is served from a different origin
 -- (the Vite dev server), so the browser preflights @POST /agent@ and expects an
@@ -175,19 +218,19 @@ startH cfg (Registry regv) sr = liftIO $ do
   slot <- newInputSlot
   let seeded = S { transcript = [Summary (unpack (task sr))]
                  , pending = [], budget = scfBudget cfg, mode = Working, tools = scfTools cfg }
-  stv <- newTVarIO (initRunState (budget seeded) (mode seeded))
   rid <- atomically $ do
     m <- readTVar regv
     let rid = pack ("run-" <> show (Map.size m))
     writeTVar regv (Map.insert rid (RunHandle logv slot) m)
     pure rid
+  stv <- newTVarIO (initRunStateFor rid (budget seeded) (mode seeded))
   let sink = logSink logv
   -- A streaming env builder (if configured) owns all emission (token streaming);
   -- otherwise wrap the plain provider with the tracing decorator, selecting the
   -- drive mode. Auto: the provider answers every turn. Human: the oracle blocks
   -- on the input slot; the provider's world seam still performs tools.
   env <- case scfEnvBuilder cfg of
-    Just build -> build sink stv rid
+    Just build -> build defaultRunOpts sink stv rid
     Nothing -> do
       inner <- scfFactory cfg rid
       pure $ case runMode sr of
@@ -314,11 +357,12 @@ aguiH cfg (Registry regv) req respond = do
       slot <- newInputSlot
       let seeded = S { transcript = seedTranscript msgs
                      , pending = [], budget = scfBudget cfg, mode = Working, tools = scfTools cfg }
-      stv <- newTVarIO (initRunState (budget seeded) (mode seeded))
+      stv <- newTVarIO (initRunStateFor rid (budget seeded) (mode seeded))
       atomically (modifyTVar' regv (Map.insert rid (RunHandle logv slot)))
       let sink = logSink logv
+      opts <- RunOpts . maybe False id <$> traverse readTVarIO (scfThinkVar cfg)
       env <- case scfEnvBuilder cfg of
-        Just build -> build sink stv rid
+        Just build -> build opts sink stv rid
         Nothing    -> traceEnv sink stv <$> scfFactory cfg rid
       void $ forkIO $ do
         mapM_ sink (runStartEvents tid rid (budget seeded) (tools seeded) (mode seeded))

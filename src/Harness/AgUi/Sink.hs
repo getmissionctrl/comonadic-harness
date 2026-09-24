@@ -18,6 +18,7 @@ module Harness.AgUi.Sink
   , jsonlSink
   , traceEnv
   , initRunState
+  , initRunStateFor
   ) where
 
 import Control.Concurrent.STM

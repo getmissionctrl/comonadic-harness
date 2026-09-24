@@ -49,7 +49,7 @@ import Data.Ollama.Common.Types
   ( ChatResponse (..)
   , FunctionDef (..)
   , FunctionParameters (..)
-  , Message (content, tool_calls)
+  , Message (content, thinking, tool_calls)
   , ModelOptions (..)
   , OutputFunction (..)
   , ToolCall (..)
@@ -145,13 +145,22 @@ completeWith cfg req = do
 -- is still returned for the coalgebra.
 --
 -- __How.__ Sets @ChatOps.stream@; the per-chunk callback accumulates @content@
--- (streaming each delta out via @onDelta@), captures any @tool_calls@, and reads
--- usage from the terminal @done@ chunk. We accumulate ourselves rather than
--- trusting the library's returned aggregate, and skip 'withLocalRetry' — a retry
--- would re-emit already-streamed deltas — so a transient fault surfaces as
--- 'Malformed' and ends the run (a fair trade for clean streaming). [design]
-streamingComplete :: OllamaCfg -> (T.Text -> IO ()) -> Request -> IO (Either Refusal Response)
-streamingComplete cfg onDelta req = do
+-- (streaming each delta out via @onDelta@), forwards any @thinking@ delta via
+-- @onThink@ (a thinking model emits reasoning in a /separate/ field, not in
+-- @content@ — without this the reasoning is silently dropped), captures any
+-- @tool_calls@, and reads usage from the terminal @done@ chunk. We accumulate
+-- ourselves rather than trusting the library's returned aggregate, and skip
+-- 'withLocalRetry' — a retry would re-emit already-streamed deltas — so a
+-- transient fault surfaces as 'Malformed' and ends the run (a fair trade for
+-- clean streaming). Reasoning is /not/ accumulated into the 'Response': it is
+-- presentation only and never part of the answer the coalgebra consumes. [design]
+streamingComplete
+  :: OllamaCfg
+  -> (T.Text -> IO ())  -- ^ @onDelta@: a fragment of the answer text
+  -> (T.Text -> IO ())  -- ^ @onThink@: a fragment of the reasoning (\"thinking\") text
+  -> Request
+  -> IO (Either Refusal Response)
+streamingComplete cfg onDelta onThink req = do
   accRef   <- newIORef []            -- content fragments, reversed
   callsRef <- newIORef Nothing       -- last seen tool_calls
   usageRef <- newIORef (0, 0)        -- (promptEvalCount, evalCount) from the done chunk
@@ -159,6 +168,7 @@ streamingComplete cfg onDelta req = do
       onChunk cr = do
         case message cr of
           Just m -> do
+            mapM_ (\t -> when (not (T.null t)) (onThink t)) (thinking m)
             let d = content m
             when (not (T.null d)) $ do
               modifyIORef' accRef (d :)
