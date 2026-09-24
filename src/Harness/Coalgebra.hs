@@ -72,6 +72,15 @@ admit specs = foldr classify ([], [])
       | tool c `elem` map specName specs = (c : ok, bad)
       | otherwise = (ok, (c, Obs ("error: tool not afforded: " ++ tool c)) : bad)
 
+-- | Tokens to debit for one successful turn. Clamps each component to >= 0 (a
+-- buggy or hostile provider cannot REFILL the budget) and enforces a minimum of
+-- 1, so every successful turn strictly decreases the budget. That minimum is
+-- what makes the token budget a genuine liveness bound: with it, a run halts in
+-- at most @budget@ turns regardless of what usage the provider reports (F4).
+-- [design]
+spend :: Usage -> Int
+spend u = max 1 (max 0 (inTok u) + max 0 (outTok u))
+
 -- | The coalgebra proper: given a state, return the single next action and, in
 -- that action's /direction/, the successor state. @step@ is deterministic — it
 -- always knows /what/ it does next. What it does not know is what /comes back/,
@@ -185,7 +194,7 @@ working s (Left (Malformed m)) =
 working s (Right r) =
   s & gfield @"transcript" %~ (Assistant r :)
     & gfield @"pending" .~ calls r
-    & gfield @"budget" %~ subtract (inTok (usage r) + outTok (usage r))
+    & gfield @"budget" %~ subtract (spend (usage r))
 
 -- | The 'Summarising'-mode continuation — the direction of the 'Ask' 'step'
 -- emits while summarising. This is compaction, and it deliberately reuses the
@@ -207,7 +216,7 @@ summarising s (Left _) = s & gfield @"budget" .~ 0
 summarising s (Right r) =
   s & gfield @"transcript" .~ [Summary (say r)]
     & gfield @"mode" .~ Working
-    & gfield @"budget" %~ subtract (inTok (usage r) + outTok (usage r))
+    & gfield @"budget" %~ subtract (spend (usage r))
 
 -- | Unfold a starting state into the 'Cofree' denotation of the whole run: at
 -- every node the annotation @'view' s@ (a 'Ctx', for analysis) sits over the

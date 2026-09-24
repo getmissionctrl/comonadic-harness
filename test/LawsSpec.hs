@@ -7,8 +7,9 @@ import Control.Comonad (duplicate, extract)
 import Control.Comonad.Cofree (Cofree ((:<)))
 import Harness.Alphabet
 import Harness.State
-import Harness.Run (run)
+import Harness.Run (Env (..), run)
 import Harness.Probe (Hypo, probe, liftHypo, outcomeOf)
+import Harness.Coalgebra (harness)
 import Harness.Compaction
 import Gen
 
@@ -119,6 +120,13 @@ spec = do
     it "a successful write unlocks commit" $ do
       let s = startStateWith [User [(Call "write" "notes.md", Obs "wrote 12 bytes to notes.md")]]
       map specName (afford s) `shouldContain` ["commit"]
+
+  describe "budget liveness (F4)" $
+    it "a zero-usage looping oracle still terminates" $ do
+      let env = Env { oracle = \_ -> pure (Right (Response "x" [Call "read" "{}"] (Usage 0 0)))
+                    , world  = \c -> pure (Obs (tool c ++ ":ok")) }
+      res <- run env (harness (startState 50))
+      res `shouldBe` Right Exhausted
 
   describe "compaction violation rate (E1, expected non-zero for real compact)" $ do
     it "no-op compaction scores 0% (baseline null model)" $ do
