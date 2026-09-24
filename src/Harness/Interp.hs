@@ -42,10 +42,8 @@ module Harness.Interp
   ) where
 
 import Control.Comonad.Cofree (Cofree ((:<)))
-import Control.Monad.Except (MonadError)
 import Control.Monad.Writer (MonadWriter, tell)
 import Harness.Alphabet
-import Harness.Fault (ProviderError)
 import Harness.State (Ctx (..), Mode)
 
 -- | A single observable event of one interpreter step — the unit of the trace
@@ -107,17 +105,18 @@ data Ev
 -- the pure walk, unrelated to the token @budget@ the coalgebra tracks in the
 -- harness state.
 --
--- __The error channel is not part of the alphabet.__ The
--- @'MonadError' 'ProviderError'@ constraint carries /transport/ failure — an
--- oracle that could not be reached after its own retries — /past/ the coalgebra
--- rather than folding it into a 'Refusal' (invariant 5). 'interp' never raises
--- one itself: the body is unchanged from the pure walk. It is the supplied
--- @askOracle@ that may 'Control.Monad.Except.throwError', and the constraint is
--- what lets that error short-circuit the walk so @Harness.Run.run@ can surface
--- it to the caller. A 'ProviderError' is /not/ a 'HarnessF' constructor and is
--- /not/ a 'Refusal'; it is deliberately outside the closed alphabet.
+-- __The error channel is not part of the alphabet.__ 'interp' is fully
+-- polymorphic in @m@: it only sequences the supplied seam actions and never
+-- raises an error itself. Transport failure — an oracle that could not be
+-- reached after its own retries — rides @m@'s error channel when the /caller/
+-- instantiates @m@ at a monad with @'Control.Monad.Except.MonadError'
+-- 'Harness.Fault.ProviderError'@ (namely @Harness.Run.Live@) and supplies an
+-- @askOracle@ that 'Control.Monad.Except.throwError's; 'interp' itself is
+-- agnostic and does not need that constraint. A 'Harness.Fault.ProviderError'
+-- is /not/ a 'HarnessF' constructor and is /not/ a 'Refusal'; it is
+-- deliberately outside the closed alphabet (invariant 5).
 interp
-  :: (MonadWriter [Ev] m, MonadError ProviderError m)
+  :: MonadWriter [Ev] m
   => (Cofree HarnessF Ctx -> m ())
   -> (Request -> m (Either Refusal Response))
   -> (Call -> m Obs)
