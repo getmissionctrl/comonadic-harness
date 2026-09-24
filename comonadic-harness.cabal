@@ -37,6 +37,7 @@ library
     Harness.Evolve
     Harness.Tutorial
     Harness.AgUi.Event
+    Harness.AgUi.Interrupt
     Harness.AgUi.Translate
     Harness.AgUi.Sink
     Harness.AgUi.HumanEnv

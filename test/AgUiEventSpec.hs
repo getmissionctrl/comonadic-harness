@@ -37,3 +37,11 @@ spec = describe "Harness.AgUi.Event ToJSON wire shapes" $ do
   it "StateDelta carries an RFC-6902 patch array under delta" $
     enc (StateDelta [PatchReplace "/budget" (Data.Aeson.toJSON (900 :: Int))])
       `shouldBe` object ["type" .= ("STATE_DELTA" :: String), "delta" .= [object ["op" .= ("replace" :: String), "path" .= ("/budget" :: String), "value" .= (900 :: Int)]]]
+
+  it "SubagentStarted uses SUBAGENT_STARTED + subagentRunId/name" $
+    enc (SubagentStarted "sa-1" "laya:qualify" Nothing)
+      `shouldBe` object ["type" .= ("SUBAGENT_STARTED"::String), "subagentRunId" .= ("sa-1"::String), "name" .= ("laya:qualify"::String)]
+
+  it "ActivitySnapshot uses ACTIVITY_SNAPSHOT + activityType + content" $
+    enc (ActivitySnapshot "act-1" "DECISION" (object ["chose" .= ("Win"::String)]))
+      `shouldBe` object ["type" .= ("ACTIVITY_SNAPSHOT"::String), "messageId" .= ("act-1"::String), "activityType" .= ("DECISION"::String), "content" .= object ["chose" .= ("Win"::String)]]

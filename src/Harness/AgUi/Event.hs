@@ -10,6 +10,7 @@ module Harness.AgUi.Event
   , ThreadId
   , MessageId
   , ToolCallId
+  , SubagentRunId
   , Patch (..)
   , AgUiEvent (..)
   ) where
@@ -33,13 +34,17 @@ type MessageId = Text
 -- frames and reused by the correlated @TOOL_CALL_RESULT@.
 type ToolCallId = Text
 
+-- | Identifier of one subagent run nested under a parent run. Stable across its
+-- @SUBAGENT_STARTED@\/@SUBAGENT_FINISHED@ frames so a client can group them.
+type SubagentRunId = Text
+
 -- | One RFC-6902 JSON Patch operation — the only two ops v1 emits. Carried in a
 -- @STATE_DELTA@ so a client can mutate its mirror of the harness state
 -- (@/budget@, @/mode@) without a full snapshot.
 data Patch
   = PatchReplace Text Value  -- ^ @{"op":"replace","path":p,"value":v}@
   | PatchAdd Text Value      -- ^ @{"op":"add","path":p,"value":v}@
-  deriving stock (Show)
+  deriving stock (Eq, Show)
 
 instance ToJSON Patch where
   toJSON (PatchReplace p v) = object ["op" .= ("replace" :: Text), "path" .= p, "value" .= v]
@@ -66,7 +71,12 @@ data AgUiEvent
   | StateSnapshot Value                  -- ^ full snapshot object
   | StateDelta [Patch]                   -- ^ RFC-6902 patch array
   | Custom Text Value                    -- ^ name, value
-  deriving stock (Show)
+  | SubagentStarted SubagentRunId Text (Maybe Text)  -- ^ subagentRunId, name, parentToolCallId?
+  | SubagentFinished SubagentRunId Value             -- ^ subagentRunId, result
+  | SubagentError SubagentRunId Text                 -- ^ subagentRunId, message
+  | ActivitySnapshot MessageId Text Value            -- ^ id, activityType, content
+  | ActivityDelta MessageId Text [Patch]             -- ^ id, activityType, patch
+  deriving stock (Eq, Show)
 
 instance ToJSON AgUiEvent where
   toJSON = \case
@@ -85,3 +95,9 @@ instance ToJSON AgUiEvent where
     StateSnapshot s        -> object ["type" .= ("STATE_SNAPSHOT" :: Text), "snapshot" .= s]
     StateDelta ps          -> object ["type" .= ("STATE_DELTA" :: Text), "delta" .= ps]
     Custom n v             -> object ["type" .= ("CUSTOM" :: Text), "name" .= n, "value" .= v]
+    SubagentStarted s n p  -> object $ ["type" .= ("SUBAGENT_STARTED" :: Text), "subagentRunId" .= s, "name" .= n]
+                                        ++ maybe [] (\x -> ["parentToolCallId" .= x]) p
+    SubagentFinished s r   -> object ["type" .= ("SUBAGENT_FINISHED" :: Text), "subagentRunId" .= s, "result" .= r]
+    SubagentError s m      -> object ["type" .= ("SUBAGENT_ERROR" :: Text), "subagentRunId" .= s, "message" .= m]
+    ActivitySnapshot i a c -> object ["type" .= ("ACTIVITY_SNAPSHOT" :: Text), "messageId" .= i, "activityType" .= a, "content" .= c]
+    ActivityDelta i a ps   -> object ["type" .= ("ACTIVITY_DELTA" :: Text), "messageId" .= i, "activityType" .= a, "patch" .= ps]
