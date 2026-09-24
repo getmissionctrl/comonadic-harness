@@ -254,22 +254,22 @@ sseH (Registry regv) rid _req respond = do
 
 -- | The subset of a standard AG-UI @RunAgentInput@ this server reads: the
 -- client-minted @threadId@\/@runId@ (echoed back so the client's event
--- verification correlates), and the seed task extracted from the message
--- history. The harness seeds a fresh run from a task rather than replaying a
--- message list, so v1 takes the latest user message as the task and ignores the
--- rest; @tools@\/@context@\/@state@ are accepted and dropped. [design]
-data RunAgentInput = RunAgentInput Text Text Text  -- threadId, runId, task
+-- verification correlates), and the __whole__ message history. An AG-UI client
+-- is stateless per run — it resends the full conversation on every turn — so to
+-- keep multi-turn context the server must seed the run from all of it, not just
+-- the latest user message. @tools@\/@context@\/@state@ are accepted and dropped
+-- (the harness recomputes affordances and budget itself). [design]
+data RunAgentInput = RunAgentInput Text Text [Msg]  -- threadId, runId, messages
 
 instance FromJSON RunAgentInput where
   parseJSON = withObject "RunAgentInput" $ \o -> do
     tid  <- o .:? "threadId" .!= "thread-0"
     rid  <- o .:? "runId" .!= "run-0"
     msgs <- o .:? "messages" .!= []
-    pure (RunAgentInput tid rid (lastUserText msgs))
+    pure (RunAgentInput tid rid msgs)
 
 -- | One AG-UI message, reduced to role + text content. Content that is not a
--- plain string (multi-part content) collapses to empty — enough for the smoke
--- test, which sends plain user text.
+-- plain string (multi-part content) collapses to empty — enough for a text chat.
 data Msg = Msg Text Text
 
 instance FromJSON Msg where
@@ -283,9 +283,21 @@ contentText :: Maybe Value -> Text
 contentText (Just (String t)) = t
 contentText _                 = ""
 
--- | The content of the last @user@ message, or empty if there is none.
-lastUserText :: [Msg] -> Text
-lastUserText = foldl (\acc (Msg role content) -> if role == "user" then content else acc) ""
+-- | Seed the harness transcript (newest-first) from the AG-UI message history so
+-- the model sees prior turns. A @user@ message becomes a 'Summary' turn (rendered
+-- as a user message by 'Harness.State.toChatMsgs'); an @assistant@ message
+-- becomes an 'Assistant' turn carrying its text; other roles are dropped. An
+-- empty result falls back to a single empty user turn so the first prompt is not
+-- degenerate.
+seedTranscript :: [Msg] -> [Turn]
+seedTranscript msgs = case reverse (concatMap toTurn msgs) of
+  [] -> [Summary ""]
+  ts -> ts
+  where
+    toTurn (Msg role content)
+      | role == "assistant" = [Assistant (Response (unpack content) [] (Usage 0 0))]
+      | role == "user"      = [Summary (unpack content)]
+      | otherwise           = []
 
 -- | @POST /agent@: the standard AG-UI HTTP transport. Accepts a @RunAgentInput@,
 -- starts a run, and streams the AG-UI events back __on this same response__ as
@@ -297,10 +309,10 @@ aguiH cfg (Registry regv) req respond = do
   body <- Wai.strictRequestBody req
   case eitherDecode body of
     Left _ -> respond (Wai.responseLBS status400 [allowOrigin, jsonCT] "{\"error\":\"bad RunAgentInput\"}")
-    Right (RunAgentInput tid rid task') -> do
+    Right (RunAgentInput tid rid msgs) -> do
       logv <- newEventLog
       slot <- newInputSlot
-      let seeded = S { transcript = [Summary (unpack task')]
+      let seeded = S { transcript = seedTranscript msgs
                      , pending = [], budget = scfBudget cfg, mode = Working, tools = scfTools cfg }
       stv <- newTVarIO (initRunState (budget seeded) (mode seeded))
       atomically (modifyTVar' regv (Map.insert rid (RunHandle logv slot)))
