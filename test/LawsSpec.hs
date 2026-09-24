@@ -27,6 +27,15 @@ firstTree h b = case reachableStates h 20 b of
   ((_, w) : _) -> Just w
   []           -> Nothing
 
+-- | Pick a random reachable tree (root or any deeper node) from the hypo's
+-- walk. Returns 'Nothing' only when the walk is entirely empty — which means
+-- every prop that uses this helper and skips on 'Nothing' is trivially
+-- satisfied, which is why T22 adds coverage to detect that. [design]
+subtreeOf :: Hypo -> Int -> Gen (Maybe (Cofree HarnessF Ctx))
+subtreeOf h b = case map snd (reachableStates h 20 b) of
+  [] -> pure Nothing
+  ws -> Just <$> elements ws
+
 -- | Every 'Perform' node reached under the hypo, paired with the afforded tool
 -- names at that node. The afforded set is read from the node's own 'Ctx'
 -- annotation (@reqTools (ctxRequest c)@, which is @afford s@ at that node — see
@@ -71,18 +80,21 @@ spec = do
           Nothing -> property True
           Just w  -> annPath h 12 (fmap extract (duplicate w)) === annPath h 12 w
 
-  describe "agreement law: run == probe outcome (§16.1, the value proposition)" $
-    prop "outcomeOf (probe h 200 w) == Just (run (liftHypo h) w)" $
+  describe "agreement law at depth (§16.1)" $
+    -- Strengthened from root-only: sample a random reachable node so the law
+    -- is checked at depth too, not just at the starting tree. [design]
+    prop "outcomeOf (probe h 200 w) matches run (liftHypo h) w at reachable nodes" $
       forAll (Blind <$> genHypo) $ \(Blind h) -> forAll (choose (200, 1200)) $ \b ->
-        case firstTree h b of
-          Nothing -> property True
-          Just w  -> ioProperty $ do
-            -- 'run' now returns @Either ProviderError Outcome@. A 'Hypo' is a pure
-            -- stand-in that never faults, so the live side is always @Right@;
-            -- project it back to @Maybe Outcome@ to match the prober's verdict.
-            o <- run (liftHypo h) w
-            let ran = case o of Right x -> Just x; Left _ -> Nothing
-            pure (outcomeOf (probe h 200 w) === ran)
+        forAll (Blind <$> subtreeOf h b) $ \(Blind mw) ->
+          case mw of
+            Nothing -> property True
+            Just w  -> ioProperty $ do
+              -- 'run' now returns @Either ProviderError Outcome@. A 'Hypo' is a
+              -- pure stand-in that never faults, so the live side is always
+              -- @Right@; project it back to @Maybe Outcome@ to match the prober.
+              o <- run (liftHypo h) w
+              let ran = case o of Right x -> Just x; Left _ -> Nothing
+              pure (outcomeOf (probe h 200 w) === ran)
 
   describe "interp observer hook is behaviour-preserving (T10, invariant 2)" $
     -- The observer 'interp' takes may label or print a node, but it must not be
