@@ -15,7 +15,7 @@ import Control.Comonad.Cofree (Cofree)
 import Data.Monoid (Sum (..))
 import System.CPUTime (getCPUTime)
 import Harness.Alphabet
-  (HarnessF, Request (..), Response (..), Usage (..), Call (..), Obs (..))
+  (HarnessF, Response (..), Usage (..), Call (..), Obs (..))
 import Harness.State (Ctx)
 import Harness.Coalgebra (harness)
 import Harness.Path (Hypo (..), takeWalk)

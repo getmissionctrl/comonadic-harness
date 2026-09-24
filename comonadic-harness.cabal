@@ -38,7 +38,6 @@ library
     Harness.Probe
     Harness.Compaction
     Harness.Evolve
-    Harness.Tutorial
     Harness.AgUi.Event
     Harness.AgUi.Translate
     Harness.AgUi.Sink
@@ -80,6 +79,20 @@ library
     -- Provider.Research's scrape_url tool: an HTTPS client to the Firecrawl API.
     , http-client          >= 0.7  && < 0.8
     , http-client-tls      >= 0.3  && < 0.4
+
+-- | The literate tutorial document — build-tested in CI but not part of the
+-- shipped library API. Consumers use the main library; this component exists
+-- so the prose stays honest: if an import or definition drifts, GHC fires.
+library tutorial
+  import:           warnings, exts
+  visibility:       private
+  hs-source-dirs:   tutorial
+  exposed-modules:  Harness.Tutorial
+  build-depends:
+      base               >= 4.17 && < 5
+    , comonadic-harness
+    , comonad            >= 5.0  && < 5.1
+    , free               >= 5.2  && < 5.3
 
 executable demo
   import:           warnings, exts

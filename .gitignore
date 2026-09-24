@@ -11,3 +11,7 @@ runs/agent-sandbox/
 # internal workflow/planning artifacts — not library source
 docs/superpowers/
 runs/live-demo.txt
+
+# generated artefacts — produced by `cabal haddock` and build scripts
+docs/api/
+*.pdf
