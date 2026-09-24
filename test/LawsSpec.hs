@@ -115,6 +115,12 @@ spec = do
             Prompt rest  = project (startStateWith ts)
          in whole === rest ++ renderLine t ++ "\n"
 
+  describe "compaction idempotence (D11)" $
+    prop "compact . compact == compact (on the transcript)" $
+      forAll genTurns $ \ts ->
+        let s = startStateWith ts
+         in transcript (compact (compact s)) === transcript (compact s)
+
   describe "affordance law (§16.4, D12)" $ do
     -- Real assertion after Task 20's @admit@ pass: every 'Perform' the coalgebra
     -- emits carries a 'Call' whose 'tool' is afforded at that node. We walk the
