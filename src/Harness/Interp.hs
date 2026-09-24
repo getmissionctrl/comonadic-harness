@@ -22,6 +22,20 @@
 -- chooses the successor. The successor is always @k result@ — a function of the
 -- oracle\/world /direction/, never of the annotation. Execution consumes the
 -- shape; analysis consumes the annotation.
+--
+-- __The observer hook.__ 'interp' takes a per-node observer @onNode@, run once
+-- at the start of each /real/ arm ('Halt', 'Ask', 'Perform') before any of that
+-- arm's work. It exists so a caller (the demo's verbose runner) can /label or
+-- print/ each node without writing a second walk over 'HarnessF' — which would
+-- be a fresh interpretation of the alphabet and so a drift risk (invariant 1).
+-- The observer only observes: it may read the node's 'Ctx' annotation for
+-- display, exactly as this function reads 'ctxMode' to tag an event, but it
+-- never chooses a successor and it does not touch the emitted @['Ev']@ trace
+-- (invariant 2). Because @run@ and @probe@ pass a no-op observer, the trace they
+-- produce is byte-for-byte what it was before the hook existed — which is why the
+-- agreement law and the compaction tests are untouched by it. The observer is
+-- /not/ run on the fuel-exhaustion guard, so a bounded pure walk still visits
+-- exactly the nodes it did before.
 module Harness.Interp
   ( Ev (..)
   , interp
@@ -66,7 +80,8 @@ data Ev
 -- direction, until it 'Halt's or runs out of fuel. Returns @'Just' outcome@ on
 -- halt, @'Nothing'@ if the fuel bound is reached first.
 --
--- __Parameters.__ @askOracle@ discharges a 'Ask' (a @'Request'@ becomes an
+-- __Parameters.__ @onNode@ is the observer run at the start of every real arm
+-- (see the module note); @askOracle@ discharges a 'Ask' (a @'Request'@ becomes an
 -- @'Either' 'Refusal' 'Response'@); @askWorld@ discharges a 'Perform' (a 'Call'
 -- becomes an 'Obs'). Instantiating these two — and the monad @m@ — is what turns
 -- the one interpreter into @run@ (live @IO@) or @probe@ (pure). @fuel@ is the
@@ -103,23 +118,26 @@ data Ev
 -- /not/ a 'Refusal'; it is deliberately outside the closed alphabet.
 interp
   :: (MonadWriter [Ev] m, MonadError ProviderError m)
-  => (Request -> m (Either Refusal Response))
+  => (Cofree HarnessF Ctx -> m ())
+  -> (Request -> m (Either Refusal Response))
   -> (Call -> m Obs)
   -> Int
   -> Cofree HarnessF Ctx
   -> m (Maybe Outcome)
-interp askOracle askWorld = go
+interp onNode askOracle askWorld = go
   where
-    go _ (_ :< Halt o) = Just o <$ tell [Ended o]
+    go _ node@(_ :< Halt o) = onNode node >> (Just o <$ tell [Ended o])
     go n _ | n <= 0 = pure Nothing
-    go n (c :< Ask q k) = do
+    go n node@(c :< Ask q k) = do
+      onNode node
       tell [Asked (ctxMode c)]
       r <- askOracle q
       case r of
         Left e  -> tell [Refused e]
         Right _ -> pure ()
       go (n - 1) (k r)
-    go n (_ :< Perform call k) = do
+    go n node@(_ :< Perform call k) = do
+      onNode node
       tell [Did call]
       o <- askWorld call
       go (n - 1) (k o)

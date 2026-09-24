@@ -118,7 +118,7 @@ data Env m = Env
 run :: Env Live -> Cofree HarnessF Ctx -> IO (Either ProviderError Outcome)
 run env w = do
   (res, _evs :: [Ev]) <-
-    runWriterT (runExceptT (interp (oracle env) (world env) maxBound w))
+    runWriterT (runExceptT (interp (\_ -> pure ()) (oracle env) (world env) maxBound w))
   pure (fmap (maybe (Stuck "fuel exhausted") id) res)
 
 -- | The concrete monad a live 'run' walks in: transport failure on an

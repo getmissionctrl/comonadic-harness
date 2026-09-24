@@ -5,10 +5,15 @@ import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck
 import Control.Comonad (duplicate, extract)
 import Control.Comonad.Cofree (Cofree ((:<)))
+import Control.Monad.Except (runExceptT)
+import Control.Monad.Writer (runWriter, tell)
 import Harness.Alphabet
+import Harness.Fault (ProviderError)
+import Harness.Interp (Ev, interp)
 import Harness.State
 import Harness.Run (Env (..), run)
-import Harness.Probe (Hypo, probe, liftHypo, outcomeOf)
+import Harness.Path (Hypo (..))
+import Harness.Probe (probe, liftHypo, outcomeOf)
 import Harness.Coalgebra (harness)
 import Harness.Compaction
 import Gen
@@ -78,6 +83,30 @@ spec = do
             o <- run (liftHypo h) w
             let ran = case o of Right x -> Just x; Left _ -> Nothing
             pure (outcomeOf (probe h 200 w) === ran)
+
+  describe "interp observer hook is behaviour-preserving (T10, invariant 2)" $
+    -- The observer 'interp' takes may label or print a node, but it must not be
+    -- able to change /what interp does/: the outcome it returns and the [Ev]
+    -- trace it writes are the same regardless of which observer is supplied. We
+    -- run the one interpreter over the same reachable tree twice — once with a
+    -- no-op observer, once with a counting observer (one that emits a
+    -- Writer-neutral @tell []@ per node) — and assert the full
+    -- @(Either ProviderError (Maybe Outcome), [Ev])@ pair is identical. This is
+    -- the library-level guard that stands in for the demo's 'runVerbose', which
+    -- lives in the executable and cannot be imported here.
+    prop "outcome and trace are identical with a no-op vs a counting observer" $
+      forAll (Blind <$> genHypo) $ \(Blind h) -> forAll (choose (200, 1200)) $ \b ->
+        case firstTree h b of
+          Nothing -> property True
+          Just w  ->
+            let runWith obs =
+                  runWriter
+                    (runExceptT
+                      (interp obs (pure . guessOracle h) (pure . guessWorld h) 200 w))
+                noop, count :: (Either ProviderError (Maybe Outcome), [Ev])
+                noop  = runWith (\_ -> pure ())
+                count = runWith (\_ -> tell [])
+             in noop === count
 
   describe "prefix stability (protects prompt caching, §16.6)" $
     prop "project (t:ts) == project ts <> renderLine t <> newline" $

@@ -86,7 +86,7 @@ import Harness.State (Ctx)
 probe :: Hypo -> Int -> Cofree HarnessF Ctx -> [Ev]
 probe h n w =
   let (_res :: Either ProviderError (Maybe Outcome), evs) =
-        runWriter (runExceptT (interp (pure . guessOracle h) (pure . guessWorld h) n w))
+        runWriter (runExceptT (interp (\_ -> pure ()) (pure . guessOracle h) (pure . guessWorld h) n w))
    in evs
 
 -- | A forward-looking score of a node's __own future__ under a hypothesis: how
