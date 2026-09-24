@@ -191,4 +191,5 @@ outcomeValue :: Outcome -> Value
 outcomeValue = \case
   Done s    -> object ["status" .= ("done" :: Text), "answer" .= pack s]
   Exhausted -> object ["status" .= ("exhausted" :: Text)]
+  Failed s  -> object ["status" .= ("failed" :: Text), "reason" .= pack s]
   Stuck s   -> object ["status" .= ("stuck" :: Text), "reason" .= pack s]

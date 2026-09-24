@@ -4,6 +4,7 @@ version:            0.1.0.0
 synopsis:           An agentic harness as a polynomial coalgebra denoted by a cofree comonad.
 description:        See BRIEF.md. Execution consumes the tree's shape; analysis consumes its annotation.
 license:            MIT
+license-file:       LICENSE
 author:             Ben Ford
 maintainer:         ben@missionctrl.dev
 category:           Control, AI
@@ -27,15 +28,16 @@ library
   hs-source-dirs:   src
   exposed-modules:
     Harness.Alphabet
+    Harness.Schema
     Harness.State
     Harness.Coalgebra
     Harness.Path
+    Harness.Fault
     Harness.Interp
     Harness.Run
     Harness.Probe
     Harness.Compaction
     Harness.Evolve
-    Harness.Tutorial
     Harness.AgUi.Event
     Harness.AgUi.Interrupt
     Harness.AgUi.Translate
@@ -48,58 +50,74 @@ library
     Provider.Research
   build-depends:
       base >= 4.17 && < 5
-    , comonad
-    , free
-    , optics-core
-    , containers
-    , mtl
-    , transformers
-    , text
-    , bytestring
-    , aeson
-    , dlist
+    , comonad              >= 5.0  && < 5.1
+    , free                 >= 5.2  && < 5.3
+    , optics-core          >= 0.4  && < 0.5
+    , containers           >= 0.6  && < 0.8
+    , mtl                  >= 2.3  && < 2.4
+    , transformers         >= 0.6  && < 0.7
+    , text                 >= 2.0  && < 2.2
+    , bytestring           >= 0.11 && < 0.13
+    , aeson                >= 2.1  && < 2.3
     -- Provider.Tools' sandboxed world executor (real read/write/bash/commit).
-    , process
-    , directory
-    , filepath
+    , process              >= 1.6  && < 1.7
+    , directory            >= 1.3  && < 1.4
+    , filepath             >= 1.4  && < 1.6
     -- 0.2.x is what nixpkgs packages; used purely as an HTTP client to the
     -- Ollama chat endpoint. Tool/affordance/MCP semantics live in the harness,
     -- not delegated to the library. [design]
-    , ollama-haskell >= 0.2 && < 0.3
+    , ollama-haskell       >= 0.2  && < 0.3
     -- AG-UI streaming transport (Harness.AgUi.*): the tracing decorator's STM
     -- event log, the Servant JSON API for starting/steering runs, and the
     -- WAI/Warp SSE out-stream. Kept off the pure core — these appear only under
     -- Harness.AgUi and app-serve.
-    , stm
-    , servant
-    , servant-server
-    , warp
-    , wai
-    , http-types
+    , stm                  >= 2.5  && < 2.6
+    , servant              >= 0.20 && < 0.21
+    , servant-server       >= 0.20 && < 0.21
+    , warp                 >= 3.3  && < 3.5
+    , wai                  >= 3.2  && < 3.3
+    , http-types           >= 0.12 && < 0.13
     -- Provider.Research's scrape_url tool: an HTTPS client to the Firecrawl API.
-    , http-client
-    , http-client-tls
+    , http-client          >= 0.7  && < 0.8
+    , http-client-tls      >= 0.3  && < 0.4
+
+-- | The literate tutorial document — build-tested in CI but not part of the
+-- shipped library API. Consumers use the main library; this component exists
+-- so the prose stays honest: if an import or definition drifts, GHC fires.
+library tutorial
+  import:           warnings, exts
+  visibility:       private
+  hs-source-dirs:   tutorial
+  exposed-modules:  Harness.Tutorial
+  build-depends:
+      base               >= 4.17 && < 5
+    , comonadic-harness
+    , comonad            >= 5.0  && < 5.1
+    , free               >= 5.2  && < 5.3
 
 executable demo
   import:           warnings, exts
   hs-source-dirs:   app
   main-is:          Main.hs
-  build-depends:    base, comonadic-harness, comonad, free
+  build-depends:    base, comonadic-harness, comonad, free, mtl
 
 executable serve
   import:           warnings, exts
   hs-source-dirs:   app-serve
   main-is:          Serve.hs
-  build-depends:    base, comonadic-harness, text, http-client, http-client-tls, stm
+  build-depends:    base, comonadic-harness, text, http-client, http-client-tls, stm, mtl
 
 test-suite spec
   import:           warnings, exts
   type:             exitcode-stdio-1.0
   hs-source-dirs:   test
   main-is:          Main.hs
-  other-modules:    Gen, LawsSpec, PerfSpec, HostileSpec, AgUiEventSpec, AgUiTranslateSpec, AgUiSinkSpec, AgUiHumanEnvSpec, AgUiServerSpec
+  other-modules:    Gen, LawsSpec, PerfSpec, HostileSpec, ProviderSpec, ToolsSpec, AgUiEventSpec, AgUiTranslateSpec, AgUiSinkSpec, AgUiHumanEnvSpec, AgUiServerSpec
+  ghc-options:      -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base, comonadic-harness, hspec, QuickCheck
     , comonad, free, containers
-    , aeson, bytestring, stm
+    , aeson, bytestring, stm, mtl
     , warp, http-client, http-types
+    , temporary
+    , directory, filepath

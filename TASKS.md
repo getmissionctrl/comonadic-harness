@@ -144,8 +144,10 @@ Required behaviour:
   inferred by comparing `prompt_eval_count` against `num_ctx`. If it errors
   cleanly, decode the error. Write down which it was, with the version number,
   in `docs/ollama-notes.md`. Do not assume.
-- Transient failures (connection refused, 5xx, timeout) go through `withRetry`
-  and must never surface as `Refusal`.
+- Transient failures (connection refused, 5xx, timeout) go through
+  `withLocalRetry` (the retry helper in `Provider.Ollama`) and must never
+  surface as `Refusal`; retry-exhausted faults surface as
+  `Harness.Fault.ProviderError`.
 
 **Accept when:** a real end-to-end run against local Ollama completes, and a
 second run with `num_ctx` set low visibly traverses the

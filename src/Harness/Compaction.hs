@@ -36,6 +36,7 @@
 -- compaction strategy, not a bug to be hidden. [established]
 module Harness.Compaction
   ( compact
+  , compactViaSummary
   , Behaviour (..)
   , observe
   , respectsBehaviour
@@ -46,9 +47,10 @@ import Data.Maybe (listToMaybe)
 import Data.Monoid (Sum (..), Last (..))
 import Harness.Alphabet
 import Harness.Interp (Ev (..))
-import Harness.Probe (Hypo, probe)
+import Harness.Path (Hypo (..))
+import Harness.Probe (probe)
 import Harness.State
-import Harness.Coalgebra (harness)
+import Harness.Coalgebra (harness, summarising)
 
 -- | Collapse the transcript to a summary stand-in.
 --
@@ -71,10 +73,14 @@ import Harness.Coalgebra (harness)
 -- the state is returned unchanged, so a second application is the identity and
 -- the fixed point is reached after one step. [established]
 --
--- __Gotcha.__ This is a deliberately crude summariser: it does not call the
--- oracle to /produce/ a summary, it merely truncates and drops a placeholder.
--- The behavioural cost of that crudeness is exactly what 'respectsBehaviour'
--- and experiment E1 quantify — see the module header.
+-- __STAND-IN ONLY — not the production path.__ @compact@ is a deterministic
+-- truncation stand-in used to exercise the law cheaply in test; it is NOT the
+-- compactor a live run uses. The production path is
+-- 'Harness.Coalgebra.summarising' (a model-produced summary), reachable via an
+-- 'Harness.Alphabet.Overflow' refusal. 'compactViaSummary' (below) makes that
+-- real path pure and measurable under a 'Harness.Path.Hypo', so experiment E1
+-- can report the behavioural cost of the actual transition the harness takes.
+-- [established]
 compact :: S -> S
 compact s
   | alreadyCompact (transcript s) = s
@@ -83,6 +89,18 @@ compact s
     alreadyCompact ts = case reverse ts of
       (User [] : _) -> length ts <= 3
       _ -> False
+
+-- | The PRODUCTION compaction path, made pure for measurement: flip to
+-- 'Harness.State.Summarising', ask the summarise 'Harness.State.request', and
+-- apply 'Harness.Coalgebra.summarising' with the hypo's answer. Unlike 'compact'
+-- (a truncation stand-in) this is exactly the transition a live run takes when
+-- it overflows — its behavioural cost is what the flagship claim should
+-- quantify (review1 #7). [established]
+compactViaSummary :: Hypo -> S -> S
+compactViaSummary h s =
+  let s'  = s { mode = Summarising }
+      ans = guessOracle h (request s')
+   in summarising s' ans
 
 -- | The behavioural shadow of a trace: four components, each with its own
 -- algebra, so that two traces are declared behaviourally equal exactly when all
@@ -140,8 +158,11 @@ data Behaviour = Behaviour
 -- that permuting the /independent/ calls within a single turn is not counted as
 -- a divergence: pi runs a turn's calls in parallel, so the trace is a list of
 -- multisets, not a list of ordered events (§16.2). @'Harness.Interp.Refused'@
--- events are dropped from the turn grouping — a refusal is not a tool call and
--- carries no name to compare. [established]
+-- and @'Harness.Interp.Repaired'@ events are dropped from the turn grouping — a
+-- refusal is not a tool call, and a repaired call never reached the world, so
+-- neither carries a performed-tool name to compare. Repairs contribute to none
+-- of the four axes, so surfacing them in the trace leaves the compaction rates
+-- unchanged. [established]
 observe :: [Ev] -> Behaviour
 observe evs = Behaviour
   { bHalt = Last (listToMaybe [o | Ended o <- evs])
@@ -156,6 +177,9 @@ observe evs = Behaviour
         go acc (Asked _ : rest) = sort acc : go [] rest
         go acc (Did c : rest)   = go (tool c : acc) rest
         go acc (Refused _ : rest) = go acc rest
+        -- A repaired call is not a performed tool, so it contributes to no turn
+        -- set (nor to any other axis): the compaction rates are unchanged by it.
+        go acc (Repaired _ _ : rest) = go acc rest
         go acc (Ended _ : _)    = [sort acc]
         go acc []               = [sort acc]
 

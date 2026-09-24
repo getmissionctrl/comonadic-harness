@@ -17,7 +17,18 @@ import Harness.Probe (Hypo (..))
 
 -- | The genuine initial state — the only hand-written S permitted.
 startState :: Int -> S
-startState b = S { transcript = [], pending = [], budget = b, mode = Working, tools = allTools }
+startState b = S { transcript = [], pending = [], budget = b, mode = Working, tools = allTools, failure = Nothing }
+
+-- | Schema-valid arguments per tool, so a generated 'Call' is a genuine perform
+-- (survives 'Harness.State.admit''s argument gate, D3) rather than being repaired.
+-- Without this, a multi-field tool like @write@ (@{path,body}@) called with the
+-- placeholder @"x"@ would be rejected, silently weakening every genHypo-driven
+-- trace test. @bash@ is name-rejected regardless, so its args are irrelevant.
+validArgs :: String -> String
+validArgs "write"  = "{\"path\":\"f.txt\",\"body\":\"x\"}"
+validArgs "read"   = "{\"path\":\"f.txt\"}"
+validArgs "commit" = "{\"msg\":\"wip\"}"
+validArgs _        = "x"
 
 -- | A generated pure oracle/world model. Responses vary by prompt length so
 -- runs actually progress and sometimes overflow.
@@ -32,7 +43,7 @@ genHypo = do
           then Right (Response "summary" [] (Usage 300 20))
           else if length (lines p) >= overflowAt
                  then Left Overflow
-                 else Right (Response "step" [Call toolChoice "x"] (Usage tokIn 40))
+                 else Right (Response "step" [Call toolChoice (validArgs toolChoice)] (Usage tokIn 40))
     , guessWorld = \c -> Obs (tool c ++ ":ok")
     }
 
@@ -57,7 +68,7 @@ genTurn = oneof
   ]
   where
     genTok      = elements ["a", "bb", "ccc", "note", "done"]
-    genCall     = Call <$> elements ["read", "write", "bash", "commit"] <*> pure "x"
+    genCall     = (\t -> Call t (validArgs t)) <$> elements ["read", "write", "bash", "commit"]
     genResponse = Response <$> genTok <*> resize 3 (listOf genCall) <*> pure (Usage 100 20)
 
 genTurns :: Gen [Turn]

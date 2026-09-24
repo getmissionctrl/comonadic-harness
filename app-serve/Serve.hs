@@ -3,7 +3,7 @@
 -- | Production entry point for the AG-UI server, wired to a __live__ Ollama
 -- model against real tools.
 --
--- The oracle is 'Provider.Ollama.ollamaProvider' (Qwen on the configured host);
+-- The oracle is 'Provider.Ollama.ollamaOracle' (Qwen on the configured host);
 -- the world routes @scrape_url@ to Firecrawl ('Provider.Research') and the
 -- filesystem tools (@read@\/@write@\/@bash@\/@commit@) to the sandbox
 -- ('Provider.Tools.sandboxAct'). So a browser driving @POST /agent@ gets a
@@ -18,6 +18,7 @@ module Main (main) where
 
 import Control.Concurrent.STM (TVar, atomically, newTVarIO, readTVar, writeTVar)
 import Control.Exception (SomeException, try)
+import Control.Monad.Except (runExceptT)
 import Data.Char (isSpace)
 import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.List (isPrefixOf)
@@ -32,10 +33,10 @@ import Text.Read (readMaybe)
 import Harness.Alphabet
   ( Call (..), Obs (..), Prompt (..), Refusal (..), Request, Response (..)
   , Usage (..), reqMessages, reqPrompt, reqTools )
-import Harness.Run (Env (..))
+import Harness.Fault (ProviderError (..))
+import Harness.Run (Env (..), Live, runNoTrace)
 import Harness.State (allTools)
-import Provider.Class (Provider (..))
-import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaProvider, streamingComplete)
+import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaOracle, streamingComplete)
 import Provider.Research (scrapeUrl, scrapeUrlSpec, urlArg)
 import Provider.Tools (prepareSandbox, sandboxAct)
 import Harness.AgUi.Event (AgUiEvent (..), RunId)
@@ -77,8 +78,13 @@ main = do
   let cfg = defaultOllamaCfg
         { ocBaseUrl = baseUrl, ocModel = model, ocNumCtx = numCtx, ocThink = Just False }
       -- Live oracle (Ollama) + a world that adds web scraping to the sandbox tools.
+      -- This factory is the /non-streaming fallback/ ('scfFactory'); the live
+      -- server always sets 'scfEnvBuilder', so it is unused in practice. It builds
+      -- a plain-@IO@ 'Env', so it runs the now-'Live' oracle through the stack and
+      -- collapses a transport 'ProviderError' to a 'Malformed' refusal (the
+      -- streaming path preserves the error channel properly).
       factory _rid = pure Env
-        { oracle = complete (ollamaProvider cfg)
+        { oracle = ioOracle cfg
         , world  = liveWorld mgr (T.pack apiKey) sandboxDir
         }
       -- read/write/bash/commit + scrape_url, subject to the harness's affordance
@@ -99,6 +105,17 @@ main = do
   putStrLn "  endpoints  : POST /agent (RunAgentInput)  |  POST /config {think:bool}  |  POST /runs  |  GET /runs/{id}/events"
   putStrLn "  logging    : per-run oracle prompt/num_ctx/overflow + world tool sizes on stderr"
   serveWith port serveCfg
+
+-- | Run the 'Live' Ollama oracle in plain 'IO' for the non-streaming fallback
+-- 'Env', discarding the trace and mapping a transport 'ProviderError' to a
+-- visible 'Malformed' refusal. The streaming builder ('streamingBuilder') is the
+-- real path and keeps the error channel intact via 'run'.
+ioOracle :: OllamaCfg -> Request -> IO (Either Refusal Response)
+ioOracle cfg req = do
+  res <- runNoTrace (runExceptT (ollamaOracle cfg req :: Live (Either Refusal Response)))
+  pure $ case res of
+    Left (ProviderUnavailable e) -> Left (Malformed ("provider unavailable: " <> e))
+    Right r                      -> r
 
 -- | The live world: @scrape_url@ hits Firecrawl; every other tool runs in the
 -- sandbox. Total — a failure is an error 'Obs', never an exception.

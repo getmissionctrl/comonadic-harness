@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Running a harness: pair the denotation tree against an effectful
@@ -36,13 +37,19 @@
 -- law is 'Harness.Probe.liftHypo'.
 module Harness.Run
   ( Env (..)
+  , Live
+  , NoTrace
+  , runNoTrace
+  , hoistEnv
   , run
   ) where
 
 import Control.Comonad.Cofree (Cofree)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Writer (runWriterT)
+import Control.Monad.Except (ExceptT, runExceptT)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Writer (MonadWriter (..))
 import Harness.Alphabet
+import Harness.Fault (ProviderError)
 import Harness.Interp (Ev, interp)
 import Harness.State (Ctx)
 
@@ -73,7 +80,10 @@ data Env m = Env
     -- ^ The provider seam: the sole point of contact with the language model.
     -- A 'Left' is a 'Refusal' the coalgebra is permitted to see — 'Overflow'
     -- (context exceeded) or 'Malformed' (a terminal decode failure). Transient
-    -- faults must be absorbed here and never returned (invariant 5).
+    -- faults must never be returned /as/ a 'Refusal' (invariant 5); a fault that
+    -- survives the provider's own retries is raised instead on @m@'s error
+    -- channel as a @Harness.Fault.ProviderError@ (see 'Live'\/'run'), so it
+    -- rides past the coalgebra rather than being mistaken for a terminal refusal.
   , world  :: Call -> m Obs
     -- ^ The world seam: run a tool 'Call' and observe its result. Total in @m@;
     -- a failed tool is an 'Obs' describing the failure, not an exception that
@@ -88,11 +98,12 @@ data Env m = Env
 -- its 'Outcome'.
 --
 -- __How.__ 'run' is 'Harness.Interp.interp' with the two seams lifted from
--- 'Env' into @WriterT [Ev] IO@, then 'Control.Monad.Writer.runWriterT' applied
--- and the accumulated @[Ev]@ trace dropped on the floor (bound to @_evs@).
--- Execution wants the 'Outcome', not the trace; the trace is what
--- 'Harness.Probe.probe' keeps. Because both go through the one 'interp', they
--- agree on the path taken by construction (§16.1).
+-- 'Env' into 'Live' (@'ExceptT' 'ProviderError' 'NoTrace'@), then
+-- 'runNoTrace'/'runExceptT' applied and the result returned. The shared
+-- 'interp' emits 'Ev' events via 'tell'; 'NoTrace' discards them silently —
+-- execution wants the 'Outcome', not the trace. The trace is what
+-- 'Harness.Probe.probe' keeps (in a real 'Writer'). Because both go through
+-- the one 'interp', they agree on the path taken by construction (§16.1).
 --
 -- __Why fuel is 'maxBound'.__ 'Harness.Interp.interp' is depth-bounded so that
 -- /analysis/ can look a finite distance ahead; a live run has no such horizon —
@@ -101,8 +112,56 @@ data Env m = Env
 -- unreachable. The @Nothing@ branch (fuel exhausted before 'Halt') is therefore
 -- a can't-happen; it is mapped to @'Stuck' \"fuel exhausted\"@ defensively
 -- rather than left partial. [design]
-run :: Env IO -> Cofree HarnessF Ctx -> IO Outcome
+--
+-- __The 'Left' result.__ A @'Left' e@ is /not/ an 'Outcome': it means the
+-- provider was unavailable — a transport fault that outlived the provider's own
+-- retries — so no terminal verdict could be reached (invariant 5). The state is
+-- resumable: a caller may run the same tree again later when the provider
+-- recovers. A run that reaches a 'Halt' yields @'Right' o@; the error never
+-- becomes a 'Refusal' the coalgebra can act on. [design]
+run :: Env Live -> Cofree HarnessF Ctx -> IO (Either ProviderError Outcome)
 run env w = do
-  (mo, _evs :: [Ev]) <-
-    runWriterT (interp (\q -> lift (oracle env q)) (\c -> lift (world env c)) maxBound w)
-  pure (maybe (Stuck "fuel exhausted") id mo)
+  res <- runNoTrace (runExceptT (interp (\_ -> pure ()) (oracle env) (world env) maxBound w))
+  pure (fmap (maybe (Stuck "fuel exhausted") id) res)
+
+-- | A trace-discarding effect stack for 'run'. Its 'MonadWriter' instance drops
+-- every 'tell', so the shared 'interp' — which emits one 'Ev' per node — pays
+-- nothing for a trace that execution does not want (analysis keeps its trace via
+-- 'Harness.Probe.probe', which uses a real 'Writer'). This removes the O(n²)
+-- list-append and O(n) live memory a real @WriterT [Ev]@ would cost over an
+-- unbounded run (review1 #3). [design]
+newtype NoTrace a = NoTrace { runNoTrace :: IO a }
+  deriving newtype (Functor, Applicative, Monad, MonadIO)
+
+instance MonadWriter [Ev] NoTrace where
+  writer (a, _) = pure a
+  tell _        = pure ()
+  listen m      = fmap (\a -> (a, [])) m
+  pass m        = fmap fst m
+
+-- | The concrete monad a live 'run' walks in: transport failure on an
+-- 'ExceptT' channel over the trace-discarding 'NoTrace' wrapper over 'IO'.
+--
+-- __Why a named alias.__ The two seams of a live 'Env' now live in this stack
+-- rather than plain 'IO', so callers construct their oracle\/world directly in
+-- 'Live' (via 'liftIO' or 'Control.Monad.Except.throwError') instead of 'run'
+-- lifting them in. Naming the stack keeps those call sites — and 'hoistEnv' —
+-- readable. The 'NoTrace' base discards the 'Ev' stream that 'interp' emits,
+-- paying nothing for a trace execution never uses; the 'ExceptT' channel carries
+-- the @'ProviderError'@ that invariant 5 forbids from becoming a 'Refusal'. [design]
+type Live = ExceptT ProviderError NoTrace
+
+-- | Lift an @'Env' 'IO'@ into an @'Env' m@ for any @'MonadIO' m@ (in practice
+-- 'Live'), by running each seam through 'liftIO'.
+--
+-- __Why.__ Several environments are naturally written in plain 'IO' — a
+-- scripted fake, the human-in-the-loop seam, a streaming builder that owns its
+-- own emission — and never raise a @'ProviderError'@. 'hoistEnv' embeds such an
+-- 'Env' into the richer 'Live' stack that 'run' now requires, without forcing
+-- each to be rewritten monad-polymorphically. A seam that /does/ fault (the
+-- Ollama oracle) is built directly in the target monad instead. [design]
+hoistEnv :: MonadIO m => Env IO -> Env m
+hoistEnv env = Env
+  { oracle = \q -> liftIO (oracle env q)
+  , world  = \c -> liftIO (world env c)
+  }

@@ -49,14 +49,16 @@ module Harness.Probe
 
 import Control.Comonad (extend)
 import Control.Comonad.Cofree (Cofree ((:<)))
-import Control.Monad.Writer (execWriter)
+import Control.Monad.Except (runExceptT)
+import Control.Monad.Writer (runWriter)
 import Data.Monoid (Sum (..), Any (..))
 import GHC.Generics (Generic, Generically (..))
 import Harness.Alphabet
+import Harness.Fault (ProviderError)
 import Harness.Interp (Ev (..), interp)
 import Harness.Path (Hypo (..), takeWalk)
 import Harness.Run (Env (..))
-import Harness.State (Ctx)
+import Harness.State (Ctx (..))
 
 -- | Drive the harness purely to a bounded depth under a 'Hypo', collecting the
 -- event trace.
@@ -67,9 +69,13 @@ import Harness.State (Ctx)
 -- lifting each into @pure@, and — where 'Harness.Run.run' discards the trace and keeps the
 -- 'Outcome' — 'probe' does the opposite: it keeps the @[Ev]@ trace.
 --
--- __How.__ One line, because it is 'Harness.Interp.interp' in the @Writer [Ev]@
--- monad; @Control.Monad.Writer.execWriter@ runs it purely and returns just the
--- accumulated trace. The depth bound @n@ is the horizon: without it a
+-- __How.__ One line, because it is 'Harness.Interp.interp' in a pure
+-- @'Control.Monad.Except.ExceptT' 'ProviderError' ('Control.Monad.Writer.Writer' [Ev])@;
+-- @Control.Monad.Writer.runWriter@ recovers the accumulated trace and the
+-- error result is discarded. The 'ProviderError' channel is present only to
+-- satisfy the shared interpreter's constraint: a 'Hypo' is a /pure/ stand-in
+-- with no transport, so it never raises one — the analyser deliberately cannot
+-- fault (invariant 5). The depth bound @n@ is the horizon: without it a
 -- non-halting hypothetical future would diverge, whereas analysis must be
 -- finite. [established]
 --
@@ -79,7 +85,9 @@ import Harness.State (Ctx)
 -- a crude forecast.
 probe :: Hypo -> Int -> Cofree HarnessF Ctx -> [Ev]
 probe h n w =
-  execWriter (interp (pure . guessOracle h) (pure . guessWorld h) n w)
+  let (_res :: Either ProviderError (Maybe Outcome), evs) =
+        runWriter (runExceptT (interp (\_ -> pure ()) (pure . guessOracle h) (pure . guessWorld h) n w))
+   in evs
 
 -- | A forward-looking score of a node's __own future__ under a hypothesis: how
 -- far it runs, whether it terminates, which irreversible tools it will touch,
@@ -198,27 +206,40 @@ governed h n = extend (assess h n)
 -- irreversible. A 'Harness.Alphabet.Ask' emits @[Asked mode]@ and, /if the
 -- oracle guess refuses/, ALSO @[Refused e]@ — so a refusing 'Harness.Alphabet.Ask'
 -- contributes 2 to 'stepsAhead', and an 'Harness.Alphabet.Overflow' refusal
--- additionally contributes 1 to 'compactions'.
+-- additionally contributes 1 to 'compactions'. In /addition/, at every node
+-- 'Harness.Interp.interp' emits one @'Harness.Interp.Repaired'@ per
+-- 'Harness.State.ctxRepaired' entry (review1 #6b), each adding 1 to 'stepsAhead'
+-- and nothing else — so 'localRisk' reads the node's annotation to add that
+-- count regardless of the shape.
 --
 -- __Gotcha.__ This case analysis duplicates the emission discipline of
 -- 'Harness.Interp.interp'; if that ever changes, this must change in lockstep or the D1 law
--- breaks. The law test is the tripwire — it is /why/ the reconciliation is a
--- checked property rather than a comment.
+-- breaks. The @'Harness.Interp.Repaired'@ term is exactly such a coupling: it was
+-- added here in lockstep with interp's per-node repair emission. The law test is
+-- the tripwire — it is /why/ the reconciliation is a checked property rather than
+-- a comment.
 localRisk :: Hypo -> Cofree HarnessF Ctx -> Risk
-localRisk h (_ :< f) = case f of
-  Halt _      -> mempty { stepsAhead = Sum 1, terminates = Any True }
-  Perform c _ ->
-    mempty
-      { stepsAhead = Sum 1
-      , irreversible = [tool c | tool c `elem` ["write", "commit"]]
-      }
-  Ask q _ -> case guessOracle h q of
-    -- Asked only: 1 event.
-    Right _            -> mempty { stepsAhead = Sum 1 }
-    -- Asked + Refused Overflow: 2 events, one of them a compaction.
-    Left Overflow      -> mempty { stepsAhead = Sum 2, compactions = Sum 1 }
-    -- Asked + Refused (Malformed _): 2 events, no compaction.
-    Left (Malformed _) -> mempty { stepsAhead = Sum 2 }
+localRisk h (ann :< f) = repaired <> shapeRisk
+  where
+    -- Each 'Harness.State.ctxRepaired' entry makes 'Harness.Interp.interp' emit
+    -- one @'Harness.Interp.Repaired'@ event at this node, /before/ the shape's
+    -- own event(s). A repaired call is neither a 'Did' nor a 'Refused Overflow',
+    -- so it grows only 'stepsAhead' — mirror that exactly or the D1 law breaks.
+    repaired = mempty { stepsAhead = Sum (length (ctxRepaired ann)) }
+    shapeRisk = case f of
+      Halt _      -> mempty { stepsAhead = Sum 1, terminates = Any True }
+      Perform c _ ->
+        mempty
+          { stepsAhead = Sum 1
+          , irreversible = [tool c | tool c `elem` ["write", "commit"]]
+          }
+      Ask q _ -> case guessOracle h q of
+        -- Asked only: 1 event.
+        Right _            -> mempty { stepsAhead = Sum 1 }
+        -- Asked + Refused Overflow: 2 events, one of them a compaction.
+        Left Overflow      -> mempty { stepsAhead = Sum 2, compactions = Sum 1 }
+        -- Asked + Refused (Malformed _): 2 events, no compaction.
+        Left (Malformed _) -> mempty { stepsAhead = Sum 2 }
 
 -- | Accumulated 'Risk' along the hypo path, by a right scan — __linear__ in
 -- depth. The efficient twin of 'governed'.

@@ -34,6 +34,7 @@ module Harness.Alphabet
   , Refusal (..)
   , Outcome (..)
   , HarnessF (..)
+  , ReplaySafety (..)
   ) where
 
 import GHC.Generics (Generic)
@@ -188,8 +189,13 @@ data Outcome
     -- 'calls'.
   | Exhausted
     -- ^ The budget ran out before the agent finished. Emitted when
-    -- 'Harness.State.budget' reaches zero (also the sink for a 'Malformed'
-    -- refusal, which zeroes the budget).
+    -- 'Harness.State.budget' reaches zero without a terminal decode failure.
+  | Failed String
+    -- ^ A terminal decode\/model failure the provider could not repair (payload
+    -- carries the diagnostic). Distinct from 'Exhausted' (budget ran out) so a
+    -- decode death is not mistaken for ordinary budget exhaustion (review1 #9).
+    -- Fires when 'Harness.State.failure' is set by a 'Malformed' refusal reaching
+    -- 'Harness.Coalgebra.working'.
   | Stuck String
     -- ^ The agent could make no progress for a non-budget reason (payload
     -- carries the explanation). [design]
@@ -223,3 +229,13 @@ data HarnessF x
     -- ^ Stop. A leaf: no direction, no successor. The 'Outcome' says how the run
     -- ended.
   deriving stock (Functor, Generic)
+
+-- | Whether a 'Call' may be safely re-performed after a crash and resume —
+-- borrowed from haskell-agent as groundwork for D4 (persist\/resume), which is
+-- otherwise unbuilt. 'ReplaySafe': idempotent or read-only, re-run freely.
+-- 'ReplayUnsafe': already applied an external side effect, must not re-run.
+-- 'ReplayUnknown': cannot establish; treat conservatively (do not re-run). No
+-- code consumes this yet; it exists so a future resume path has a vocabulary for
+-- what is safe to repeat. [design] [unbuilt: the resume engine]
+data ReplaySafety = ReplaySafe | ReplayUnsafe | ReplayUnknown
+  deriving stock (Eq, Show, Generic)

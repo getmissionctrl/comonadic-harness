@@ -4,7 +4,7 @@ import Test.Hspec
 import Control.Exception (SomeException, evaluate, try)
 import Harness.Alphabet
 import Harness.Coalgebra (harness)
-import Harness.Run (Env (..), run)
+import Harness.Run (Env (..), Live, run)
 import Gen (startState)
 
 -- | E4: under a maximally hostile oracle, the harness NEVER crashes — it always
@@ -16,42 +16,60 @@ import Gen (startState)
 -- the coalgebra's admission pass (Task 20, D3) into a synthetic observation, so
 -- the run makes progress and terminates on budget. [established]
 spec :: Spec
-spec =
+spec = do
   describe "hostile oracle (E4): zero harness crashes" $
     it "run returns Some outcome (no exception) for >= 100 seeds" $ do
       results <- mapM runSeed [0 .. 149 :: Int]
       let crashed = [ n | (n, Left _) <- zip [0 :: Int ..] results ]
           outcomes = [ o | Right o <- results ]
           tally p = length (filter p outcomes)
-      -- The done/exhausted split is the real evidence: it shows hostile runs
-      -- reach genuine terminal states (a normal 'Done' or a budget 'Exhausted'),
-      -- not that they merely fail to crash. Note 'Stuck' is /structurally/ absent
-      -- here — 'step' only emits 'Done'\/'Exhausted', and the sole 'Stuck' path
-      -- ('Harness.Run.run' on fuel exhaustion) can't fire because @run@ uses
-      -- @maxBound@ fuel. So a real halt is @done + exhausted@, asserted below.
+      -- The done/exhausted/failed split is the real evidence: it shows hostile runs
+      -- reach genuine terminal states (a normal 'Done', a budget 'Exhausted', or a
+      -- terminal decode 'Failed'), not that they merely fail to crash. 'Stuck' is
+      -- /structurally/ absent here — 'step' only emits 'Done'\/'Exhausted'\/'Failed',
+      -- and the sole 'Stuck' path ('Harness.Run.run' on fuel exhaustion) can't fire
+      -- because @run@ uses @maxBound@ fuel. Seed 1 ('Malformed') now halts as
+      -- 'Failed' (review1 #9), counted in the tally below.
       putStrLn
         ( "hostile oracle: ran " ++ show (length results)
             ++ " seeds, crashes=" ++ show (length crashed)
             ++ "; outcomes done=" ++ show (tally isDone)
-            ++ " exhausted=" ++ show (tally (== Exhausted)) )
+            ++ " exhausted=" ++ show (tally (== Exhausted))
+            ++ " failed=" ++ show (tally isFailed) )
       crashed `shouldBe` []                             -- E4: no exceptions escape
-      (tally isDone + tally (== Exhausted)) `shouldBe` length results  -- all halted cleanly
+      (tally isDone + tally (== Exhausted) + tally isFailed) `shouldBe` length results  -- all halted cleanly
+  describe "terminal Malformed outcome" $
+    it "a terminal Malformed halts as Failed, not Exhausted" $ do
+      let env = Env { oracle = \_ -> pure (Left (Malformed "boom"))
+                    , world  = \c -> pure (Obs (tool c ++ ":ok")) }
+      res <- run env (harness (startState 400))
+      res `shouldBe` Right (Failed "boom")
   where
-    isDone (Done _)  = True
-    isDone _         = False
+    isDone (Done _)   = True
+    isDone _          = False
+    isFailed (Failed _) = True
+    isFailed _          = False
 
 -- | Run one hostile seed to termination inside a 'try', forcing the 'Outcome' to
--- WHNF so a lazily-thrown error is caught here rather than escaping.
+-- WHNF so a lazily-thrown error is caught here rather than escaping. 'run' now
+-- returns @'Either' 'Harness.Fault.ProviderError' 'Outcome'@; the hostile oracle
+-- only ever returns 'Refusal'\/'Response' (it never raises on the error channel),
+-- so a @'Left'@ provider fault would be a genuine surprise — 'unwrap' turns it
+-- into an 'error', caught by the same 'try' as any other crash and reported as a
+-- failed seed.
 runSeed :: Int -> IO (Either SomeException Outcome)
 runSeed seed =
   try @SomeException
-    (run (hostileEnv seed) (harness (startState 400)) >>= evaluate)
+    (run (hostileEnv seed) (harness (startState 400)) >>= evaluate . unwrap)
+  where
+    unwrap (Right o) = o
+    unwrap (Left e)  = error ("unexpected provider error: " ++ show e)
 
 -- | A hostile environment. The world is benign (it only ever sees afforded calls
 -- — the coalgebra guarantees it); all the malice is in the oracle, which cycles
 -- through adversarial responses keyed by the seed and the running prompt length
 -- so successive turns differ.
-hostileEnv :: Int -> Env IO
+hostileEnv :: Int -> Env Live
 hostileEnv seed = Env oracle' world'
   where
     world' c = pure (Obs (tool c ++ ":ok"))

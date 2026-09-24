@@ -1,5 +1,5 @@
 -- | The real oracle: an Ollama-backed 'Provider' talking to a Qwen model on a
--- remote host.
+-- local (default @localhost:11434@) Ollama server.
 --
 -- __What.__ Supplies @complete@ (the model) for a live run. The companion
 -- 'Provider.Tools.sandboxAct' supplies @act@ (the world); together they replace
@@ -22,12 +22,16 @@
 module Provider.Ollama
   ( OllamaCfg (..)
   , defaultOllamaCfg
+  , ollamaOracle
   , ollamaProvider
   , streamingComplete
+  , overflowByEstimate
   ) where
 
 import Control.Concurrent (threadDelay)
 import Control.Monad (when)
+import Control.Monad.Except (MonadError, throwError)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson (decode, encode)
 import Data.IORef (modifyIORef', newIORef, readIORef, writeIORef)
 import Data.ByteString.Lazy.Char8 qualified as BSLC
@@ -57,6 +61,8 @@ import Data.Ollama.Common.Types
 import Data.Ollama.Common.Utils (defaultModelOptions)
 import Data.Text qualified as T
 import Harness.Alphabet
+import Harness.Fault (ProviderError (..))
+import Harness.Schema (schemaFields)
 import Provider.Class (Provider (..))
 
 -- | Everything the provider needs to reach a specific model on a specific
@@ -99,21 +105,31 @@ defaultOllamaCfg =
     , ocThink   = Nothing
     }
 
--- | Assemble a 'Provider' from a config: a real oracle, and — for now — a stub
--- world.
+-- | The oracle half only — the model, with no world. Pair with an explicit
+-- world (e.g. 'Provider.Tools.sandboxAct') to build a 'Provider', or use it
+-- directly as an 'Harness.Run.Env' oracle. There is deliberately no bundled
+-- world: a live oracle with silent no-op tools is a footgun (F6).
 --
--- __What.__ @complete@ is wired to @completeWith@, the live HTTP oracle. @act@
--- is a placeholder that echoes @\"\<tool\>:ok\"@ without doing anything: this
--- module owns the /oracle/ half of the seam only. A live run that wants real
--- tool effects pairs this provider's @complete@ with
--- 'Provider.Tools.sandboxAct' as its world (see @Harness.Run.Env@), rather than
--- using this stub. [design]
-ollamaProvider :: OllamaCfg -> Provider IO
-ollamaProvider cfg =
-  Provider
-    { complete = completeWith cfg
-    , act      = \c -> pure (Obs (tool c ++ ":ok"))  -- stub; the live world is Provider.Tools.sandboxAct
-    }
+-- __Monad.__ Polymorphic in @m@ (not specialised to @IO@) so the live oracle
+-- can ride the interpreter's error channel: a transport fault is raised as a
+-- @'ProviderError'@ rather than a 'Refusal' (invariant 5), which needs a
+-- @'MonadError' 'ProviderError'@ context — in practice @Harness.Run.Live@.
+ollamaOracle
+  :: (MonadIO m, MonadError ProviderError m)
+  => OllamaCfg -> Request -> m (Either Refusal Response)
+ollamaOracle = completeWith
+
+-- | Build a live 'Provider' from a config and an EXPLICIT world. There is no
+-- default no-op world (F6): the caller must choose what @act@ does, so a live
+-- run cannot silently acknowledge tool calls without performing them.
+--
+-- __Monad.__ Polymorphic in @m@ for the same reason as 'ollamaOracle': the
+-- oracle half needs @'MonadError' 'ProviderError'@; the world @w@ supplied by
+-- the caller must be lawful in the same monad.
+ollamaProvider
+  :: (MonadIO m, MonadError ProviderError m)
+  => OllamaCfg -> (Call -> m Obs) -> Provider m
+ollamaProvider cfg w = Provider { complete = completeWith cfg, act = w }
 
 -- ---------------------------------------------------------------------------
 -- Internal: oracle
@@ -124,19 +140,26 @@ ollamaProvider cfg =
 --
 -- __How.__ @buildChatOps@ projects our 'Request' onto the client's @ChatOps@;
 -- @withLocalRetry@ shields the call so a timeout or 5xx is retried rather than
--- escaping; then the result is folded to @Either Refusal Response@. A hard
--- client error that survives retry becomes 'Harness.Alphabet.Malformed' (a
--- terminal refusal), and a successful reply is handed to @decodeResp@, which may
--- still infer 'Harness.Alphabet.Overflow'. Nothing transient reaches the caller
--- — invariant 5. [established]
-completeWith :: OllamaCfg -> Request -> IO (Either Refusal Response)
+-- escaping; then the result is folded. A /transient/ fault that survives retry
+-- ('HttpError'\/'TimeoutError') is raised on the error channel as a
+-- @'ProviderError'@ — it is transport failure, not a verdict, so it must not
+-- reach the coalgebra as a 'Refusal' (invariant 5); @Harness.Run.run@ surfaces
+-- it to the caller and the state stays resumable. Every /other/ hard client
+-- error is a genuine, terminal model\/decode failure and becomes
+-- 'Harness.Alphabet.Malformed'. A successful reply is handed to @decodeResp@,
+-- which may still infer 'Harness.Alphabet.Overflow'. [established]
+completeWith
+  :: (MonadIO m, MonadError ProviderError m)
+  => OllamaCfg -> Request -> m (Either Refusal Response)
 completeWith cfg req = do
   let ops      = buildChatOps cfg req
       ollamaCfg = defaultOllamaConfig { hostUrl = T.pack (ocBaseUrl cfg) }
-  result <- withLocalRetry 3 (chat ops (Just ollamaCfg))
-  pure $ case result of
-    Left err   -> Left (Malformed (show err))
-    Right resp -> decodeResp req resp
+  result <- liftIO (withLocalRetry 3 (chat ops (Just ollamaCfg)))
+  case result of
+    Left err
+      | isTransient err -> throwError (ProviderUnavailable (show err))
+      | otherwise       -> pure (Left (Malformed (show err)))
+    Right resp          -> pure (decodeResp cfg req resp)
 
 -- | A __streaming__ oracle: identical to 'completeWith' in what it returns, but
 -- it calls @onDelta@ with each text fragment as the model emits it, so a caller
@@ -189,11 +212,8 @@ streamingComplete cfg onDelta onThink req = do
       said       <- (T.concat . reverse) <$> readIORef accRef
       mcalls     <- readIORef callsRef
       (pin, out) <- readIORef usageRef
-      let Prompt promptText = reqPrompt req
-          promptChars = length promptText
-          isOverflow  = promptChars > 80 && fromIntegral pin < 0.6 * (fromIntegral promptChars / 4.0 :: Double)
       pure $
-        if isOverflow
+        if overflowByEstimate cfg (sentText req)
           then Left Overflow
           else Right Response
             { say   = T.unpack said
@@ -209,6 +229,12 @@ streamingComplete cfg onDelta onThink req = do
 -- rather than replaying the whole transcript, because the harness has /already/
 -- folded the history into the projected prompt — the model's own multi-message
 -- memory would double-count it. [design]
+--
+-- __Tools field.__ When the afforded set is empty (e.g. the Summarising\/compaction
+-- path), the @tools@ field is omitted entirely rather than sent as @Just []@.
+-- Some servers treat the mere /presence/ of an empty tools array as a signal to
+-- activate tool-call parsing, which can alter generation. Omitting the field
+-- keeps wire behaviour identical to a plain completion request. [design]
 buildChatOps :: OllamaCfg -> Request -> ChatOps
 buildChatOps cfg req =
   let Prompt promptText = reqPrompt req
@@ -223,7 +249,9 @@ buildChatOps cfg req =
   in  defaultChatOps
         { modelName = T.pack (ocModel cfg)
         , messages  = msgs
-        , tools     = Just (map toInputTool (reqTools req))
+        , tools     = case reqTools req of
+                        [] -> Nothing
+                        ts -> Just (map toInputTool ts)
         , options   = Just defaultModelOptions { numCtx = Just (ocNumCtx cfg) }
         , think     = ocThink cfg
         }
@@ -297,55 +325,61 @@ schemaOf spec = FunctionParameters
       }
 
 -- | Parse the terse @{k:type,...}@ tool-schema DSL into @[(name, jsonType)]@.
+-- The field parsing is delegated to 'Harness.Schema.schemaFields' — the single
+-- source of the DSL, shared with the admission layer ('Harness.State.admit') so
+-- the two cannot drift — and this function only adds the provider-specific type
+-- column: mapping each declared type to the JSON-schema type Ollama expects.
 parseSpec :: String -> [(T.Text, T.Text)]
 parseSpec raw =
-  [ (T.pack (trim k), jsonType (trim (drop 1 v)))
-  | field <- splitComma inner
-  , let (k, v) = break (== ':') field
-  , not (null (trim k))
-  ]
+  [ (T.pack k, jsonType ty) | (k, ty) <- schemaFields raw ]
   where
-    inner = takeWhile (/= '}') (drop 1 (dropWhile (/= '{') raw))
-    trim  = f . f where f = reverse . dropWhile (== ' ')
     jsonType :: String -> T.Text
     jsonType ty
       | ty `elem` ["int", "integer", "number"] = "number"
       | ty `elem` ["bool", "boolean"]          = "boolean"
       | otherwise                               = "string"
-    splitComma [] = []
-    splitComma s  = let (a, b) = break (== ',') s
-                    in a : case b of [] -> []; (_ : rest) -> splitComma rest
+
+-- | The text actually sent to the model for a request: the concatenation of the
+-- native 'reqMessages' when present (that is what goes on the wire), falling
+-- back to the flattened 'reqPrompt' (the compaction\/summarising path sends a
+-- single flattened message). Used only for the overflow token estimate, and
+-- kept as ONE definition so the two decode paths ('decodeResp' and
+-- 'streamingComplete') cannot drift. [design]
+sentText :: Request -> String
+sentText req = case reqMessages req of
+  [] -> let Prompt p = reqPrompt req in p
+  ms -> concatMap renderMsg ms
+  where
+    renderMsg (MsgUser t)               = t
+    renderMsg (MsgAssistant t cs)       = t ++ concatMap (\c -> " " ++ tool c ++ " " ++ args c) cs
+    renderMsg (MsgToolResult _ (Obs o)) = o
+
+-- | Infer prompt overflow from the CONFIGURED window, not from
+-- @promptEvalCount@. Estimate prompt tokens at ~4 chars/token and compare to
+-- @ocNumCtx@ with a margin for chat-template / tool-schema overhead. This
+-- deliberately does NOT read the evaluated-token count: under prefix/KV caching
+-- a long cached prompt evaluates few new tokens, which the old heuristic
+-- mistook for truncation (F3). Still [speculative] — it is an estimate; a native
+-- overflow signal or an exact tokeniser would supersede it. See
+-- @docs\/ollama-notes.md@.
+overflowByEstimate :: OllamaCfg -> String -> Bool
+overflowByEstimate cfg promptText =
+  let estTokens    = length promptText `div` 4
+      budgetTokens = (ocNumCtx cfg * 85) `div` 100  -- ~15% headroom for template/tool overhead
+  in  estTokens > budgetTokens
 
 -- | Decode a successful @ChatResponse@ into our 'Response', or infer
 -- 'Harness.Alphabet.Overflow'.
 --
 -- __What.__ On the happy path, lifts @say@\/@calls@\/@usage@ out of the reply.
--- The interesting work is deciding whether the reply is /trustworthy/ or the
--- product of a silently truncated prompt.
---
--- __The overflow heuristic. [speculative]__ Ollama 0.32.13 + qwen3:8b truncates
--- the prompt silently when it overflows @num_ctx@; @doneReason@ stays
--- @\"stop\"@ in /all/ cases (it becomes @\"length\"@ only when @numPredict@ is
--- set explicitly, which we do not do). So there is no reported signal, and we
--- /infer/ truncation from a character-budget comparison:
---
---   if  @promptEvalCount * charsPerTok < 0.6 × length(promptText)@
---   and the prompt is non-trivially large (> 80 chars ≈ 20 tokens),
---   the prompt was truncated.
---
--- __Why these constants.__ @charsPerTok = 4@ is the standard rough English
--- average; the @0.6@ factor makes the test /conservative/ — it fires only when
--- the tokens actually evaluated fall well below what the prompt length implies,
--- so it errs toward FEWER false positives (a genuinely dense or Unicode-heavy
--- prompt will not be mistaken for a truncated one). The @> 80@ guard stops a
--- short prompt, whose count is dominated by fixed chat-template overhead, from
--- tripping the test. This is the one part of the module that is an educated
--- guess rather than a reported fact, which is why it keeps the @[speculative]@
--- tag; its empirical grounding (observed counts at @numCtx@ 64 and 256) is in
--- @docs\/ollama-notes.md@.
-decodeResp :: Request -> ChatResponse -> Either Refusal Response
-decodeResp req resp
-  | isOverflow = Left Overflow
+-- Overflow is inferred by 'overflowByEstimate': compare the estimated token
+-- count of the /actually-sent/ content against 'ocNumCtx'. When 'reqMessages'
+-- is non-empty that content is on the wire; 'reqPrompt' is the fallback for the
+-- compaction\/summarising path that sends a single flattened message. This also
+-- fixes the drift between @reqPrompt@ and @reqMessages@ noted in review1 #9.
+decodeResp :: OllamaCfg -> Request -> ChatResponse -> Either Refusal Response
+decodeResp cfg req resp
+  | overflowByEstimate cfg (sentText req) = Left Overflow
   | otherwise  = Right Response
       { say   = maybe "" (T.unpack . content) (message resp)
       , calls = maybe [] (map toCall) (message resp >>= tool_calls)
@@ -354,20 +388,6 @@ decodeResp req resp
           , outTok = maybe 0 fromIntegral (evalCount resp)
           }
       }
-  where
-    Prompt promptText = reqPrompt req
-    promptChars       = length promptText
-    -- rough token estimate: 1 token ≈ 4 chars for English
-    charsPerTok :: Double
-    charsPerTok = 4.0
-    estimatedTok :: Double
-    estimatedTok = fromIntegral promptChars / charsPerTok
-    isOverflow = case promptEvalCount resp of
-      Nothing  -> False
-      Just pec ->
-        -- only flag overflow for non-trivial prompts
-        promptChars > 80
-        && fromIntegral pec < 0.6 * estimatedTok
 
 -- | Convert one library @ToolCall@ into our 'Harness.Alphabet.Call'.
 --

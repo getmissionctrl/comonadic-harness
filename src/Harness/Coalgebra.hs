@@ -9,9 +9,9 @@
 -- of the three alphabet positions comes next ('Ask' to ask the oracle,
 -- 'Perform' to run a tool against the world, or 'Halt' to stop) and how the
 -- state evolves once the /direction/ (the oracle\/world result) comes back.
--- 'admit' is the repair pass 'step' runs first; 'working' and 'summarising' are
--- the two 'Ask' continuations; 'harness' unfolds 'step' into the 'Cofree'
--- denotation.
+-- 'Harness.State.settle' is the repair pass 'step' runs first; 'working' and
+-- 'summarising' are the two 'Ask' continuations; 'harness' unfolds 'step' into
+-- the 'Cofree' denotation.
 --
 -- __Why a coalgebra.__ The state transition is separated from the effect. 'step'
 -- names the successor as a pure function of an as-yet-unknown result; the
@@ -39,38 +39,14 @@ import Optics.Generic (gfield)
 import Harness.Alphabet
 import Harness.State
 
--- | The admission pass. Split the model's pending calls into those the current
--- node affords (safe to 'Perform') and those it does not, pairing each rejected
--- 'Call' with a synthetic error 'Obs' so the model sees its own mistake on the
--- next turn (D3\/D12).
---
--- __Why it exists.__ A live model can ask for a tool it was never offered — a
--- hallucinated name, a call that is schema-invalid, or a tool gated behind a
--- precondition it has not met (@commit@ before any @write@; see
--- @Harness.State.afford@). Such a call is neither a 'Refusal' (the provider did
--- answer) nor a clean 'Response' to act on, yet the alphabet is closed at three
--- constructors and we refuse to grow it for this. So the mismatch is repaired
--- /in the coalgebra/: the bad call becomes an ordinary observation carrying an
--- error string, and the run continues rather than crashing or stalling. [design]
---
--- __How it is used.__ 'step' calls @admit ('afford' s) ('pending' s)@ before it
--- emits anything. The first component (the afforded calls) becomes the new
--- 'pending' queue drained one 'Perform' at a time; the second (the rejects) is
--- folded into the transcript as error observations. See 'step' for the
--- termination argument.
---
--- __Gotcha — order-preserving.__ @foldr@ keeps the original call order in both
--- partitions, so the afforded calls that survive are performed in exactly the
--- sequence the model asked for: no reordering, no dropping, no deduplication.
--- The membership test is by tool /name/ only ('specName'), not by argument
--- schema — an afforded name with malformed @args@ still reaches the world.
+-- | Tokens to debit for one successful turn. Clamps each component to >= 0 (a
+-- buggy or hostile provider cannot REFILL the budget) and enforces a minimum of
+-- 1, so every successful turn strictly decreases the budget. That minimum is
+-- what makes the token budget a genuine liveness bound: with it, a run halts in
+-- at most @budget@ turns regardless of what usage the provider reports (F4).
 -- [design]
-admit :: [ToolSpec] -> [Call] -> ([Call], [(Call, Obs)])
-admit specs = foldr classify ([], [])
-  where
-    classify c (ok, bad)
-      | tool c `elem` map specName specs = (c : ok, bad)
-      | otherwise = (ok, (c, Obs ("error: tool not afforded: " ++ tool c)) : bad)
+spend :: Usage -> Int
+spend u = max 1 (max 0 (inTok u) + max 0 (outTok u))
 
 -- | The coalgebra proper: given a state, return the single next action and, in
 -- that action's /direction/, the successor state. @step@ is deterministic — it
@@ -81,81 +57,42 @@ admit specs = foldr classify ([], [])
 --
 -- __The cases, in order (wildcard-free over 'HarnessF', invariant 1):__
 --
--- * __Budget exhausted__ (@'budget' s <= 0@): 'Halt' with 'Exhausted'. Budget is
---   spent in tokens, not turns (see 'Harness.Alphabet.Usage'), and this guard is
---   checked before anything else so no further 'Ask' can overspend.
+-- * __Terminal decode failure__ (@'failure' s == Just m@): 'Halt' with @'Failed' m@.
+--   Checked FIRST so a decode death is surfaced distinctly rather than being
+--   masked as 'Exhausted' (review1 #9).
 --
--- * __Some pending calls unafforded__ (@admit@ returns a non-empty reject list):
---   repair. The rejects are folded into the transcript as error observations and
---   'pending' is narrowed to the afforded calls, then we re-enter @step@ on that
---   repaired state — a pure state transition with no oracle\/world direction.
+-- * __Budget exhausted__ (@'budget' s <= 0@): 'Halt' with 'Exhausted'.
 --
--- * __Afforded call waiting__ (@ok@ is @c : cs@): emit @'Perform' c@. In its
---   direction the returned 'Obs' is @record@ed into the transcript and the
---   remaining calls @cs@ stay 'pending', so a multi-call response drains one
---   'Perform' per @step@.
+-- * __Afforded call waiting__ (@ok@ is @c : cs@): emit @'Perform' c@.
 --
 -- * __No calls, done__ ('Working' mode, newest turn an 'Assistant' 'Response'
---   with empty @calls@): 'Halt' with @'Done' ('say' r)@ — the model answered
---   with prose and asked for nothing, so the run is finished.
+--   with empty @calls@): 'Halt' with @'Done' ('say' r)@.
 --
 -- * __No calls, keep working__ ('Working' otherwise): 'Ask' the 'request' and
---   continue with 'working' — ask the oracle for the next move.
+--   continue with 'working'.
 --
--- * __No calls, summarising__ ('Summarising'): 'Ask' the summarisation
---   'request' and continue with 'summarising' — compaction over the same path.
---
--- __Admission runs first (D3\/D12).__ Every 'Perform' the coalgebra emits
--- carries a 'Call' whose 'tool' is afforded at that node. An unafforded call
--- never reaches the world — its synthetic error 'Obs' is folded into the
--- transcript as a 'User' turn (the same append convention 'Perform' uses for
--- real observations), 'pending' is narrowed to the afforded calls, and we
--- re-enter @step@ on that repaired state.
---
--- __Why re-entry terminates.__ The repair carries no oracle\/world direction, so
--- it is not an infinite emit loop: the afforded partition is strictly shorter
--- than @pending s@ whenever any call was rejected, and on the very next entry
--- @admit@ returns no rejections (the surviving calls are all afforded by
--- construction). At most one repair pass happens per @step@ entry.
---
--- __Overflow → Summarising.__ Note @step@ never flips the mode itself; a
--- 'Ask' in 'Working' mode that comes back 'Overflow' is turned into a mode
--- change by 'working', and the /next/ @step@ then takes the 'Summarising' branch.
--- The coalgebra is the only thing that can make a state transition, so overflow
--- handling is a continuation, not an interpreter concern.
---
--- __Mode note (unreachable-but-correct).__ @'afford' s@ is @[]@ in 'Summarising'
--- mode, so /every/ pending call would be rejected there. That is correct — no
--- tool is offered while summarising — but also unreachable: pending calls only
--- arise in 'Working' mode from an 'Assistant' response's @calls@, and the mode
--- is not flipped to 'Summarising' while any call is still pending. [established]
+-- * __No calls, summarising__ ('Summarising'): 'Ask' the summarisation 'request'
+--   and continue with 'summarising'.
 step :: S -> HarnessF S
-step s
-  | budget s <= 0 = Halt Exhausted
-  | otherwise = case admit (afford s) (pending s) of
-      -- Some pending calls are unafforded: repair them into synthetic
-      -- observations and re-enter with the afforded calls only.
-      (ok, bad@(_ : _)) ->
-        step $
-          s & gfield @"transcript" %~ recordAll bad
-            & gfield @"pending" .~ ok
-      -- All pending calls (if any) are afforded: proceed as before.
-      (ok, []) -> case ok of
-        (c : cs) ->
-          Perform c $ \o ->
-            s & gfield @"transcript" %~ record c o
-              & gfield @"pending" .~ cs
-        [] -> case (mode s, transcript s) of
-          (Working, Assistant r : _)
-            | null (calls r) -> Halt (Done (say r))
-          (Working, _)     -> Ask (request s) (working s)
-          (Summarising, _) -> Ask (request s) (summarising s)
+step s0 =
+  let (s, _rejects) = settle s0
+   in case failure s of
+        Just m  -> Halt (Failed m)
+        Nothing
+          | budget s <= 0 -> Halt Exhausted
+          | otherwise     -> case pending s of
+              (c : cs) ->
+                Perform c $ \o ->
+                  s & gfield @"transcript" %~ record c o
+                    & gfield @"pending" .~ cs
+              [] -> case (mode s, transcript s) of
+                (Working, Assistant r : _)
+                  | null (calls r) -> Halt (Done (say r))
+                (Working, _)     -> Ask (request s) (working s)
+                (Summarising, _) -> Ask (request s) (summarising s)
   where
     record c o (User rs : ts) = User (rs ++ [(c, o)]) : ts
     record c o ts             = User [(c, o)] : ts
-    -- Fold the rejected @(Call, Obs)@ pairs into the transcript, reusing the
-    -- same 'User'-turn append convention as a performed observation.
-    recordAll bad ts = foldl (\acc (c, o) -> record c o acc) ts bad
 
 -- | The 'Working'-mode continuation — the direction of the 'Ask' that 'step'
 -- emits while working. It is the function through which an oracle answer
@@ -167,11 +104,12 @@ step s
 --   transition into compaction, and the coalgebra is the only thing that can
 --   make one. The next 'step' takes the 'Summarising' branch. [design]
 --
--- * __'Malformed' m__: terminal. Record the decode failure as a @!@-prefixed
---   'Summary' turn and zero the 'budget', which makes the next 'step' 'Halt'
---   with 'Exhausted'. A response the decoder could not parse is not something to
---   retry here — transient decode noise never reaches the coalgebra (invariant
---   5), so a 'Malformed' that /does/ reach it is genuinely unrecoverable.
+-- * __'Malformed' m__: terminal. Set the 'failure' field to @Just m@; the next
+--   'step' checks 'failure' FIRST and halts with @'Failed' m@, so a decode death
+--   is surfaced as 'Harness.Alphabet.Failed' rather than being masked as
+--   'Exhausted' (review1 #9). Transient decode noise never reaches the
+--   coalgebra (invariant 5), so a 'Malformed' that /does/ reach it is genuinely
+--   unrecoverable.
 --
 -- * __'Response' r__: the normal move. Push the 'Assistant' turn onto the
 --   transcript, set 'pending' to the response's @calls@ (which the next 'step'
@@ -179,35 +117,38 @@ step s
 --   (@'inTok' + 'outTok'@).
 working :: S -> Either Refusal Response -> S
 working s (Left Overflow)      = s & gfield @"mode" .~ Summarising
-working s (Left (Malformed m)) =
-  s & gfield @"transcript" %~ (Summary ("!" ++ m) :)
-    & gfield @"budget" .~ 0
+working s (Left (Malformed m)) = s & gfield @"failure" .~ Just m
 working s (Right r) =
   s & gfield @"transcript" %~ (Assistant r :)
     & gfield @"pending" .~ calls r
-    & gfield @"budget" %~ subtract (inTok (usage r) + outTok (usage r))
+    & gfield @"budget" %~ subtract (spend (usage r))
 
 -- | The 'Summarising'-mode continuation — the direction of the 'Ask' 'step'
 -- emits while summarising. This is compaction, and it deliberately reuses the
 -- ordinary 'Ask' path rather than a bespoke constructor: to the alphabet a
 -- summarisation turn is just another ask (see @Harness.State.request@, which
--- appends the summarise instruction and offers no tools). Two cases:
+-- appends the summarise instruction and offers no tools). Three cases:
 --
--- * __Any 'Refusal'__ (@'Left' _@): give up by zeroing the 'budget'. If even the
---   summarisation ask overflows or comes back malformed there is nothing smaller
---   left to try, so the next 'step' 'Halt's 'Exhausted'. Note the 'Refusal' is
---   ignored — /any/ failure here is terminal. [design]
+-- * __'Overflow'__: give up by zeroing the 'budget'. The context is already too
+--   large to fit even a summarisation request; there is nothing smaller left to
+--   try, so the next 'step' 'Halt's with 'Exhausted'. [design]
+--
+-- * __'Malformed' m__: a decode failure on the summarisation turn. Set the
+--   'failure' field, which makes the next 'step' halt with @'Failed' m@ rather
+--   than 'Exhausted' — consistent with how 'working' handles 'Malformed'
+--   (review1 #9). [design]
 --
 -- * __'Response' r__: success. Collapse the whole transcript to the single
 --   'Summary' turn @'say' r@, flip 'mode' back to 'Working', and debit the
 --   'budget' by the token 'usage' of the summarisation call itself. The shrunken
 --   transcript is what buys the run more room.
 summarising :: S -> Either Refusal Response -> S
-summarising s (Left _) = s & gfield @"budget" .~ 0
+summarising s (Left Overflow)      = s & gfield @"budget" .~ 0
+summarising s (Left (Malformed m)) = s & gfield @"failure" .~ Just m
 summarising s (Right r) =
   s & gfield @"transcript" .~ [Summary (say r)]
     & gfield @"mode" .~ Working
-    & gfield @"budget" %~ subtract (inTok (usage r) + outTok (usage r))
+    & gfield @"budget" %~ subtract (spend (usage r))
 
 -- | Unfold a starting state into the 'Cofree' denotation of the whole run: at
 -- every node the annotation @'view' s@ (a 'Ctx', for analysis) sits over the

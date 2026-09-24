@@ -5,11 +5,17 @@ import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck
 import Control.Comonad (duplicate, extract)
 import Control.Comonad.Cofree (Cofree ((:<)))
+import Control.Monad.Except (runExceptT)
+import Control.Monad.Writer (runWriter, tell)
 import Harness.Alphabet
+import Harness.Fault (ProviderError)
+import Harness.Interp (Ev (..), interp)
 import Harness.State
-import Harness.Run (run)
-import Harness.Probe (Hypo, probe, liftHypo, outcomeOf)
-import Harness.Compaction
+import Harness.Run (Env (..), run)
+import Harness.Path (Hypo (..))
+import Harness.Probe (probe, liftHypo, outcomeOf)
+import Harness.Coalgebra (harness)
+import Harness.Compaction (compact, compactViaSummary, Behaviour (..), respectsBehaviour)
 import Gen
 
 -- | The annotation path to bounded depth, under a hypo.
@@ -20,6 +26,15 @@ firstTree :: Hypo -> Int -> Maybe (Cofree HarnessF Ctx)
 firstTree h b = case reachableStates h 20 b of
   ((_, w) : _) -> Just w
   []           -> Nothing
+
+-- | Pick a random reachable tree (root or any deeper node) from the hypo's
+-- walk. Returns 'Nothing' only when the walk is entirely empty — which means
+-- every prop that uses this helper and skips on 'Nothing' is trivially
+-- satisfied, which is why T22 adds coverage to detect that. [design]
+subtreeOf :: Hypo -> Int -> Gen (Maybe (Cofree HarnessF Ctx))
+subtreeOf h b = case map snd (reachableStates h 20 b) of
+  [] -> pure Nothing
+  ws -> Just <$> elements ws
 
 -- | Every 'Perform' node reached under the hypo, paired with the afforded tool
 -- names at that node. The afforded set is read from the node's own 'Ctx'
@@ -46,7 +61,7 @@ afforded (performed, tools) =
 -- 'project' is a pure function of the transcript, so reachability is irrelevant
 -- here — we are testing an algebraic law of 'project', not running the coalgebra.
 startStateWith :: [Turn] -> S
-startStateWith ts = S { transcript = ts, pending = [], budget = 1, mode = Working, tools = allTools }
+startStateWith ts = S { transcript = ts, pending = [], budget = 1, mode = Working, tools = allTools, failure = Nothing }
 
 spec :: Spec
 spec = do
@@ -65,14 +80,47 @@ spec = do
           Nothing -> property True
           Just w  -> annPath h 12 (fmap extract (duplicate w)) === annPath h 12 w
 
-  describe "agreement law: run == probe outcome (§16.1, the value proposition)" $
-    prop "outcomeOf (probe h 200 w) == Just (run (liftHypo h) w)" $
+  describe "agreement law at depth (§16.1)" $
+    -- Strengthened from root-only: sample a random reachable node so the law
+    -- is checked at depth too, not just at the starting tree. [design]
+    prop "outcomeOf (probe h 200 w) matches run (liftHypo h) w at reachable nodes" $
+      forAll (Blind <$> genHypo) $ \(Blind h) -> forAll (choose (200, 1200)) $ \b ->
+        forAll (Blind <$> subtreeOf h b) $ \(Blind mw) ->
+          checkCoverage $
+          cover 80 (case mw of Just _ -> True; Nothing -> False) "reachable tree present" $
+          case mw of
+            Nothing -> property True
+            Just w  -> ioProperty $ do
+              -- 'run' now returns @Either ProviderError Outcome@. A 'Hypo' is a
+              -- pure stand-in that never faults, so the live side is always
+              -- @Right@; project it back to @Maybe Outcome@ to match the prober.
+              o <- run (liftHypo h) w
+              let ran = case o of Right x -> Just x; Left _ -> Nothing
+              pure (outcomeOf (probe h 200 w) === ran)
+
+  describe "interp observer hook is behaviour-preserving (T10, invariant 2)" $
+    -- The observer 'interp' takes may label or print a node, but it must not be
+    -- able to change /what interp does/: the outcome it returns and the [Ev]
+    -- trace it writes are the same regardless of which observer is supplied. We
+    -- run the one interpreter over the same reachable tree twice — once with a
+    -- no-op observer, once with a counting observer (one that emits a
+    -- Writer-neutral @tell []@ per node) — and assert the full
+    -- @(Either ProviderError (Maybe Outcome), [Ev])@ pair is identical. This is
+    -- the library-level guard that stands in for the demo's 'runVerbose', which
+    -- lives in the executable and cannot be imported here.
+    prop "outcome and trace are identical with a no-op vs a counting observer" $
       forAll (Blind <$> genHypo) $ \(Blind h) -> forAll (choose (200, 1200)) $ \b ->
         case firstTree h b of
           Nothing -> property True
-          Just w  -> ioProperty $ do
-            o <- run (liftHypo h) w
-            pure (outcomeOf (probe h 200 w) === Just o)
+          Just w  ->
+            let runWith obs =
+                  runWriter
+                    (runExceptT
+                      (interp obs (pure . guessOracle h) (pure . guessWorld h) 200 w))
+                noop, count :: (Either ProviderError (Maybe Outcome), [Ev])
+                noop  = runWith (\_ -> pure ())
+                count = runWith (\_ -> tell [])
+             in noop === count
 
   describe "prefix stability (protects prompt caching, §16.6)" $
     prop "project (t:ts) == project ts <> renderLine t <> newline" $
@@ -80,6 +128,12 @@ spec = do
         let Prompt whole = project (startStateWith (t : ts))
             Prompt rest  = project (startStateWith ts)
          in whole === rest ++ renderLine t ++ "\n"
+
+  describe "compaction idempotence (D11)" $
+    prop "compact . compact == compact (on the transcript)" $
+      forAll genTurns $ \ts ->
+        let s = startStateWith ts
+         in transcript (compact (compact s)) === transcript (compact s)
 
   describe "affordance law (§16.4, D12)" $ do
     -- Real assertion after Task 20's @admit@ pass: every 'Perform' the coalgebra
@@ -92,9 +146,14 @@ spec = do
     -- afforded set excludes @commit@.
     prop "probe never emits (Did c) whose tool is unafforded at that node" $
       forAll (Blind <$> genHypo) $ \(Blind h) -> forAll (choose (200, 1200)) $ \b ->
+        checkCoverage $
+        cover 80 (case firstTree h b of Just _ -> True; Nothing -> False) "reachable tree present" $
         case firstTree h b of
           Nothing -> property True
           Just w  -> conjoin (map afforded (performNodes h w))
+
+    it "bash is not in the default tool catalogue" $
+      map specName allTools `shouldNotContain` ["bash"]
 
     -- Non-vacuity guard: over a fixed sample the affordance walk must observe at
     -- least one 'Perform' node (otherwise the prop above proves nothing). We
@@ -105,12 +164,72 @@ spec = do
       putStrLn ("affordance law: observed " ++ show (length seen) ++ " Perform nodes across sample")
       length seen `shouldSatisfy` (> 0)
 
-  describe "compaction violation rate (E1, expected non-zero for real compact)" $ do
-    it "no-op compaction scores 0% (baseline null model)" $ do
-      r <- measureRate id
+  describe "afford: only a successful write unlocks commit (review1 #1)" $ do
+    it "a failed write does not unlock commit" $ do
+      let s = startStateWith [User [(Call "write" "x", Obs "error: absolute path not allowed: /etc/x")]]
+      map specName (afford s) `shouldNotContain` ["commit"]
+    it "a successful write unlocks commit" $ do
+      let s = startStateWith [User [(Call "write" "notes.md", Obs "wrote 12 bytes to notes.md")]]
+      map specName (afford s) `shouldContain` ["commit"]
+
+  describe "budget liveness (F4)" $
+    it "a zero-usage looping oracle still terminates" $ do
+      let env = Env { oracle = \_ -> pure (Right (Response "x" [Call "read" "{}"] (Usage 0 0)))
+                    , world  = \c -> pure (Obs (tool c ++ ":ok")) }
+      res <- run env (harness (startState 50))
+      res `shouldBe` Right Exhausted
+
+  describe "repair honesty: annotation matches the wire (review1 #6a)" $
+    it "at a node with an unafforded pending call, ctxRequest reflects the repaired state" $ do
+      let s = (startState 1000) { pending = [Call "commit" "{}"] }  -- commit before any write: unafforded
+          (c :< sh) = harness s
+      -- the node's annotation records the repair, and its request is the repaired one
+      map (tool . fst) (ctxRepaired c) `shouldContain` ["commit"]
+      case sh of
+        Ask q _ -> ctxRequest c `shouldBe` q     -- annotation request == the request actually emitted
+        _       -> pure ()
+
+  describe "repair honesty: repairs appear in the trace (review1 #6b)" $
+    it "a repaired call shows up as a Repaired event under probe" $ do
+      -- A deterministic hypo that halts (no tool calls) so the only tool-related
+      -- event is the repaired one — a random hypo could emit further calls and
+      -- make the assertion non-deterministic.
+      let h   = Hypo { guessOracle = \_ -> Right (Response "done" [] (Usage 1 1))
+                     , guessWorld  = \c -> Obs (tool c) }
+          s   = (startState 1000) { pending = [Call "commit" "{}"] }
+          evs = probe h 50 (harness s)
+      any (\e -> case e of Repaired (Call "commit" _) _ -> True; _ -> False) evs
+        `shouldBe` True
+
+  describe "admit validates arguments (D3, review1 #6)" $
+    it "a schema-invalid write is repaired, not performed" $ do
+      -- Deterministic halt-hypo: after the invalid write is repaired, the run
+      -- must not go on to perform a (valid) write. A random hypo can emit a
+      -- schema-valid write later in the walk, which made this test flaky.
+      let h   = Hypo { guessOracle = \_ -> Right (Response "done" [] (Usage 1 1))
+                     , guessWorld  = \c -> Obs (tool c) }
+          s   = (startState 1000) { pending = [Call "write" "not json"] }  -- write needs {path,body}
+          evs = probe h 50 (harness s)
+      any (\e -> case e of Repaired (Call "write" _) _ -> True; _ -> False) evs `shouldBe` True
+      all (\e -> case e of Did (Call "write" _) -> False; _ -> True) evs `shouldBe` True
+
+  describe "replay safety groundwork (D4)" $
+    it "read is ReplaySafe; write/commit ReplayUnsafe; unknown otherwise" $ do
+      replayOf "read"   `shouldBe` ReplaySafe
+      replayOf "write"  `shouldBe` ReplayUnsafe
+      replayOf "commit" `shouldBe` ReplayUnsafe
+      replayOf "wat"    `shouldBe` ReplayUnknown
+
+  describe "compaction violation rate — STAND-IN compactor (E1); real path measured separately" $ do
+    it "no-op compaction is a determinism check (must be 0%)" $ do
+      r <- measureRate (const id)
       totalPct r `shouldBe` 0
-    it "real compaction: report rate + per-component breakdown, no crash" $ do
-      r <- measureRate compact
+    it "stand-in (compact) compaction: report rate + per-component breakdown, no crash" $ do
+      r <- measureRate (const compact)
+      putStrLn (renderRate r)
+      nStates r `shouldSatisfy` (>= 1000)
+    it "real (Summarising) compaction: report rate + breakdown, no crash" $ do
+      r <- measureRate compactViaSummary
       putStrLn (renderRate r)
       nStates r `shouldSatisfy` (>= 1000)
 
@@ -124,12 +243,12 @@ data Rate = Rate
   , diffTurns  :: Int
   }
 
-measureRate :: (S -> S) -> IO Rate
-measureRate k = do
+measureRate :: (Hypo -> (S -> S)) -> IO Rate
+measureRate mk = do
   hs <- generate (vectorOf 200 genHypo)
   let pairs = [ (h, s) | h <- hs, (s, _w) <- reachableStates h 40 900 ]
       obs (h, s) =
-        let (a, b) = respectsBehaviour h 40 k s
+        let (a, b) = respectsBehaviour h 40 (mk h) s
          in ( bHalt a /= bHalt b
             , bWrites a /= bWrites b
             , bCalls a /= bCalls b

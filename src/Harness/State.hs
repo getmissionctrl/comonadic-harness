@@ -25,13 +25,22 @@ module Harness.State
   , project
   , allTools
   , afford
+  , admit
+  , settle
   , request
   , view
   , renderLine
+  , replayOf
   ) where
 
+import Data.Aeson (Value (Object), decode)
+import Data.Aeson.Key qualified as K
+import Data.Aeson.KeyMap qualified as KM
+import Data.ByteString.Lazy.Char8 qualified as BSLC
+import Data.List (isPrefixOf)
 import GHC.Generics (Generic)
 import Harness.Alphabet
+import Harness.Schema (requiredKeys)
 
 -- | Which of the two turn-shapes the harness is currently in. Both go through
 -- the single 'Harness.Alphabet.Ask' constructor; @Mode@ is the bit that tells
@@ -95,6 +104,12 @@ data S = S
   , tools :: [ToolSpec]
     -- ^ The tools afforded to THIS session. 'afford' filters this per turn.
     -- The coding demo seeds @tools = allTools@; other agents supply their own.
+  , failure :: Maybe String
+    -- ^ Set by a terminal 'Harness.Alphabet.Malformed' refusal (see
+    -- 'Harness.Coalgebra.working'); when present, 'Harness.Coalgebra.step' halts
+    -- with 'Harness.Alphabet.Failed' rather than 'Exhausted', so a decode\/model
+    -- death is distinguishable from budget exhaustion (review1 #9). 'Nothing' on
+    -- a healthy run.
   }
   deriving stock (Eq, Show, Generic)
 
@@ -115,6 +130,12 @@ data Ctx = Ctx
   , ctxMode :: Mode
     -- ^ The 'mode' at this node, letting a trace distinguish task turns from
     -- summarisation turns (as 'Harness.Interp.Ev' does).
+  , ctxRepaired :: [(Call, Obs)]
+    -- ^ The pending calls this node rejected as unafforded (D3\/D12), each paired
+    -- with its synthetic error 'Obs'. Populated by 'view' from 'settle', so the
+    -- annotation matches what actually went on the wire (review1 #6a). Read by
+    -- analysis (and the trace labeller) only — it never steers execution
+    -- (invariant 2). Empty at a node with no repair.
   }
   deriving stock (Eq, Show, Generic)
 
@@ -138,14 +159,19 @@ renderLine (Summary t)   = "S: " ++ t
 project :: S -> Prompt
 project s = Prompt (unlines (map renderLine (reverse (transcript s))))
 
--- | The full catalogue of tools the harness can ever offer. 'afford' selects a
+-- | The default catalogue of tools the harness can offer. 'afford' selects a
 -- subset of this list per turn; nothing outside it is ever afforded. Kept as a
 -- flat constant so the affordance /policy/ lives entirely in 'afford' rather
 -- than being smeared across construction sites.
+--
+-- __Safety__: @bash@ is deliberately excluded from this catalogue. Running
+-- arbitrary shell commands as the harness uid escapes the path sandbox and
+-- gives the model unrestricted execution. @bash@ will be re-introduced behind
+-- an explicit opt-in world constructor in a later task; it must never be
+-- reachable by default. [design]
 allTools :: [ToolSpec]
 allTools =
   [ ToolSpec "read" "{path:string}"
-  , ToolSpec "bash" "{cmd:string}"
   , ToolSpec "write" "{path:string,body:string}"
   , ToolSpec "commit" "{msg:string}"
   ]
@@ -154,16 +180,104 @@ allTools =
 -- over the transcript, __not a constant__ — this is precisely what makes the
 -- interface polynomial (the set of directions available at a node varies with
 -- the node). The policy: no tools at all while 'Summarising'; otherwise the
--- full 'allTools', except @commit@ is withheld until a @write@ has actually
--- happened, so the model cannot commit work it never wrote. [design]
+-- full 'allTools', except @commit@ is withheld until a @write@ has
+-- __successfully__ completed — that is, its observation does not begin with
+-- @"error: "@. A failed write (path-sandbox rejection, unafforded-tool repair,
+-- or any other error observation) must not unlock @commit@: the safety
+-- invariant is keyed on world state, not on the mere presence of a @write@
+-- call in memory. [design, review1 #1]
 afford :: S -> [ToolSpec]
 afford s
   | mode s == Summarising = []
   | any wrote (transcript s) = tools s
   | otherwise = filter ((/= "commit") . specName) (tools s)
   where
-    wrote (User rs) = any ((== "write") . tool . fst) rs
+    -- A write counts only if it SUCCEEDED: its observation is not an error.
+    -- Failed, rejected, or hallucinated writes (whose Obs begins "error: ") must
+    -- not unlock commit — the safety invariant is keyed on world state, not on
+    -- the mere presence of a write call in memory (review1 #1). [established]
+    wrote (User rs) = any (\(c, Obs o) -> tool c == "write" && not ("error: " `isPrefixOf` o)) rs
     wrote _ = False
+
+-- | The admission pass. Split the model's pending calls into those the current
+-- node affords (safe to 'Harness.Alphabet.Perform') and those it does not,
+-- pairing each rejected 'Call' with a synthetic error 'Obs' so the model sees
+-- its own mistake on the next turn (D3\/D12).
+--
+-- __Why it lives here.__ It depends only on 'afford' and 'pending', both in this
+-- module, and both the coalgebra ('Harness.Coalgebra.step', which drains the
+-- afforded calls) and the annotation ('view', which surfaces the rejects for
+-- analysis) must classify pending calls the /same/ way. Keeping the single
+-- source of that classification here — rather than in @Coalgebra@ — lets 'view'
+-- reuse it without an import cycle (@State@ must not import @Coalgebra@). [design]
+--
+-- __Why a model needs it.__ A live model can ask for a tool it was never offered
+-- — a hallucinated name, a schema-invalid call, or a tool gated behind a
+-- precondition it has not met (@commit@ before any @write@; see 'afford'). Such a
+-- call is neither a 'Harness.Alphabet.Refusal' (the provider did answer) nor a
+-- clean 'Harness.Alphabet.Response' to act on, yet the alphabet is closed at
+-- three constructors and we refuse to grow it for this. So the mismatch is
+-- repaired: the bad call becomes an ordinary observation carrying an error
+-- string, and the run continues rather than crashing or stalling. [design]
+--
+-- __Gotcha — order-preserving.__ @foldr@ keeps the original call order in both
+-- partitions, so the afforded calls that survive are performed in exactly the
+-- sequence the model asked for: no reordering, no dropping, no deduplication.
+--
+-- __Two gates.__ A call survives only if BOTH its tool /name/ is afforded
+-- ('specName') AND its @args@ satisfy that tool's declared schema
+-- ('argsSatisfy'). The two rejections carry distinct, model-legible error
+-- observations so the next turn can tell an unafforded name from a malformed
+-- argument. The argument gate is the D3 fix (review1 #6): before it, an afforded
+-- name with malformed @args@ still reached the world. [design]
+admit :: [ToolSpec] -> [Call] -> ([Call], [(Call, Obs)])
+admit specs = foldr classify ([], [])
+  where
+    classify c (ok, bad) = case lookupSpec c of
+      Nothing -> (ok, (c, Obs ("error: tool not afforded: " ++ tool c)) : bad)
+      Just spec
+        | argsSatisfy spec c -> (c : ok, bad)
+        | otherwise ->
+            ( ok
+            , (c, Obs ("error: invalid arguments for " ++ tool c
+                       ++ "; expected " ++ specSchema spec)) : bad )
+    lookupSpec c = case [ s | s <- specs, specName s == tool c ] of
+                     (s : _) -> Just s
+                     []      -> Nothing
+
+-- | Does this call's args satisfy its tool's declared schema? Lenient by design
+-- (a local model varies key names and omits the JSON envelope for single-arg
+-- tools), strict where it matters (a multi-field tool needs a JSON object naming
+-- its fields). A tool with no declared fields accepts anything; a single-field
+-- tool accepts any non-empty payload (bare strings included); a multi-field tool
+-- requires a JSON object containing each declared key. This is the argument gate
+-- of 'admit' (D3, review1 #6): the "third thing" — a rejected call becomes an
+-- error 'Obs', neither a 'Harness.Alphabet.Refusal' nor a clean
+-- 'Harness.Alphabet.Response'. [design]
+argsSatisfy :: ToolSpec -> Call -> Bool
+argsSatisfy spec c = case requiredKeys (specSchema spec) of
+  []    -> True
+  [_]   -> not (null (args c))
+  keys  -> case decode (BSLC.pack (args c)) of
+             Just (Object o) -> all (\k -> KM.member (K.fromString k) o) keys
+             _               -> False
+
+-- | Apply one admission pass: fold rejected (unafforded) calls into the
+-- transcript as error observations and narrow 'pending' to the afforded calls.
+-- Idempotent (a settled state has no rejects), so it is safe to apply at every
+-- node without looping. Returns the settled state and the rejects it recorded,
+-- so both the coalgebra (which drains the afforded calls) and the annotation
+-- (which surfaces the rejects for analysis) work from the same partition —
+-- the single source of the repair (review1 #6). [design]
+settle :: S -> (S, [(Call, Obs)])
+settle s = case admit (afford s) (pending s) of
+  (_,  []) -> (s, [])
+  (ok, bad) ->
+    ( s { transcript = recordAll bad (transcript s), pending = ok }, bad )
+  where
+    record c o (User rs : ts) = User (rs ++ [(c, o)]) : ts
+    record c o ts             = User [(c, o)] : ts
+    recordAll bad ts = foldl (\acc (c, o) -> record c o acc) ts bad
 
 -- | Assemble the 'Harness.Alphabet.Request' for the current turn. In 'Working'
 -- mode it pairs the plain 'project'ion with the afforded tools. In 'Summarising'
@@ -191,10 +305,30 @@ toChatMsgs s = concatMap turnMsgs (reverse (transcript s))
     turnMsgs (Assistant r) = [MsgAssistant (say r) (calls r)]
     turnMsgs (User rs)     = [ MsgToolResult c o | (c, o) <- rs ]
 
+-- | The replay policy by tool name: read-only tools are safe to re-run,
+-- irreversible tools (@write@\/@commit@) are unsafe, and anything else is unknown
+-- (treated conservatively on resume). Classified by name rather than by a field
+-- on 'Harness.Alphabet.Call' so no construction site changes for data nothing
+-- consumes yet; promote it to a 'Call'\/'ToolSpec' field if\/when D4's resume
+-- engine is built. [design] [unbuilt: the resume engine]
+replayOf :: String -> ReplaySafety
+replayOf "read"   = ReplaySafe
+replayOf "write"  = ReplayUnsafe
+replayOf "commit" = ReplayUnsafe
+replayOf _        = ReplayUnknown
+
 -- | Quotient 3: the annotation map @S -> Ctx@ used to label every node of the
 -- unfolded tree (@unfold (\\s -> (view s, step s))@ in 'Harness.Coalgebra.harness').
 -- It exposes only what analysis is permitted to read — the pending 'request',
 -- the remaining 'budget', and the 'mode' — and deliberately withholds the rest
 -- of @S@, keeping execution and analysis on their separate sides of invariant 2.
+--
+-- __Repair honesty.__ 'view' first 'settle's the state, so the 'ctxRequest' it
+-- exposes is the /repaired/ request — the one 'Harness.Coalgebra.step' actually
+-- emits — and 'ctxRepaired' names the rejected calls that settling folded in.
+-- The pre-repair annotation would have disagreed with the wire (review1 #6a).
+-- Note @'mode' s' == 'mode' s@ ('settle' never changes the mode), so the mode
+-- label is unaffected.
 view :: S -> Ctx
-view s = Ctx (request s) (budget s) (mode s)
+view s = let (s', rejects) = settle s
+          in Ctx (request s') (budget s') (mode s') rejects

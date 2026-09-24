@@ -83,7 +83,7 @@ A start state, and the tree it denotes:
 > -- | An empty starting state: no transcript, no pending calls, a 500-token
 > -- budget, in 'Working' mode.
 > demoStart :: S
-> demoStart = S { transcript = [], pending = [], budget = 500, mode = Working, tools = allTools }
+> demoStart = S { transcript = [], pending = [], budget = 500, mode = Working, tools = allTools, failure = Nothing }
 >
 > -- | The tree of every reachable future from 'demoStart' — a denotation.
 > demoTree :: Cofree HarnessF Ctx
