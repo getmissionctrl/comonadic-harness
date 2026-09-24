@@ -98,6 +98,12 @@ data S = S
   , tools :: [ToolSpec]
     -- ^ The tools afforded to THIS session. 'afford' filters this per turn.
     -- The coding demo seeds @tools = allTools@; other agents supply their own.
+  , failure :: Maybe String
+    -- ^ Set by a terminal 'Harness.Alphabet.Malformed' refusal (see
+    -- 'Harness.Coalgebra.working'); when present, 'Harness.Coalgebra.step' halts
+    -- with 'Harness.Alphabet.Failed' rather than 'Exhausted', so a decode\/model
+    -- death is distinguishable from budget exhaustion (review1 #9). 'Nothing' on
+    -- a healthy run.
   }
   deriving stock (Eq, Show, Generic)
 

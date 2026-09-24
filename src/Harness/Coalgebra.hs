@@ -57,63 +57,39 @@ spend u = max 1 (max 0 (inTok u) + max 0 (outTok u))
 --
 -- __The cases, in order (wildcard-free over 'HarnessF', invariant 1):__
 --
--- * __Budget exhausted__ (@'budget' s <= 0@): 'Halt' with 'Exhausted'. Budget is
---   spent in tokens, not turns (see 'Harness.Alphabet.Usage'), and this guard is
---   checked before anything else so no further 'Ask' can overspend.
+-- * __Terminal decode failure__ (@'failure' s == Just m@): 'Halt' with @'Failed' m@.
+--   Checked FIRST so a decode death is surfaced distinctly rather than being
+--   masked as 'Exhausted' (review1 #9).
 --
--- * __Afforded call waiting__ (@ok@ is @c : cs@): emit @'Perform' c@. In its
---   direction the returned 'Obs' is @record@ed into the transcript and the
---   remaining calls @cs@ stay 'pending', so a multi-call response drains one
---   'Perform' per @step@.
+-- * __Budget exhausted__ (@'budget' s <= 0@): 'Halt' with 'Exhausted'.
+--
+-- * __Afforded call waiting__ (@ok@ is @c : cs@): emit @'Perform' c@.
 --
 -- * __No calls, done__ ('Working' mode, newest turn an 'Assistant' 'Response'
---   with empty @calls@): 'Halt' with @'Done' ('say' r)@ — the model answered
---   with prose and asked for nothing, so the run is finished.
+--   with empty @calls@): 'Halt' with @'Done' ('say' r)@.
 --
 -- * __No calls, keep working__ ('Working' otherwise): 'Ask' the 'request' and
---   continue with 'working' — ask the oracle for the next move.
+--   continue with 'working'.
 --
--- * __No calls, summarising__ ('Summarising'): 'Ask' the summarisation
---   'request' and continue with 'summarising' — compaction over the same path.
---
--- __Admission runs first (D3\/D12).__ 'step' 'Harness.State.settle's the state
--- /once/ up front: every 'Perform' the coalgebra emits then carries a 'Call'
--- whose 'tool' is afforded at that node. An unafforded call never reaches the
--- world — its synthetic error 'Obs' is folded into the transcript as a 'User'
--- turn (the same append convention 'Perform' uses for real observations) and
--- 'pending' is narrowed to the afforded calls. Because 'Harness.State.settle' is
--- idempotent, this single pass suffices — 'step' does /not/ re-enter itself
--- (the earlier self-recursion left the node's annotation describing the
--- pre-repair state while the wire carried the repaired one; review1 #6a). The
--- same 'Harness.State.settle' feeds 'Harness.State.view', so annotation and wire
--- agree by construction.
---
--- __Overflow → Summarising.__ Note @step@ never flips the mode itself; a
--- 'Ask' in 'Working' mode that comes back 'Overflow' is turned into a mode
--- change by 'working', and the /next/ @step@ then takes the 'Summarising' branch.
--- The coalgebra is the only thing that can make a state transition, so overflow
--- handling is a continuation, not an interpreter concern.
---
--- __Mode note (unreachable-but-correct).__ @'afford' s@ is @[]@ in 'Summarising'
--- mode, so /every/ pending call would be rejected there. That is correct — no
--- tool is offered while summarising — but also unreachable: pending calls only
--- arise in 'Working' mode from an 'Assistant' response's @calls@, and the mode
--- is not flipped to 'Summarising' while any call is still pending. [established]
+-- * __No calls, summarising__ ('Summarising'): 'Ask' the summarisation 'request'
+--   and continue with 'summarising'.
 step :: S -> HarnessF S
 step s0 =
   let (s, _rejects) = settle s0
-   in if budget s <= 0
-        then Halt Exhausted
-        else case pending s of
-          (c : cs) ->
-            Perform c $ \o ->
-              s & gfield @"transcript" %~ record c o
-                & gfield @"pending" .~ cs
-          [] -> case (mode s, transcript s) of
-            (Working, Assistant r : _)
-              | null (calls r) -> Halt (Done (say r))
-            (Working, _)     -> Ask (request s) (working s)
-            (Summarising, _) -> Ask (request s) (summarising s)
+   in case failure s of
+        Just m  -> Halt (Failed m)
+        Nothing
+          | budget s <= 0 -> Halt Exhausted
+          | otherwise     -> case pending s of
+              (c : cs) ->
+                Perform c $ \o ->
+                  s & gfield @"transcript" %~ record c o
+                    & gfield @"pending" .~ cs
+              [] -> case (mode s, transcript s) of
+                (Working, Assistant r : _)
+                  | null (calls r) -> Halt (Done (say r))
+                (Working, _)     -> Ask (request s) (working s)
+                (Summarising, _) -> Ask (request s) (summarising s)
   where
     record c o (User rs : ts) = User (rs ++ [(c, o)]) : ts
     record c o ts             = User [(c, o)] : ts
@@ -128,11 +104,12 @@ step s0 =
 --   transition into compaction, and the coalgebra is the only thing that can
 --   make one. The next 'step' takes the 'Summarising' branch. [design]
 --
--- * __'Malformed' m__: terminal. Record the decode failure as a @!@-prefixed
---   'Summary' turn and zero the 'budget', which makes the next 'step' 'Halt'
---   with 'Exhausted'. A response the decoder could not parse is not something to
---   retry here — transient decode noise never reaches the coalgebra (invariant
---   5), so a 'Malformed' that /does/ reach it is genuinely unrecoverable.
+-- * __'Malformed' m__: terminal. Set the 'failure' field to @Just m@; the next
+--   'step' checks 'failure' FIRST and halts with @'Failed' m@, so a decode death
+--   is surfaced as 'Harness.Alphabet.Failed' rather than being masked as
+--   'Exhausted' (review1 #9). Transient decode noise never reaches the
+--   coalgebra (invariant 5), so a 'Malformed' that /does/ reach it is genuinely
+--   unrecoverable.
 --
 -- * __'Response' r__: the normal move. Push the 'Assistant' turn onto the
 --   transcript, set 'pending' to the response's @calls@ (which the next 'step'
@@ -140,9 +117,7 @@ step s0 =
 --   (@'inTok' + 'outTok'@).
 working :: S -> Either Refusal Response -> S
 working s (Left Overflow)      = s & gfield @"mode" .~ Summarising
-working s (Left (Malformed m)) =
-  s & gfield @"transcript" %~ (Summary ("!" ++ m) :)
-    & gfield @"budget" .~ 0
+working s (Left (Malformed m)) = s & gfield @"failure" .~ Just m
 working s (Right r) =
   s & gfield @"transcript" %~ (Assistant r :)
     & gfield @"pending" .~ calls r
@@ -152,19 +127,24 @@ working s (Right r) =
 -- emits while summarising. This is compaction, and it deliberately reuses the
 -- ordinary 'Ask' path rather than a bespoke constructor: to the alphabet a
 -- summarisation turn is just another ask (see @Harness.State.request@, which
--- appends the summarise instruction and offers no tools). Two cases:
+-- appends the summarise instruction and offers no tools). Three cases:
 --
--- * __Any 'Refusal'__ (@'Left' _@): give up by zeroing the 'budget'. If even the
---   summarisation ask overflows or comes back malformed there is nothing smaller
---   left to try, so the next 'step' 'Halt's 'Exhausted'. Note the 'Refusal' is
---   ignored — /any/ failure here is terminal. [design]
+-- * __'Overflow'__: give up by zeroing the 'budget'. The context is already too
+--   large to fit even a summarisation request; there is nothing smaller left to
+--   try, so the next 'step' 'Halt's with 'Exhausted'. [design]
+--
+-- * __'Malformed' m__: a decode failure on the summarisation turn. Set the
+--   'failure' field, which makes the next 'step' halt with @'Failed' m@ rather
+--   than 'Exhausted' — consistent with how 'working' handles 'Malformed'
+--   (review1 #9). [design]
 --
 -- * __'Response' r__: success. Collapse the whole transcript to the single
 --   'Summary' turn @'say' r@, flip 'mode' back to 'Working', and debit the
 --   'budget' by the token 'usage' of the summarisation call itself. The shrunken
 --   transcript is what buys the run more room.
 summarising :: S -> Either Refusal Response -> S
-summarising s (Left _) = s & gfield @"budget" .~ 0
+summarising s (Left Overflow)      = s & gfield @"budget" .~ 0
+summarising s (Left (Malformed m)) = s & gfield @"failure" .~ Just m
 summarising s (Right r) =
   s & gfield @"transcript" .~ [Summary (say r)]
     & gfield @"mode" .~ Working

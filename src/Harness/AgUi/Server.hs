@@ -218,7 +218,8 @@ startH cfg (Registry regv) sr = liftIO $ do
   logv <- newEventLog
   slot <- newInputSlot
   let seeded = S { transcript = [Summary (unpack (task sr))]
-                 , pending = [], budget = scfBudget cfg, mode = Working, tools = scfTools cfg }
+                 , pending = [], budget = scfBudget cfg, mode = Working, tools = scfTools cfg
+                 , failure = Nothing }
   rid <- atomically $ do
     m <- readTVar regv
     let rid = pack ("run-" <> show (Map.size m))
@@ -370,7 +371,8 @@ aguiH cfg (Registry regv) req respond = do
       logv <- newEventLog
       slot <- newInputSlot
       let seeded = S { transcript = seedTranscript msgs
-                     , pending = [], budget = scfBudget cfg, mode = Working, tools = scfTools cfg }
+                     , pending = [], budget = scfBudget cfg, mode = Working, tools = scfTools cfg
+                     , failure = Nothing }
       stv <- newTVarIO (initRunStateFor rid (budget seeded) (mode seeded))
       atomically (modifyTVar' regv (Map.insert rid (RunHandle logv slot)))
       let sink = logSink logv

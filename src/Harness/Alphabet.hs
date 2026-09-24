@@ -188,8 +188,13 @@ data Outcome
     -- 'calls'.
   | Exhausted
     -- ^ The budget ran out before the agent finished. Emitted when
-    -- 'Harness.State.budget' reaches zero (also the sink for a 'Malformed'
-    -- refusal, which zeroes the budget).
+    -- 'Harness.State.budget' reaches zero without a terminal decode failure.
+  | Failed String
+    -- ^ A terminal decode\/model failure the provider could not repair (payload
+    -- carries the diagnostic). Distinct from 'Exhausted' (budget ran out) so a
+    -- decode death is not mistaken for ordinary budget exhaustion (review1 #9).
+    -- Fires when 'Harness.State.failure' is set by a 'Malformed' refusal reaching
+    -- 'Harness.Coalgebra.working'.
   | Stuck String
     -- ^ The agent could make no progress for a non-budget reason (payload
     -- carries the explanation). [design]
