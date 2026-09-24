@@ -86,6 +86,8 @@ spec = do
     prop "outcomeOf (probe h 200 w) matches run (liftHypo h) w at reachable nodes" $
       forAll (Blind <$> genHypo) $ \(Blind h) -> forAll (choose (200, 1200)) $ \b ->
         forAll (Blind <$> subtreeOf h b) $ \(Blind mw) ->
+          checkCoverage $
+          cover 80 (case mw of Just _ -> True; Nothing -> False) "reachable tree present" $
           case mw of
             Nothing -> property True
             Just w  -> ioProperty $ do
@@ -144,6 +146,8 @@ spec = do
     -- afforded set excludes @commit@.
     prop "probe never emits (Did c) whose tool is unafforded at that node" $
       forAll (Blind <$> genHypo) $ \(Blind h) -> forAll (choose (200, 1200)) $ \b ->
+        checkCoverage $
+        cover 80 (case firstTree h b of Just _ -> True; Nothing -> False) "reachable tree present" $
         case firstTree h b of
           Nothing -> property True
           Just w  -> conjoin (map afforded (performNodes h w))
