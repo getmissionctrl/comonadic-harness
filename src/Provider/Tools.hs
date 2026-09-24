@@ -9,12 +9,10 @@
 --
 --   * @read@\/@write@ resolve their path inside the sandbox; a @..@ escape is
 --     refused rather than followed.
---   * @bash@ runs with the sandbox as its working directory and a wall-clock
---     timeout, so a hung or runaway command cannot block the run forever.
---     /Caveat:/ this is @cwd@-confinement, not a security boundary — the command
---     runs with the harness's own uid and can read outside the sandbox (e.g.
---     @cat \/etc\/passwd@). Only @read@\/@write@ are path-confined; @bash@ is
---     trusted-input territory. [design]
+--   * @bash@ is __disabled by default__ in 'sandboxAct'. Use 'trustedShellWorld'
+--     to opt in explicitly. Even then, this is @cwd@-confinement only — not a
+--     security boundary. The command runs with the harness's own uid and can read
+--     outside the sandbox (@cat \/etc\/passwd@ works). [design]
 --   * @commit@ is a @git commit@ in the sandbox's /own/ repository, seeded by
 --     'prepareSandbox' — the surrounding project repo is never touched.
 --
@@ -24,6 +22,7 @@
 module Provider.Tools
   ( prepareSandbox
   , sandboxAct
+  , trustedShellWorld
   ) where
 
 import Control.Exception (SomeException, try)
@@ -43,7 +42,18 @@ import System.Directory
   )
 import System.Exit (ExitCode (..))
 import System.FilePath (isAbsolute, pathSeparator, splitDirectories, takeDirectory, (</>))
-import System.Process (CreateProcess (..), proc, readCreateProcessWithExitCode, shell)
+import System.IO (hGetContents)
+import System.Process
+  ( CreateProcess (..)
+  , StdStream (..)
+  , proc
+  , readCreateProcessWithExitCode
+  , shell
+  , withCreateProcess
+  , waitForProcess
+  , terminateProcess
+  , interruptProcessGroupOf
+  )
 import System.Timeout (timeout)
 
 import Harness.Alphabet (Call (..), Obs (..))
@@ -106,13 +116,18 @@ sandboxAct root c = do
 -- | Route a call to the tool that runs it, pulling each tool's argument out of
 -- the (loosely-keyed) 'Args' by trying every plausible key name the model might
 -- have used. An unknown tool name is a recoverable error string, not a crash.
+--
+-- __Shell is absent here by design.__ @bash@ is refused by default; call
+-- 'trustedShellWorld' instead of 'sandboxAct' when you want shell capability.
+-- This means a caller cannot accidentally enable shell by passing a @bash@ call
+-- through the default world — the opt-in must be explicit. [design]
 dispatch :: FilePath -> String -> Args -> IO String
 dispatch root tl a = case tl of
   "read"   -> readTool root (arg ["path", "filename", "file", "filepath"] a)
   "write"  -> writeTool root (arg ["path", "filename", "file", "filepath"] a)
                              (arg ["body", "content", "text", "data"] a)
-  "bash"   -> bashTool root (arg ["cmd", "command", "script"] a)
   "commit" -> commitTool root (arg ["msg", "message", "m"] a)
+  "bash"   -> pure "error: shell disabled (use trustedShellWorld to opt in)"
   other    -> pure ("error: unknown tool " ++ other)
 
 -- | @read@: return a clipped view of a file's contents. Path-confined through
@@ -139,26 +154,55 @@ writeTool root (Just rel) mbody = withSafePath root rel $ \p -> do
   writeFile p body
   pure ("wrote " ++ show (length body) ++ " bytes to " ++ rel)
 
--- | @bash@: run a shell command with the sandbox as its working directory and a
--- 10-second wall-clock timeout, returning the exit status and clipped
--- stdout+stderr. A timeout is reported as an error string so a hung command
--- cannot block the run forever.
+-- | An opt-in world that adds the untrusted shell capability to 'sandboxAct'.
 --
--- __Caveat, not hidden.__ This is @cwd@-confinement, /not/ a security boundary.
--- The command runs with the harness's own uid and can read outside the sandbox
--- (@cat \/etc\/passwd@ works). Only @read@\/@write@ are path-confined; @bash@ is
--- trusted-input territory. [design]
-bashTool :: FilePath -> Maybe String -> IO String
-bashTool _ Nothing = pure "error: bash: no command argument"
-bashTool root (Just cmd)
+-- __This is not a security boundary.__ @trustedShell@ runs arbitrary commands
+-- with the harness's own uid; @cwd@-confinement is not containment. Use only
+-- with a trusted model, or wait for the microVM sandbox (see the @..\/scape@
+-- project). [unbuilt: real isolation]
+--
+-- All non-@bash@ calls are forwarded to 'sandboxAct' unchanged, so this world
+-- is a strict superset of the default one.
+trustedShellWorld :: FilePath -> Call -> IO Obs
+trustedShellWorld root c
+  | tool c == "bash" = do
+      result <- try (trustedShell root (arg ["cmd", "command", "script"] (parseArgs (args c))))
+      pure $ Obs $ case result of
+        Left (e :: SomeException) -> "error: " ++ show e
+        Right out                 -> out
+  | otherwise = sandboxAct root c
+
+-- | Run a shell command in a new process group so a timeout can terminate the
+-- whole tree, not merely stop waiting on it.
+--
+-- __Stdout\/stderr.__ We merge stderr into stdout via the shell (@2>&1@) rather
+-- than draining two pipes concurrently. Two-pipe concurrent draining without a
+-- dedicated thread per handle is prone to deadlock when either pipe fills its
+-- kernel buffer before the other is read; the @2>&1@ merge avoids that entirely
+-- with no observable difference to the model. [design]
+--
+-- __Still not a security boundary__ — see 'trustedShellWorld'.
+trustedShell :: FilePath -> Maybe String -> IO String
+trustedShell _ Nothing = pure "error: bash: no command argument"
+trustedShell root (Just cmd)
   | null cmd  = pure "error: bash: empty command"
   | otherwise = do
-      let cp = (shell cmd) { cwd = Just root }
-      mres <- timeout (10 * 1000000) (readCreateProcessWithExitCode cp "")
-      case mres of
-        Nothing              -> pure "error: bash: timed out after 10s"
-        Just (code, out, err) ->
-          pure ("bash " ++ showExit code ++ "\n" ++ clip 800 (out ++ err))
+      -- Merge stderr into stdout to avoid two-pipe deadlock. [design]
+      let cp = (shell (cmd ++ " 2>&1"))
+                 { cwd          = Just root
+                 , create_group = True
+                 , std_out      = CreatePipe
+                 }
+      withCreateProcess cp $ \_ mout _ ph -> do
+        out <- maybe (pure "") hGetContents mout
+        mcode <- timeout (10 * 1000000) (length out `seq` waitForProcess ph)
+        case mcode of
+          Just code -> pure ("bash " ++ showExit code ++ "\n" ++ clip 800 out)
+          Nothing   -> do
+            interruptProcessGroupOf ph
+            _ <- timeout (2 * 1000000) (waitForProcess ph)
+            terminateProcess ph
+            pure "error: bash: timed out after 10s (process group killed)"
 
 -- | @commit@: stage everything and @git commit@ in the sandbox's /own/
 -- repository (seeded by 'prepareSandbox'). The surrounding project repo is never
