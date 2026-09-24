@@ -181,6 +181,26 @@ trustedShellWorld root c
 -- kernel buffer before the other is read; the @2>&1@ merge avoids that entirely
 -- with no observable difference to the model. [design]
 --
+-- __Kill caveats — best effort only.__
+--
+-- [speculative] If the child survives SIGTERM (e.g. it catches or blocks the
+-- signal), the @waitForProcess@ inside @withCreateProcess@'s cleanup bracket
+-- can block indefinitely, holding the harness thread.
+--
+-- [design] The SIGTERM escalation (@terminateProcess@) targets only the group
+-- leader, not the entire process group. A group member that survived the
+-- preceding SIGINT (@interruptProcessGroupOf@) can therefore be orphaned and
+-- continue running after this function returns. Sending SIGKILL to the whole
+-- group (@kill -9 -<pgid>@) would close the window, but the @process@ library
+-- does not expose @signalProcessGroup@; the POSIX call would require @unix@
+-- directly. This is the correct future fix. [unbuilt: SIGKILL-to-group via unix]
+--
+-- [speculative] For output-heavy commands, draining the pipe (@length out@
+-- forcing the lazy 'hGetContents') happens inside the 10 s timeout window. A
+-- command that exits quickly but emits hundreds of MB of output can therefore
+-- exhaust the timeout during the drain phase and be misreported as timed out
+-- rather than as producing too much output.
+--
 -- __Still not a security boundary__ — see 'trustedShellWorld'.
 trustedShell :: FilePath -> Maybe String -> IO String
 trustedShell _ Nothing = pure "error: bash: no command argument"
