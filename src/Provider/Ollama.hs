@@ -23,10 +23,13 @@ module Provider.Ollama
   ( OllamaCfg (..)
   , defaultOllamaCfg
   , ollamaProvider
+  , streamingComplete
   ) where
 
 import Control.Concurrent (threadDelay)
+import Control.Monad (when)
 import Data.Aeson (decode, encode)
+import Data.IORef (modifyIORef', newIORef, readIORef, writeIORef)
 import Data.ByteString.Lazy.Char8 qualified as BSLC
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map qualified as Map
@@ -134,6 +137,59 @@ completeWith cfg req = do
   pure $ case result of
     Left err   -> Left (Malformed (show err))
     Right resp -> decodeResp req resp
+
+-- | A __streaming__ oracle: identical to 'completeWith' in what it returns, but
+-- it calls @onDelta@ with each text fragment as the model emits it, so a caller
+-- (the AG-UI server) can forward tokens to the client live instead of waiting
+-- for the whole turn. The full 'Response' (accumulated text, tool calls, usage)
+-- is still returned for the coalgebra.
+--
+-- __How.__ Sets @ChatOps.stream@; the per-chunk callback accumulates @content@
+-- (streaming each delta out via @onDelta@), captures any @tool_calls@, and reads
+-- usage from the terminal @done@ chunk. We accumulate ourselves rather than
+-- trusting the library's returned aggregate, and skip 'withLocalRetry' — a retry
+-- would re-emit already-streamed deltas — so a transient fault surfaces as
+-- 'Malformed' and ends the run (a fair trade for clean streaming). [design]
+streamingComplete :: OllamaCfg -> (T.Text -> IO ()) -> Request -> IO (Either Refusal Response)
+streamingComplete cfg onDelta req = do
+  accRef   <- newIORef []            -- content fragments, reversed
+  callsRef <- newIORef Nothing       -- last seen tool_calls
+  usageRef <- newIORef (0, 0)        -- (promptEvalCount, evalCount) from the done chunk
+  let ollamaCfg = defaultOllamaConfig { hostUrl = T.pack (ocBaseUrl cfg) }
+      onChunk cr = do
+        case message cr of
+          Just m -> do
+            let d = content m
+            when (not (T.null d)) $ do
+              modifyIORef' accRef (d :)
+              onDelta d
+            case tool_calls m of
+              Just tcs -> writeIORef callsRef (Just tcs)
+              Nothing  -> pure ()
+          Nothing -> pure ()
+        when (done cr) $
+          writeIORef usageRef
+            ( maybe 0 fromIntegral (promptEvalCount cr)
+            , maybe 0 fromIntegral (evalCount cr) )
+      ops = (buildChatOps cfg req) { stream = Just (onChunk, pure ()) }
+  result <- chat ops (Just ollamaCfg)
+  case result of
+    Left err -> pure (Left (Malformed (show err)))
+    Right _  -> do
+      said       <- (T.concat . reverse) <$> readIORef accRef
+      mcalls     <- readIORef callsRef
+      (pin, out) <- readIORef usageRef
+      let Prompt promptText = reqPrompt req
+          promptChars = length promptText
+          isOverflow  = promptChars > 80 && fromIntegral pin < 0.6 * (fromIntegral promptChars / 4.0 :: Double)
+      pure $
+        if isOverflow
+          then Left Overflow
+          else Right Response
+            { say   = T.unpack said
+            , calls = maybe [] (map toCall) mcalls
+            , usage = Usage { inTok = pin, outTok = out }
+            }
 
 -- | Translate our 'Request' plus an 'OllamaCfg' into the client's @ChatOps@.
 --

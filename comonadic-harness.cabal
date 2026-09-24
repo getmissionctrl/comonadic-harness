@@ -89,7 +89,7 @@ executable serve
   import:           warnings, exts
   hs-source-dirs:   app-serve
   main-is:          Serve.hs
-  build-depends:    base, comonadic-harness, text, http-client, http-client-tls
+  build-depends:    base, comonadic-harness, text, http-client, http-client-tls, stm
 
 test-suite spec
   import:           warnings, exts

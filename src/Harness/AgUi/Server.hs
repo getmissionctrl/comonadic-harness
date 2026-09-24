@@ -14,6 +14,7 @@
 -- 'harness' unfold and only decorates the seams.
 module Harness.AgUi.Server
   ( ProviderFactory
+  , EnvBuilder
   , ServeConfig (..)
   , defaultServeConfig
   , mkApp
@@ -45,7 +46,7 @@ import Harness.Probe (assess)
 import Harness.Run (Env (..), run)
 import Harness.AgUi.Event
 import Harness.AgUi.Sink
-import Harness.AgUi.Translate (runStartEvents, runFinishEvents, forecastEvent)
+import Harness.AgUi.Translate (RunState, runStartEvents, runFinishEvents, forecastEvent)
 import Harness.AgUi.HumanEnv
 
 -- | Build the per-run behaviour 'Env' (provider + world) for a run id. Injected
@@ -53,21 +54,33 @@ import Harness.AgUi.HumanEnv
 -- transport is oblivious to which.
 type ProviderFactory = RunId -> IO (Env IO)
 
+-- | Build a run's 'Env' given its event 'Sink' and threaded 'RunState'. Unlike a
+-- 'ProviderFactory' (which the tracing decorator wraps to derive events /after/
+-- each turn), an 'EnvBuilder' is handed the sink directly, so it can emit events
+-- __during__ a turn — this is what token streaming needs: the oracle pushes
+-- @TEXT_MESSAGE_CONTENT@ deltas as the model produces them. A builder owns all
+-- emission for its runs (the server does not also wrap it with 'traceEnv').
+type EnvBuilder = Sink -> TVar RunState -> RunId -> IO (Env IO)
+
 -- | How the server seeds and drives each run: the provider 'ProviderFactory',
 -- the tools every run is afforded ('scfTools' — empty for the fake, the real
--- read\/write\/bash\/commit\/scrape_url set for a live agent), and the starting
--- token 'scfBudget'. Injected so the transport stays oblivious to whether it is
--- driving a stub or a live model against real tools.
+-- read\/write\/bash\/commit\/scrape_url set for a live agent), the starting
+-- token 'scfBudget', and an optional streaming 'EnvBuilder'. When 'scfEnvBuilder'
+-- is 'Just', it owns emission (used for the live, token-streaming agent); when
+-- 'Nothing', runs use 'scfFactory' wrapped in the tracing decorator (the fake and
+-- the tests).
 data ServeConfig = ServeConfig
-  { scfFactory :: ProviderFactory
-  , scfTools   :: [ToolSpec]
-  , scfBudget  :: Int
+  { scfFactory    :: ProviderFactory
+  , scfTools      :: [ToolSpec]
+  , scfBudget     :: Int
+  , scfEnvBuilder :: Maybe EnvBuilder
   }
 
--- | A config for the deterministic fake: no tools, a small budget. Matches the
--- pre-config behaviour so existing callers ('mkApp'\/'serve'') are unchanged.
+-- | A config for the deterministic fake: no tools, a small budget, no streaming
+-- builder. Matches the pre-config behaviour so existing callers
+-- ('mkApp'\/'serve'') are unchanged.
 defaultServeConfig :: ProviderFactory -> ServeConfig
-defaultServeConfig f = ServeConfig f [] 1200
+defaultServeConfig f = ServeConfig f [] 1200 Nothing
 
 -- | Everything the transport needs to reach a live run: its event log (for SSE)
 -- and its input slot (for a human-driven oracle). The threaded @RunState@ that
@@ -158,7 +171,6 @@ preflightHeaders =
 -- decorator, then emits @RUN_FINISHED@.
 startH :: ServeConfig -> Registry -> StartReq -> Handler StartResp
 startH cfg (Registry regv) sr = liftIO $ do
-  let factory = scfFactory cfg
   logv <- newEventLog
   slot <- newInputSlot
   let seeded = S { transcript = [Summary (unpack (task sr))]
@@ -169,12 +181,16 @@ startH cfg (Registry regv) sr = liftIO $ do
     let rid = pack ("run-" <> show (Map.size m))
     writeTVar regv (Map.insert rid (RunHandle logv slot) m)
     pure rid
-  inner <- factory rid
   let sink = logSink logv
-      -- One clear wiring, selected by the drive mode. Auto: the provider answers
-      -- every turn. Human: the oracle blocks on the input slot; the provider's
-      -- world seam still performs tools automatically.
-      env = case runMode sr of
+  -- A streaming env builder (if configured) owns all emission (token streaming);
+  -- otherwise wrap the plain provider with the tracing decorator, selecting the
+  -- drive mode. Auto: the provider answers every turn. Human: the oracle blocks
+  -- on the input slot; the provider's world seam still performs tools.
+  env <- case scfEnvBuilder cfg of
+    Just build -> build sink stv rid
+    Nothing -> do
+      inner <- scfFactory cfg rid
+      pure $ case runMode sr of
         "human" -> traceEnv sink stv (humanEnv (\_ -> pure ()) slot (world inner))
         _       -> traceEnv sink stv inner
   void $ forkIO $ do
@@ -282,16 +298,16 @@ aguiH cfg (Registry regv) req respond = do
   case eitherDecode body of
     Left _ -> respond (Wai.responseLBS status400 [allowOrigin, jsonCT] "{\"error\":\"bad RunAgentInput\"}")
     Right (RunAgentInput tid rid task') -> do
-      let factory = scfFactory cfg
       logv <- newEventLog
       slot <- newInputSlot
       let seeded = S { transcript = [Summary (unpack task')]
                      , pending = [], budget = scfBudget cfg, mode = Working, tools = scfTools cfg }
       stv <- newTVarIO (initRunState (budget seeded) (mode seeded))
       atomically (modifyTVar' regv (Map.insert rid (RunHandle logv slot)))
-      inner <- factory rid
       let sink = logSink logv
-          env  = traceEnv sink stv inner
+      env <- case scfEnvBuilder cfg of
+        Just build -> build sink stv rid
+        Nothing    -> traceEnv sink stv <$> scfFactory cfg rid
       void $ forkIO $ do
         mapM_ sink (runStartEvents tid rid (budget seeded) (tools seeded) (mode seeded))
         o <- run env (harness seeded)

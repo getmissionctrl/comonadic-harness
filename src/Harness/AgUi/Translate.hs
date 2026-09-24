@@ -11,6 +11,8 @@ module Harness.AgUi.Translate
   , budgetOf
   , runStartEvents
   , oracleEvents
+  , oracleEventsStreamed
+  , mintMessageId
   , refusalEvents
   , worldEvents
   , runFinishEvents
@@ -90,6 +92,34 @@ oracleEvents r st0 =
                    , budgetDelta (rsBudget st2)
                    ]
          in (evs, st2)
+       cs ->
+         let step (acc, s) c =
+               let (tid, s') = mint "tc-" s
+                   trio = [ ToolCallStart tid (pack (tool c))
+                          , ToolCallArgs tid (pack (args c))
+                          , ToolCallEnd tid
+                          ]
+               in (acc ++ trio, s' { rsLastTC = Just (tid, "tcmsg-" <> tid) })
+             (evs, st2) = foldl step ([], st1) cs
+         in (evs ++ [budgetDelta (rsBudget st2)], st2)
+
+-- | Mint a fresh assistant message id, advancing the run state. Used by the
+-- streaming server path, which emits @TEXT_MESSAGE_START@ itself (on the first
+-- streamed token) rather than letting 'oracleEvents' build the whole message.
+mintMessageId :: RunState -> (MessageId, RunState)
+mintMessageId = mint "msg-"
+
+-- | Like 'oracleEvents' but for the __streaming__ path, where the assistant text
+-- has already been emitted token-by-token (@TEXT_MESSAGE_START@\/@CONTENT@*\/
+-- @END@) by the caller. This emits only the /rest/: the tool-call proposals (if
+-- any) and the budget 'StateDelta'. Threads 'rsLastTC' exactly as 'oracleEvents'
+-- so a following 'worldEvents' still correlates its @TOOL_CALL_RESULT@.
+oracleEventsStreamed :: Response -> RunState -> ([AgUiEvent], RunState)
+oracleEventsStreamed r st0 =
+  let spent = inTok (usage r) + outTok (usage r)
+      st1   = st0 { rsBudget = rsBudget st0 - spent }
+  in case calls r of
+       [] -> ([budgetDelta (rsBudget st1)], st1)
        cs ->
          let step (acc, s) c =
                let (tid, s') = mint "tc-" s
