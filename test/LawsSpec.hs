@@ -175,6 +175,14 @@ spec = do
       any (\e -> case e of Repaired (Call "commit" _) _ -> True; _ -> False) evs
         `shouldBe` True
 
+  describe "admit validates arguments (D3, review1 #6)" $
+    it "a schema-invalid write is repaired, not performed" $ do
+      h <- generate genHypo
+      let s   = (startState 1000) { pending = [Call "write" "not json"] }  -- write needs {path,body}
+          evs = probe h 50 (harness s)
+      any (\e -> case e of Repaired (Call "write" _) _ -> True; _ -> False) evs `shouldBe` True
+      all (\e -> case e of Did (Call "write" _) -> False; _ -> True) evs `shouldBe` True
+
   describe "compaction violation rate — STAND-IN compactor (E1); real path measured separately" $ do
     it "no-op compaction is a determinism check (must be 0%)" $ do
       r <- measureRate (const id)

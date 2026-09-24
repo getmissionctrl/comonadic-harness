@@ -27,6 +27,7 @@ library
   hs-source-dirs:   src
   exposed-modules:
     Harness.Alphabet
+    Harness.Schema
     Harness.State
     Harness.Coalgebra
     Harness.Path

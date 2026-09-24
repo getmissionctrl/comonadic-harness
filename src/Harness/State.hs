@@ -32,9 +32,14 @@ module Harness.State
   , renderLine
   ) where
 
+import Data.Aeson (Value (Object), decode)
+import Data.Aeson.Key qualified as K
+import Data.Aeson.KeyMap qualified as KM
+import Data.ByteString.Lazy.Char8 qualified as BSLC
 import Data.List (isPrefixOf)
 import GHC.Generics (Generic)
 import Harness.Alphabet
+import Harness.Schema (requiredKeys)
 
 -- | Which of the two turn-shapes the harness is currently in. Both go through
 -- the single 'Harness.Alphabet.Ask' constructor; @Mode@ is the bit that tells
@@ -217,15 +222,44 @@ afford s
 -- __Gotcha — order-preserving.__ @foldr@ keeps the original call order in both
 -- partitions, so the afforded calls that survive are performed in exactly the
 -- sequence the model asked for: no reordering, no dropping, no deduplication.
--- The membership test is by tool /name/ only ('specName'), not by argument
--- schema — an afforded name with malformed @args@ still reaches the world.
--- [design]
+--
+-- __Two gates.__ A call survives only if BOTH its tool /name/ is afforded
+-- ('specName') AND its @args@ satisfy that tool's declared schema
+-- ('argsSatisfy'). The two rejections carry distinct, model-legible error
+-- observations so the next turn can tell an unafforded name from a malformed
+-- argument. The argument gate is the D3 fix (review1 #6): before it, an afforded
+-- name with malformed @args@ still reached the world. [design]
 admit :: [ToolSpec] -> [Call] -> ([Call], [(Call, Obs)])
 admit specs = foldr classify ([], [])
   where
-    classify c (ok, bad)
-      | tool c `elem` map specName specs = (c : ok, bad)
-      | otherwise = (ok, (c, Obs ("error: tool not afforded: " ++ tool c)) : bad)
+    classify c (ok, bad) = case lookupSpec c of
+      Nothing -> (ok, (c, Obs ("error: tool not afforded: " ++ tool c)) : bad)
+      Just spec
+        | argsSatisfy spec c -> (c : ok, bad)
+        | otherwise ->
+            ( ok
+            , (c, Obs ("error: invalid arguments for " ++ tool c
+                       ++ "; expected " ++ specSchema spec)) : bad )
+    lookupSpec c = case [ s | s <- specs, specName s == tool c ] of
+                     (s : _) -> Just s
+                     []      -> Nothing
+
+-- | Does this call's args satisfy its tool's declared schema? Lenient by design
+-- (a local model varies key names and omits the JSON envelope for single-arg
+-- tools), strict where it matters (a multi-field tool needs a JSON object naming
+-- its fields). A tool with no declared fields accepts anything; a single-field
+-- tool accepts any non-empty payload (bare strings included); a multi-field tool
+-- requires a JSON object containing each declared key. This is the argument gate
+-- of 'admit' (D3, review1 #6): the "third thing" — a rejected call becomes an
+-- error 'Obs', neither a 'Harness.Alphabet.Refusal' nor a clean
+-- 'Harness.Alphabet.Response'. [design]
+argsSatisfy :: ToolSpec -> Call -> Bool
+argsSatisfy spec c = case requiredKeys (specSchema spec) of
+  []    -> True
+  [_]   -> not (null (args c))
+  keys  -> case decode (BSLC.pack (args c)) of
+             Just (Object o) -> all (\k -> KM.member (K.fromString k) o) keys
+             _               -> False
 
 -- | Apply one admission pass: fold rejected (unafforded) calls into the
 -- transcript as error observations and narrow 'pending' to the afforded calls.

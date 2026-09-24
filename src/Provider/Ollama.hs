@@ -62,6 +62,7 @@ import Data.Ollama.Common.Utils (defaultModelOptions)
 import Data.Text qualified as T
 import Harness.Alphabet
 import Harness.Fault (ProviderError (..))
+import Harness.Schema (schemaFields)
 import Provider.Class (Provider (..))
 
 -- | Everything the provider needs to reach a specific model on a specific
@@ -324,24 +325,19 @@ schemaOf spec = FunctionParameters
       }
 
 -- | Parse the terse @{k:type,...}@ tool-schema DSL into @[(name, jsonType)]@.
+-- The field parsing is delegated to 'Harness.Schema.schemaFields' — the single
+-- source of the DSL, shared with the admission layer ('Harness.State.admit') so
+-- the two cannot drift — and this function only adds the provider-specific type
+-- column: mapping each declared type to the JSON-schema type Ollama expects.
 parseSpec :: String -> [(T.Text, T.Text)]
 parseSpec raw =
-  [ (T.pack (trim k), jsonType (trim (drop 1 v)))
-  | field <- splitComma inner
-  , let (k, v) = break (== ':') field
-  , not (null (trim k))
-  ]
+  [ (T.pack k, jsonType ty) | (k, ty) <- schemaFields raw ]
   where
-    inner = takeWhile (/= '}') (drop 1 (dropWhile (/= '{') raw))
-    trim  = f . f where f = reverse . dropWhile (== ' ')
     jsonType :: String -> T.Text
     jsonType ty
       | ty `elem` ["int", "integer", "number"] = "number"
       | ty `elem` ["bool", "boolean"]          = "boolean"
       | otherwise                               = "string"
-    splitComma [] = []
-    splitComma s  = let (a, b) = break (== ',') s
-                    in a : case b of [] -> []; (_ : rest) -> splitComma rest
 
 -- | The text actually sent to the model for a request: the concatenation of the
 -- native 'reqMessages' when present (that is what goes on the wire), falling
