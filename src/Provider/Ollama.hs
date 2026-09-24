@@ -206,15 +206,8 @@ streamingComplete cfg onDelta onThink req = do
       said       <- (T.concat . reverse) <$> readIORef accRef
       mcalls     <- readIORef callsRef
       (pin, out) <- readIORef usageRef
-      let Prompt promptText = reqPrompt req
-          sentText = case reqMessages req of
-            [] -> promptText
-            ms -> concatMap renderMsg ms
-          renderMsg (MsgUser t)               = t
-          renderMsg (MsgAssistant t cs)       = t ++ concatMap (\c -> " " ++ tool c ++ " " ++ args c) cs
-          renderMsg (MsgToolResult _ (Obs o)) = o
       pure $
-        if overflowByEstimate cfg sentText
+        if overflowByEstimate cfg (sentText req)
           then Left Overflow
           else Right Response
             { say   = T.unpack said
@@ -337,6 +330,21 @@ parseSpec raw =
     splitComma s  = let (a, b) = break (== ',') s
                     in a : case b of [] -> []; (_ : rest) -> splitComma rest
 
+-- | The text actually sent to the model for a request: the concatenation of the
+-- native 'reqMessages' when present (that is what goes on the wire), falling
+-- back to the flattened 'reqPrompt' (the compaction\/summarising path sends a
+-- single flattened message). Used only for the overflow token estimate, and
+-- kept as ONE definition so the two decode paths ('decodeResp' and
+-- 'streamingComplete') cannot drift. [design]
+sentText :: Request -> String
+sentText req = case reqMessages req of
+  [] -> let Prompt p = reqPrompt req in p
+  ms -> concatMap renderMsg ms
+  where
+    renderMsg (MsgUser t)               = t
+    renderMsg (MsgAssistant t cs)       = t ++ concatMap (\c -> " " ++ tool c ++ " " ++ args c) cs
+    renderMsg (MsgToolResult _ (Obs o)) = o
+
 -- | Infer prompt overflow from the CONFIGURED window, not from
 -- @promptEvalCount@. Estimate prompt tokens at ~4 chars/token and compare to
 -- @ocNumCtx@ with a margin for chat-template / tool-schema overhead. This
@@ -362,7 +370,7 @@ overflowByEstimate cfg promptText =
 -- fixes the drift between @reqPrompt@ and @reqMessages@ noted in review1 #9.
 decodeResp :: OllamaCfg -> Request -> ChatResponse -> Either Refusal Response
 decodeResp cfg req resp
-  | overflowByEstimate cfg sentText = Left Overflow
+  | overflowByEstimate cfg (sentText req) = Left Overflow
   | otherwise  = Right Response
       { say   = maybe "" (T.unpack . content) (message resp)
       , calls = maybe [] (map toCall) (message resp >>= tool_calls)
@@ -371,14 +379,6 @@ decodeResp cfg req resp
           , outTok = maybe 0 fromIntegral (evalCount resp)
           }
       }
-  where
-    Prompt promptText = reqPrompt req
-    sentText = case reqMessages req of
-      [] -> promptText
-      ms -> concatMap renderMsg ms
-    renderMsg (MsgUser t)               = t
-    renderMsg (MsgAssistant t cs)       = t ++ concatMap (\c -> " " ++ tool c ++ " " ++ args c) cs
-    renderMsg (MsgToolResult _ (Obs o)) = o
 
 -- | Convert one library @ToolCall@ into our 'Harness.Alphabet.Call'.
 --
