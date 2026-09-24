@@ -1,5 +1,5 @@
 -- | The real oracle: an Ollama-backed 'Provider' talking to a Qwen model on a
--- remote host.
+-- local (default @localhost:11434@) Ollama server.
 --
 -- __What.__ Supplies @complete@ (the model) for a live run. The companion
 -- 'Provider.Tools.sandboxAct' supplies @act@ (the world); together they replace
