@@ -76,6 +76,9 @@ data AgUiEvent
   | SubagentError SubagentRunId Text                 -- ^ subagentRunId, message
   | ActivitySnapshot MessageId Text Value            -- ^ id, activityType, content
   | ActivityDelta MessageId Text [Patch]             -- ^ id, activityType, patch
+  | ReasoningMessageStart MessageId                  -- ^ messageId (role is always "reasoning")
+  | ReasoningMessageContent MessageId Text           -- ^ messageId, delta
+  | ReasoningMessageEnd MessageId                    -- ^ messageId
   deriving stock (Eq, Show)
 
 instance ToJSON AgUiEvent where
@@ -101,3 +104,6 @@ instance ToJSON AgUiEvent where
     SubagentError s m      -> object ["type" .= ("SUBAGENT_ERROR" :: Text), "subagentRunId" .= s, "message" .= m]
     ActivitySnapshot i a c -> object ["type" .= ("ACTIVITY_SNAPSHOT" :: Text), "messageId" .= i, "activityType" .= a, "content" .= c]
     ActivityDelta i a ps   -> object ["type" .= ("ACTIVITY_DELTA" :: Text), "messageId" .= i, "activityType" .= a, "patch" .= ps]
+    ReasoningMessageStart m     -> object ["type" .= ("REASONING_MESSAGE_START" :: Text), "messageId" .= m, "role" .= ("reasoning" :: Text)]
+    ReasoningMessageContent m d -> object ["type" .= ("REASONING_MESSAGE_CONTENT" :: Text), "messageId" .= m, "delta" .= d]
+    ReasoningMessageEnd m       -> object ["type" .= ("REASONING_MESSAGE_END" :: Text), "messageId" .= m]

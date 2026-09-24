@@ -45,3 +45,11 @@ spec = describe "Harness.AgUi.Event ToJSON wire shapes" $ do
   it "ActivitySnapshot uses ACTIVITY_SNAPSHOT + activityType + content" $
     enc (ActivitySnapshot "act-1" "DECISION" (object ["chose" .= ("Win"::String)]))
       `shouldBe` object ["type" .= ("ACTIVITY_SNAPSHOT"::String), "messageId" .= ("act-1"::String), "activityType" .= ("DECISION"::String), "content" .= object ["chose" .= ("Win"::String)]]
+
+  it "ReasoningMessageStart uses REASONING_MESSAGE_START + messageId + reasoning role" $
+    enc (ReasoningMessageStart "rsn-1")
+      `shouldBe` object ["type" .= ("REASONING_MESSAGE_START"::String), "messageId" .= ("rsn-1"::String), "role" .= ("reasoning"::String)]
+
+  it "ReasoningMessageContent uses REASONING_MESSAGE_CONTENT + messageId + delta" $
+    enc (ReasoningMessageContent "rsn-1" "let me think")
+      `shouldBe` object ["type" .= ("REASONING_MESSAGE_CONTENT"::String), "messageId" .= ("rsn-1"::String), "delta" .= ("let me think"::String)]
