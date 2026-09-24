@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Running a harness: pair the denotation tree against an effectful
@@ -37,6 +38,8 @@
 module Harness.Run
   ( Env (..)
   , Live
+  , NoTrace
+  , runNoTrace
   , hoistEnv
   , run
   ) where
@@ -44,7 +47,7 @@ module Harness.Run
 import Control.Comonad.Cofree (Cofree)
 import Control.Monad.Except (ExceptT, runExceptT)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Writer (WriterT, runWriterT)
+import Control.Monad.Writer (MonadWriter (..))
 import Harness.Alphabet
 import Harness.Fault (ProviderError)
 import Harness.Interp (Ev, interp)
@@ -95,11 +98,12 @@ data Env m = Env
 -- its 'Outcome'.
 --
 -- __How.__ 'run' is 'Harness.Interp.interp' with the two seams lifted from
--- 'Env' into @WriterT [Ev] IO@, then 'Control.Monad.Writer.runWriterT' applied
--- and the accumulated @[Ev]@ trace dropped on the floor (bound to @_evs@).
--- Execution wants the 'Outcome', not the trace; the trace is what
--- 'Harness.Probe.probe' keeps. Because both go through the one 'interp', they
--- agree on the path taken by construction (§16.1).
+-- 'Env' into 'Live' (@'ExceptT' 'ProviderError' 'NoTrace'@), then
+-- 'runNoTrace'/'runExceptT' applied and the result returned. The shared
+-- 'interp' emits 'Ev' events via 'tell'; 'NoTrace' discards them silently —
+-- execution wants the 'Outcome', not the trace. The trace is what
+-- 'Harness.Probe.probe' keeps (in a real 'Writer'). Because both go through
+-- the one 'interp', they agree on the path taken by construction (§16.1).
 --
 -- __Why fuel is 'maxBound'.__ 'Harness.Interp.interp' is depth-bounded so that
 -- /analysis/ can look a finite distance ahead; a live run has no such horizon —
@@ -117,21 +121,35 @@ data Env m = Env
 -- becomes a 'Refusal' the coalgebra can act on. [design]
 run :: Env Live -> Cofree HarnessF Ctx -> IO (Either ProviderError Outcome)
 run env w = do
-  (res, _evs :: [Ev]) <-
-    runWriterT (runExceptT (interp (\_ -> pure ()) (oracle env) (world env) maxBound w))
+  res <- runNoTrace (runExceptT (interp (\_ -> pure ()) (oracle env) (world env) maxBound w))
   pure (fmap (maybe (Stuck "fuel exhausted") id) res)
 
+-- | A trace-discarding effect stack for 'run'. Its 'MonadWriter' instance drops
+-- every 'tell', so the shared 'interp' — which emits one 'Ev' per node — pays
+-- nothing for a trace that execution does not want (analysis keeps its trace via
+-- 'Harness.Probe.probe', which uses a real 'Writer'). This removes the O(n²)
+-- list-append and O(n) live memory a real @WriterT [Ev]@ would cost over an
+-- unbounded run (review1 #3). [design]
+newtype NoTrace a = NoTrace { runNoTrace :: IO a }
+  deriving newtype (Functor, Applicative, Monad, MonadIO)
+
+instance MonadWriter [Ev] NoTrace where
+  writer (a, _) = pure a
+  tell _        = pure ()
+  listen m      = fmap (\a -> (a, [])) m
+  pass m        = fmap fst m
+
 -- | The concrete monad a live 'run' walks in: transport failure on an
--- 'ExceptT' channel over the interpreter's @'WriterT' ['Ev']@ trace over 'IO'.
+-- 'ExceptT' channel over the trace-discarding 'NoTrace' wrapper over 'IO'.
 --
 -- __Why a named alias.__ The two seams of a live 'Env' now live in this stack
 -- rather than plain 'IO', so callers construct their oracle\/world directly in
 -- 'Live' (via 'liftIO' or 'Control.Monad.Except.throwError') instead of 'run'
 -- lifting them in. Naming the stack keeps those call sites — and 'hoistEnv' —
--- readable. The 'WriterT' trace is an analysis artefact 'run' discards; the
--- 'ExceptT' channel carries the @'ProviderError'@ that invariant 5 forbids from
--- becoming a 'Refusal'. [design]
-type Live = ExceptT ProviderError (WriterT [Ev] IO)
+-- readable. The 'NoTrace' base discards the 'Ev' stream that 'interp' emits,
+-- paying nothing for a trace execution never uses; the 'ExceptT' channel carries
+-- the @'ProviderError'@ that invariant 5 forbids from becoming a 'Refusal'. [design]
+type Live = ExceptT ProviderError NoTrace
 
 -- | Lift an @'Env' 'IO'@ into an @'Env' m@ for any @'MonadIO' m@ (in practice
 -- 'Live'), by running each seam through 'liftIO'.

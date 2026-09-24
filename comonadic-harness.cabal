@@ -57,7 +57,6 @@ library
     , text
     , bytestring
     , aeson
-    , dlist
     -- Provider.Tools' sandboxed world executor (real read/write/bash/commit).
     , process
     , directory

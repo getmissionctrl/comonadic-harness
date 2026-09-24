@@ -16,14 +16,13 @@ module Main (main) where
 import Control.Comonad.Cofree (Cofree ((:<)))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Writer (runWriterT)
 import Data.Monoid (Any (..), Sum (..))
 import Harness.Alphabet
 import Harness.Coalgebra (harness)
 import Harness.Fault (ProviderError (..))
-import Harness.Interp (Ev, interp)
+import Harness.Interp (interp)
 import Harness.Probe (Hypo (..), Risk (..), assess, probe)
-import Harness.Run (Env (..), Live, hoistEnv)
+import Harness.Run (Env (..), Live, hoistEnv, runNoTrace)
 import Harness.State (Ctx (..), Mode (..), S (..), Turn (..), allTools)
 import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaOracle)
 import Provider.Tools (prepareSandbox, sandboxAct)
@@ -78,7 +77,7 @@ hypo =
 -- The final outcome is printed by the caller, not here.
 runVerbose :: Env Live -> Hypo -> Int -> Cofree HarnessF Ctx -> IO (Either ProviderError Outcome)
 runVerbose env h horizon w = do
-    (res, _evs :: [Ev]) <- runWriterT (runExceptT (interp onNode ora wld maxBound w))
+    res <- runNoTrace (runExceptT (interp onNode ora wld maxBound w))
     pure (fmap (maybe (Stuck "fuel exhausted") id) res)
   where
     -- The observer: label the node. It reads the annotation and the pure

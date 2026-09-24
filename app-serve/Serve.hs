@@ -19,7 +19,6 @@ module Main (main) where
 import Control.Concurrent.STM (TVar, atomically, newTVarIO, readTVar, writeTVar)
 import Control.Exception (SomeException, try)
 import Control.Monad.Except (runExceptT)
-import Control.Monad.Writer (runWriterT)
 import Data.Char (isSpace)
 import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.List (isPrefixOf)
@@ -35,7 +34,7 @@ import Harness.Alphabet
   ( Call (..), Obs (..), Prompt (..), Refusal (..), Request, Response (..)
   , Usage (..), reqMessages, reqPrompt, reqTools )
 import Harness.Fault (ProviderError (..))
-import Harness.Run (Env (..), Live)
+import Harness.Run (Env (..), Live, runNoTrace)
 import Harness.State (allTools)
 import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaOracle, streamingComplete)
 import Provider.Research (scrapeUrl, scrapeUrlSpec, urlArg)
@@ -113,7 +112,7 @@ main = do
 -- real path and keeps the error channel intact via 'run'.
 ioOracle :: OllamaCfg -> Request -> IO (Either Refusal Response)
 ioOracle cfg req = do
-  (res, _evs) <- runWriterT (runExceptT (ollamaOracle cfg req :: Live (Either Refusal Response)))
+  res <- runNoTrace (runExceptT (ollamaOracle cfg req :: Live (Either Refusal Response)))
   pure $ case res of
     Left (ProviderUnavailable e) -> Left (Malformed ("provider unavailable: " <> e))
     Right r                      -> r
