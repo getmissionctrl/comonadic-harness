@@ -228,6 +228,12 @@ streamingComplete cfg onDelta onThink req = do
 -- rather than replaying the whole transcript, because the harness has /already/
 -- folded the history into the projected prompt — the model's own multi-message
 -- memory would double-count it. [design]
+--
+-- __Tools field.__ When the afforded set is empty (e.g. the Summarising\/compaction
+-- path), the @tools@ field is omitted entirely rather than sent as @Just []@.
+-- Some servers treat the mere /presence/ of an empty tools array as a signal to
+-- activate tool-call parsing, which can alter generation. Omitting the field
+-- keeps wire behaviour identical to a plain completion request. [design]
 buildChatOps :: OllamaCfg -> Request -> ChatOps
 buildChatOps cfg req =
   let Prompt promptText = reqPrompt req
@@ -242,7 +248,9 @@ buildChatOps cfg req =
   in  defaultChatOps
         { modelName = T.pack (ocModel cfg)
         , messages  = msgs
-        , tools     = Just (map toInputTool (reqTools req))
+        , tools     = case reqTools req of
+                        [] -> Nothing
+                        ts -> Just (map toInputTool ts)
         , options   = Just defaultModelOptions { numCtx = Just (ocNumCtx cfg) }
         , think     = ocThink cfg
         }
