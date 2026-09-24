@@ -30,6 +30,7 @@ module Harness.State
   , request
   , view
   , renderLine
+  , replayOf
   ) where
 
 import Data.Aeson (Value (Object), decode)
@@ -303,6 +304,18 @@ toChatMsgs s = concatMap turnMsgs (reverse (transcript s))
     turnMsgs (Summary t)   = [MsgUser t]
     turnMsgs (Assistant r) = [MsgAssistant (say r) (calls r)]
     turnMsgs (User rs)     = [ MsgToolResult c o | (c, o) <- rs ]
+
+-- | The replay policy by tool name: read-only tools are safe to re-run,
+-- irreversible tools (@write@\/@commit@) are unsafe, and anything else is unknown
+-- (treated conservatively on resume). Classified by name rather than by a field
+-- on 'Harness.Alphabet.Call' so no construction site changes for data nothing
+-- consumes yet; promote it to a 'Call'\/'ToolSpec' field if\/when D4's resume
+-- engine is built. [design] [unbuilt: the resume engine]
+replayOf :: String -> ReplaySafety
+replayOf "read"   = ReplaySafe
+replayOf "write"  = ReplayUnsafe
+replayOf "commit" = ReplayUnsafe
+replayOf _        = ReplayUnknown
 
 -- | Quotient 3: the annotation map @S -> Ctx@ used to label every node of the
 -- unfolded tree (@unfold (\\s -> (view s, step s))@ in 'Harness.Coalgebra.harness').

@@ -183,6 +183,13 @@ spec = do
       any (\e -> case e of Repaired (Call "write" _) _ -> True; _ -> False) evs `shouldBe` True
       all (\e -> case e of Did (Call "write" _) -> False; _ -> True) evs `shouldBe` True
 
+  describe "replay safety groundwork (D4)" $
+    it "read is ReplaySafe; write/commit ReplayUnsafe; unknown otherwise" $ do
+      replayOf "read"   `shouldBe` ReplaySafe
+      replayOf "write"  `shouldBe` ReplayUnsafe
+      replayOf "commit" `shouldBe` ReplayUnsafe
+      replayOf "wat"    `shouldBe` ReplayUnknown
+
   describe "compaction violation rate — STAND-IN compactor (E1); real path measured separately" $ do
     it "no-op compaction is a determinism check (must be 0%)" $ do
       r <- measureRate (const id)
