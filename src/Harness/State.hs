@@ -30,6 +30,7 @@ module Harness.State
   , renderLine
   ) where
 
+import Data.List (isPrefixOf)
 import GHC.Generics (Generic)
 import Harness.Alphabet
 
@@ -159,15 +160,23 @@ allTools =
 -- over the transcript, __not a constant__ — this is precisely what makes the
 -- interface polynomial (the set of directions available at a node varies with
 -- the node). The policy: no tools at all while 'Summarising'; otherwise the
--- full 'allTools', except @commit@ is withheld until a @write@ has actually
--- happened, so the model cannot commit work it never wrote. [design]
+-- full 'allTools', except @commit@ is withheld until a @write@ has
+-- __successfully__ completed — that is, its observation does not begin with
+-- @"error: "@. A failed write (path-sandbox rejection, unafforded-tool repair,
+-- or any other error observation) must not unlock @commit@: the safety
+-- invariant is keyed on world state, not on the mere presence of a @write@
+-- call in memory. [design, review1 #1]
 afford :: S -> [ToolSpec]
 afford s
   | mode s == Summarising = []
   | any wrote (transcript s) = tools s
   | otherwise = filter ((/= "commit") . specName) (tools s)
   where
-    wrote (User rs) = any ((== "write") . tool . fst) rs
+    -- A write counts only if it SUCCEEDED: its observation is not an error.
+    -- Failed, rejected, or hallucinated writes (whose Obs begins "error: ") must
+    -- not unlock commit — the safety invariant is keyed on world state, not on
+    -- the mere presence of a write call in memory (review1 #1). [established]
+    wrote (User rs) = any (\(c, Obs o) -> tool c == "write" && not ("error: " `isPrefixOf` o)) rs
     wrote _ = False
 
 -- | Assemble the 'Harness.Alphabet.Request' for the current turn. In 'Working'

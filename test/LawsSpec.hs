@@ -112,6 +112,14 @@ spec = do
       putStrLn ("affordance law: observed " ++ show (length seen) ++ " Perform nodes across sample")
       length seen `shouldSatisfy` (> 0)
 
+  describe "afford: only a successful write unlocks commit (review1 #1)" $ do
+    it "a failed write does not unlock commit" $ do
+      let s = startStateWith [User [(Call "write" "x", Obs "error: absolute path not allowed: /etc/x")]]
+      map specName (afford s) `shouldNotContain` ["commit"]
+    it "a successful write unlocks commit" $ do
+      let s = startStateWith [User [(Call "write" "notes.md", Obs "wrote 12 bytes to notes.md")]]
+      map specName (afford s) `shouldContain` ["commit"]
+
   describe "compaction violation rate (E1, expected non-zero for real compact)" $ do
     it "no-op compaction scores 0% (baseline null model)" $ do
       r <- measureRate id
