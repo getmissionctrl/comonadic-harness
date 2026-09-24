@@ -24,6 +24,7 @@ module Provider.Ollama
   , defaultOllamaCfg
   , ollamaProvider
   , streamingComplete
+  , overflowByEstimate
   ) where
 
 import Control.Concurrent (threadDelay)
@@ -152,7 +153,7 @@ completeWith cfg req = do
     Left err
       | isTransient err -> throwError (ProviderUnavailable (show err))
       | otherwise       -> pure (Left (Malformed (show err)))
-    Right resp          -> pure (decodeResp req resp)
+    Right resp          -> pure (decodeResp cfg req resp)
 
 -- | A __streaming__ oracle: identical to 'completeWith' in what it returns, but
 -- it calls @onDelta@ with each text fragment as the model emits it, so a caller
@@ -206,10 +207,14 @@ streamingComplete cfg onDelta onThink req = do
       mcalls     <- readIORef callsRef
       (pin, out) <- readIORef usageRef
       let Prompt promptText = reqPrompt req
-          promptChars = length promptText
-          isOverflow  = promptChars > 80 && fromIntegral pin < 0.6 * (fromIntegral promptChars / 4.0 :: Double)
+          sentText = case reqMessages req of
+            [] -> promptText
+            ms -> concatMap renderMsg ms
+          renderMsg (MsgUser t)               = t
+          renderMsg (MsgAssistant t cs)       = t ++ concatMap (\c -> " " ++ tool c ++ " " ++ args c) cs
+          renderMsg (MsgToolResult _ (Obs o)) = o
       pure $
-        if isOverflow
+        if overflowByEstimate cfg sentText
           then Left Overflow
           else Right Response
             { say   = T.unpack said
@@ -332,36 +337,32 @@ parseSpec raw =
     splitComma s  = let (a, b) = break (== ',') s
                     in a : case b of [] -> []; (_ : rest) -> splitComma rest
 
+-- | Infer prompt overflow from the CONFIGURED window, not from
+-- @promptEvalCount@. Estimate prompt tokens at ~4 chars/token and compare to
+-- @ocNumCtx@ with a margin for chat-template / tool-schema overhead. This
+-- deliberately does NOT read the evaluated-token count: under prefix/KV caching
+-- a long cached prompt evaluates few new tokens, which the old heuristic
+-- mistook for truncation (F3). Still [speculative] — it is an estimate; a native
+-- overflow signal or an exact tokeniser would supersede it. See
+-- @docs\/ollama-notes.md@.
+overflowByEstimate :: OllamaCfg -> String -> Bool
+overflowByEstimate cfg promptText =
+  let estTokens    = length promptText `div` 4
+      budgetTokens = (ocNumCtx cfg * 85) `div` 100  -- ~15% headroom for template/tool overhead
+  in  estTokens > budgetTokens
+
 -- | Decode a successful @ChatResponse@ into our 'Response', or infer
 -- 'Harness.Alphabet.Overflow'.
 --
 -- __What.__ On the happy path, lifts @say@\/@calls@\/@usage@ out of the reply.
--- The interesting work is deciding whether the reply is /trustworthy/ or the
--- product of a silently truncated prompt.
---
--- __The overflow heuristic. [speculative]__ Ollama 0.32.13 + qwen3:8b truncates
--- the prompt silently when it overflows @num_ctx@; @doneReason@ stays
--- @\"stop\"@ in /all/ cases (it becomes @\"length\"@ only when @numPredict@ is
--- set explicitly, which we do not do). So there is no reported signal, and we
--- /infer/ truncation from a character-budget comparison:
---
---   if  @promptEvalCount * charsPerTok < 0.6 × length(promptText)@
---   and the prompt is non-trivially large (> 80 chars ≈ 20 tokens),
---   the prompt was truncated.
---
--- __Why these constants.__ @charsPerTok = 4@ is the standard rough English
--- average; the @0.6@ factor makes the test /conservative/ — it fires only when
--- the tokens actually evaluated fall well below what the prompt length implies,
--- so it errs toward FEWER false positives (a genuinely dense or Unicode-heavy
--- prompt will not be mistaken for a truncated one). The @> 80@ guard stops a
--- short prompt, whose count is dominated by fixed chat-template overhead, from
--- tripping the test. This is the one part of the module that is an educated
--- guess rather than a reported fact, which is why it keeps the @[speculative]@
--- tag; its empirical grounding (observed counts at @numCtx@ 64 and 256) is in
--- @docs\/ollama-notes.md@.
-decodeResp :: Request -> ChatResponse -> Either Refusal Response
-decodeResp req resp
-  | isOverflow = Left Overflow
+-- Overflow is inferred by 'overflowByEstimate': compare the estimated token
+-- count of the /actually-sent/ content against 'ocNumCtx'. When 'reqMessages'
+-- is non-empty that content is on the wire; 'reqPrompt' is the fallback for the
+-- compaction\/summarising path that sends a single flattened message. This also
+-- fixes the drift between @reqPrompt@ and @reqMessages@ noted in review1 #9.
+decodeResp :: OllamaCfg -> Request -> ChatResponse -> Either Refusal Response
+decodeResp cfg req resp
+  | overflowByEstimate cfg sentText = Left Overflow
   | otherwise  = Right Response
       { say   = maybe "" (T.unpack . content) (message resp)
       , calls = maybe [] (map toCall) (message resp >>= tool_calls)
@@ -372,18 +373,12 @@ decodeResp req resp
       }
   where
     Prompt promptText = reqPrompt req
-    promptChars       = length promptText
-    -- rough token estimate: 1 token ≈ 4 chars for English
-    charsPerTok :: Double
-    charsPerTok = 4.0
-    estimatedTok :: Double
-    estimatedTok = fromIntegral promptChars / charsPerTok
-    isOverflow = case promptEvalCount resp of
-      Nothing  -> False
-      Just pec ->
-        -- only flag overflow for non-trivial prompts
-        promptChars > 80
-        && fromIntegral pec < 0.6 * estimatedTok
+    sentText = case reqMessages req of
+      [] -> promptText
+      ms -> concatMap renderMsg ms
+    renderMsg (MsgUser t)               = t
+    renderMsg (MsgAssistant t cs)       = t ++ concatMap (\c -> " " ++ tool c ++ " " ++ args c) cs
+    renderMsg (MsgToolResult _ (Obs o)) = o
 
 -- | Convert one library @ToolCall@ into our 'Harness.Alphabet.Call'.
 --
