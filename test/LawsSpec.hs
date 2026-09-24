@@ -15,7 +15,7 @@ import Harness.Run (Env (..), run)
 import Harness.Path (Hypo (..))
 import Harness.Probe (probe, liftHypo, outcomeOf)
 import Harness.Coalgebra (harness)
-import Harness.Compaction
+import Harness.Compaction (compact, compactViaSummary, Behaviour (..), respectsBehaviour)
 import Gen
 
 -- | The annotation path to bounded depth, under a hypo.
@@ -175,12 +175,16 @@ spec = do
       any (\e -> case e of Repaired (Call "commit" _) _ -> True; _ -> False) evs
         `shouldBe` True
 
-  describe "compaction violation rate (E1, expected non-zero for real compact)" $ do
-    it "no-op compaction scores 0% (baseline null model)" $ do
-      r <- measureRate id
+  describe "compaction violation rate — STAND-IN compactor (E1); real path measured separately" $ do
+    it "no-op compaction is a determinism check (must be 0%)" $ do
+      r <- measureRate (const id)
       totalPct r `shouldBe` 0
-    it "real compaction: report rate + per-component breakdown, no crash" $ do
-      r <- measureRate compact
+    it "stand-in (compact) compaction: report rate + per-component breakdown, no crash" $ do
+      r <- measureRate (const compact)
+      putStrLn (renderRate r)
+      nStates r `shouldSatisfy` (>= 1000)
+    it "real (Summarising) compaction: report rate + breakdown, no crash" $ do
+      r <- measureRate compactViaSummary
       putStrLn (renderRate r)
       nStates r `shouldSatisfy` (>= 1000)
 
@@ -194,12 +198,12 @@ data Rate = Rate
   , diffTurns  :: Int
   }
 
-measureRate :: (S -> S) -> IO Rate
-measureRate k = do
+measureRate :: (Hypo -> (S -> S)) -> IO Rate
+measureRate mk = do
   hs <- generate (vectorOf 200 genHypo)
   let pairs = [ (h, s) | h <- hs, (s, _w) <- reachableStates h 40 900 ]
       obs (h, s) =
-        let (a, b) = respectsBehaviour h 40 k s
+        let (a, b) = respectsBehaviour h 40 (mk h) s
          in ( bHalt a /= bHalt b
             , bWrites a /= bWrites b
             , bCalls a /= bCalls b

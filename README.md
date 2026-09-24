@@ -2,6 +2,10 @@
 
 An agentic harness built as a polynomial coalgebra, denoted by a cofree
 comonad, with a stated correctness condition for context compaction.
+The condition is measured against two compactors: `compact` (a deterministic
+truncation stand-in, used by experiment E1 to exercise the law cheaply) and
+`compactViaSummary` (the real `Summarising` path the live harness takes on
+overflow, now made pure and measurable under a `Hypo`).
 
 The point of the construction: **execution consumes the shape of the tree,
 analysis consumes its annotation.** That split lets you attach a
