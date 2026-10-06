@@ -29,7 +29,7 @@ import Harness.Alphabet (Call (..), Obs (..), RefId (..), inline)
 import Harness.Preview (preview, previewResult, previewThreshold, clipText)
 
 -- | A monotonic, per-run store of full observation values keyed by handle.
-data Store = Store { refs :: Map RefId Text, nextId :: Int }
+data Store = Store { refs :: Map RefId Text, nextId :: !Int }
 
 -- | The store a run starts with: no parked values yet. Each run gets a fresh
 -- one so refs never collide across runs. (Ids begin at @obs#0@.)

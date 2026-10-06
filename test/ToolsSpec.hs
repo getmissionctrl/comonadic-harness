@@ -4,6 +4,7 @@ import Test.Hspec
 import qualified Data.Text as T
 import Data.IORef (newIORef)
 import Harness.Alphabet (Call (..), Obs (..), obsRender, obsRef, RefId (..))
+import Harness.Preview (previewThreshold)
 import Harness.Ref (emptyStore)
 import Provider.Tools (sandboxAct, prepareSandbox, trustedShellWorld, refWorld, parseArgs, arg)
 import System.IO.Temp (withSystemTempDirectory)
@@ -94,7 +95,7 @@ spec = do
       withSystemTempDirectory "harness-ref" $ \root -> do
         prepareSandbox root "README.md"
         let body = "{\"users\":[{\"email\":\"a@x.com\"}],\"pad\":\""
-                     ++ replicate 300 'x' ++ "\"}"
+                     ++ replicate (previewThreshold + 100) 'x' ++ "\"}"
         writeFile (root </> "data.json") body
         store <- newIORef emptyStore
         let w = refWorld store (sandboxAct root)

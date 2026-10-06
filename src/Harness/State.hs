@@ -176,6 +176,13 @@ project s = Prompt (T.unlines (map renderLine (reverse (transcript s))))
 -- gives the model unrestricted execution. @bash@ will be re-introduced behind
 -- an explicit opt-in world constructor in a later task; it must never be
 -- reachable by default. [design]
+--
+-- __Selector tools__: @jsonpath@ and @deref@ are read-only selectors afforded
+-- unconditionally in 'Working' mode (they carry no precondition like @commit@
+-- does). They are handled at the world layer by 'Provider.Tools.refWorld' —
+-- resolved from the reference store, __not__ forwarded to 'Provider.Tools.dispatch'.
+-- This list must therefore stay in sync with the @elem [\"jsonpath\",\"deref\"]@
+-- guard in 'Provider.Tools.refWorld'. [design]
 allTools :: [ToolSpec]
 allTools =
   [ ToolSpec "read" "{path:string}"
@@ -327,10 +334,12 @@ toChatMsgs s = concatMap turnMsgs (reverse (transcript s))
 -- consumes yet; promote it to a 'Call'\/'ToolSpec' field if\/when D4's resume
 -- engine is built. [design] [unbuilt: the resume engine]
 replayOf :: Text -> ReplaySafety
-replayOf "read"   = ReplaySafe
-replayOf "write"  = ReplayUnsafe
-replayOf "commit" = ReplayUnsafe
-replayOf _        = ReplayUnknown
+replayOf "read"     = ReplaySafe
+replayOf "jsonpath" = ReplaySafe
+replayOf "deref"    = ReplaySafe
+replayOf "write"    = ReplayUnsafe
+replayOf "commit"   = ReplayUnsafe
+replayOf _          = ReplayUnknown
 
 -- | Quotient 3: the annotation map @S -> Ctx@ used to label every node of the
 -- unfolded tree (@unfold (\\s -> (view s, step s))@ in 'Harness.Coalgebra.harness').

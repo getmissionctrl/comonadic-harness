@@ -15,6 +15,8 @@
 --     outside the sandbox (@cat \/etc\/passwd@ works). [design]
 --   * @commit@ is a @git commit@ in the sandbox's /own/ repository, seeded by
 --     'prepareSandbox' — the surrounding project repo is never touched.
+--   * 'refWorld' additionally handles @jsonpath@\/@deref@ as selector calls
+--     resolved from the reference store; these never reach 'dispatch'. [design]
 --
 -- The model does not reliably use the schema's argument names (qwen3 emits
 -- @{"filename":...}@ or @{"file":...}@ where the schema said @path@), so
@@ -335,7 +337,7 @@ showExit :: ExitCode -> String
 showExit ExitSuccess     = "ok"
 showExit (ExitFailure n) = "exit=" ++ show n
 
--- | Truncate long tool output so a single read/bash does not blow the budget.
+-- | Truncate long text for single-line summaries (e.g. commit output via 'firstLine').
 clip :: Int -> String -> String
 clip n s
   | length s <= n = s
