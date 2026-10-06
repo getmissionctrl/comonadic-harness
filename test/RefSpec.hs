@@ -1,8 +1,11 @@
 module RefSpec (spec) where
 
 import Test.Hspec
+import Test.Hspec.QuickCheck (prop)
+import Test.QuickCheck (forAll, listOf, elements, (===), (.&&.))
 import qualified Data.Text as T
 import Harness.Alphabet (Call (..), Obs (..), RefId (..), inline)
+import Harness.Preview (previewThreshold)
 import Harness.Ref (emptyStore, absorb, selector)
 
 -- Padded so it exceeds previewThreshold (256) and therefore gets parked by absorb.
@@ -75,3 +78,14 @@ spec = describe "Harness.Ref" $ do
   it "a non-selector tool is an error observation" $ do
     let (o, _) = selector (Call "read" "{}") emptyStore
     obsRender o `shouldSatisfy` T.isInfixOf "not a selector"
+
+  prop "absorb bounds an observation's render regardless of input size" $
+    -- Letters/spaces only: never valid JSON, so absorb takes the text-clip path.
+    -- This quantifies the pass-by-reference payoff — the render a tool result
+    -- contributes to the transcript is bounded by the preview budget, no matter
+    -- how large the underlying value is — and that parking triggers exactly when
+    -- the input exceeds the threshold.
+    forAll (T.pack <$> listOf (elements "abcdefghij ")) $ \t ->
+      let (o, _) = absorb (inline t) emptyStore
+       in (T.length (obsRender o) <= previewThreshold + 3)
+            .&&. ((T.length t > previewThreshold) === (obsRef o /= Nothing))

@@ -43,6 +43,12 @@ subtreeOf h b = case map snd (reachableStates h 20 b) of
 -- 'Harness.State.request'); this is analysis reading the annotation, permitted.
 -- Wildcard-free over 'HarnessF' (invariant 1): 'Ask' and 'Halt' contribute
 -- nothing, but are matched explicitly.
+--
+-- Closed-alphabet note: the @jsonpath@ and @deref@ selectors added for
+-- pass-by-reference are ordinary 'Call' values performed through the existing
+-- 'Perform' position — they are NOT new 'HarnessF' constructors. The alphabet
+-- therefore remains closed at three constructors, and the @run@\/'probe'
+-- agreement law (§16.1) is unaffected.
 performNodes :: Hypo -> Cofree HarnessF Ctx -> [(Text, [Text])]
 performNodes h w = concatMap (\(c :< f) -> node c f) (takeWalk h 200 w)
   where
