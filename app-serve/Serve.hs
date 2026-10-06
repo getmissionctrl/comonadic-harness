@@ -38,7 +38,8 @@ import Harness.Run (Env (..), Live, runNoTrace)
 import Harness.State (allTools)
 import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaOracle, streamingComplete)
 import Provider.Research (scrapeUrl, scrapeUrlSpec, urlArg)
-import Provider.Tools (prepareSandbox, sandboxAct)
+import Harness.Ref (emptyStore)
+import Provider.Tools (prepareSandbox, refWorld, sandboxAct)
 import Harness.AgUi.Event (AgUiEvent (..), RunId)
 import Harness.AgUi.Sink (Sink)
 import Harness.AgUi.Translate
@@ -83,10 +84,12 @@ main = do
       -- a plain-@IO@ 'Env', so it runs the now-'Live' oracle through the stack and
       -- collapses a transport 'ProviderError' to a 'Malformed' refusal (the
       -- streaming path preserves the error channel properly).
-      factory _rid = pure Env
-        { oracle = ioOracle cfg
-        , world  = liveWorld mgr (T.pack apiKey) sandboxDir
-        }
+      factory _rid = do
+        store <- newIORef emptyStore
+        pure Env
+          { oracle = ioOracle cfg
+          , world  = refWorld store (liveWorld mgr (T.pack apiKey) sandboxDir)
+          }
       -- read/write/bash/commit + scrape_url, subject to the harness's affordance
       -- policy (no tools while summarising; commit withheld until a write).
       tools = allTools ++ [scrapeUrlSpec]
@@ -134,8 +137,10 @@ liveWorld mgr apiKey root c
 -- This builder owns all emission, so the server does not also wrap it in the
 -- tracing decorator.
 streamingBuilder :: OllamaCfg -> Manager -> T.Text -> FilePath -> EnvBuilder
-streamingBuilder cfg0 mgr apiKey root opts sink stv rid = pure Env
-  { oracle = \req -> do
+streamingBuilder cfg0 mgr apiKey root opts sink stv rid = do
+  store <- newIORef emptyStore
+  pure $ Env
+    { oracle = \req -> do
       logOracleReq rid cfg req
       startedRef  <- newIORef Nothing  -- Maybe MessageId: answer id, minted on first token
       thinkingRef <- newIORef Nothing  -- Maybe MessageId: reasoning message id while streaming
@@ -183,13 +188,13 @@ streamingBuilder cfg0 mgr apiKey root opts sink stv rid = pure Env
         Left ref   -> emitVia sink stv (refusalEvents ref)
         Right resp -> emitVia sink stv (oracleEventsStreamed resp)
       pure eresp
-  , world = \call -> do
-      logLn rid ("world: " <> T.unpack (tool call) <> " args=" <> clip 200 (T.unpack (args call)))
-      obs <- liveWorld mgr apiKey root call
-      logLn rid ("world -> obs=" <> show (T.length (obsRender obs)) <> "chars")
-      emitVia sink stv (worldEvents obs)
-      pure obs
-  }
+    , world = \call -> do
+        logLn rid ("world: " <> T.unpack (tool call) <> " args=" <> clip 200 (T.unpack (args call)))
+        obs <- refWorld store (liveWorld mgr apiKey root) call
+        logLn rid ("world -> obs=" <> show (T.length (obsRender obs)) <> "chars")
+        emitVia sink stv (worldEvents obs)
+        pure obs
+    }
   where
     -- Honour the per-run thinking toggle (POST /config) over the server default.
     cfg = cfg0 { ocThink = Just (roThink opts) }
