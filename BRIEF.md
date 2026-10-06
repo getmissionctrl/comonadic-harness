@@ -450,6 +450,10 @@ a no-op `compact`, which must score 0%.
   invalidates the provider's prompt prefix cache. Include the cache-miss cost
   of the next turn alongside the summarisation call's own tokens, or the
   measured cost of compaction will be understated.
+- **Pass-by-reference reframe [design]:** `Obs { obsRender, obsRef }` bounds each
+  observation's transcript contribution, so `Overflow`→`Summarising` rarely fires.
+  E1 therefore becomes a compacting-coalgebra-vs-reference-coalgebra bake-off;
+  see the pass-by-reference note in `TASKS.md`. `[unbuilt]`
 
 **E2 — does the gate beat a static budget?** Treatment: abort when
 `assess` predicts `not terminates` or more than *k* irreversible actions.

@@ -203,3 +203,22 @@ or a written explanation of why the monoid does not exist.
 - Queues and steering seams (§9).
 - The driver side, `Free`/`Sum`/`Day` (§13). Do not build until something
   forces it.
+
+---
+
+## Pass-by-reference reframe of E1 [design]
+
+Pass-by-reference (`Obs { obsRender, obsRef }` + world-side `Store` + `jsonpath`/`deref`
+selectors performed through the existing `Perform` position) bounds each observation's
+contribution to the transcript. Large tool results are previewed, not inlined, so the
+context remains prefix-stable (§16.6) and `Overflow`→`Summarising` compaction rarely
+fires in practice.
+
+Compaction is **retained** as a rarely-fired fallback; it is not removed. If a session
+accumulates enough small results or long oracle exchanges to exhaust the context window,
+the existing `Summarising` path handles it correctly.
+
+This reframes **E1** from "stand-alone compaction-defect rate" into a
+**compacting-coalgebra-vs-reference-coalgebra bake-off**: measure per-component
+`Behaviour` divergence, prefix-stability cost, and evaluated-token cost across both
+strategies on the same generated transcript corpus. The bake-off is `[unbuilt]`.
