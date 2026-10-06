@@ -7,6 +7,7 @@ import Control.Comonad (duplicate, extract)
 import Control.Comonad.Cofree (Cofree ((:<)))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Writer (runWriter, tell)
+import Data.Text (Text)
 import Harness.Alphabet
 import Harness.Fault (ProviderError)
 import Harness.Interp (Ev (..), interp)
@@ -42,7 +43,7 @@ subtreeOf h b = case map snd (reachableStates h 20 b) of
 -- 'Harness.State.request'); this is analysis reading the annotation, permitted.
 -- Wildcard-free over 'HarnessF' (invariant 1): 'Ask' and 'Halt' contribute
 -- nothing, but are matched explicitly.
-performNodes :: Hypo -> Cofree HarnessF Ctx -> [(String, [String])]
+performNodes :: Hypo -> Cofree HarnessF Ctx -> [(Text, [Text])]
 performNodes h w = concatMap (\(c :< f) -> node c f) (takeWalk h 200 w)
   where
     node c (Perform call _) = [(tool call, map specName (reqTools (ctxRequest c)))]
@@ -51,7 +52,7 @@ performNodes h w = concatMap (\(c :< f) -> node c f) (takeWalk h 200 w)
 
 -- | One 'Perform' observation from 'performNodes' passes the affordance law iff
 -- the performed tool is among the afforded names at that node.
-afforded :: (String, [String]) -> Property
+afforded :: (Text, [Text]) -> Property
 afforded (performed, tools) =
   counterexample
     ("Perform " ++ show performed ++ " unafforded; afforded=" ++ show tools)
@@ -127,7 +128,7 @@ spec = do
       forAll genTurns $ \ts -> forAll genTurn $ \t ->
         let Prompt whole = project (startStateWith (t : ts))
             Prompt rest  = project (startStateWith ts)
-         in whole === rest ++ renderLine t ++ "\n"
+         in whole === rest <> renderLine t <> "\n"
 
   describe "compaction idempotence (D11)" $
     prop "compact . compact == compact (on the transcript)" $
@@ -175,7 +176,7 @@ spec = do
   describe "budget liveness (F4)" $
     it "a zero-usage looping oracle still terminates" $ do
       let env = Env { oracle = \_ -> pure (Right (Response "x" [Call "read" "{}"] (Usage 0 0)))
-                    , world  = \c -> pure (Obs (tool c ++ ":ok")) }
+                    , world  = \c -> pure (Obs (tool c <> ":ok")) }
       res <- run env (harness (startState 50))
       res `shouldBe` Right Exhausted
 

@@ -34,6 +34,7 @@ import Control.Monad.Except (MonadError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson (decode, encode)
 import Data.IORef (modifyIORef', newIORef, readIORef, writeIORef)
+import Data.ByteString.Lazy qualified as BL
 import Data.ByteString.Lazy.Char8 qualified as BSLC
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map qualified as Map
@@ -60,6 +61,7 @@ import Data.Ollama.Common.Types
   )
 import Data.Ollama.Common.Utils (defaultModelOptions)
 import Data.Text qualified as T
+import Data.Text.Encoding qualified as TE
 import Harness.Alphabet
 import Harness.Fault (ProviderError (..))
 import Harness.Schema (schemaFields)
@@ -157,8 +159,8 @@ completeWith cfg req = do
   result <- liftIO (withLocalRetry 3 (chat ops (Just ollamaCfg)))
   case result of
     Left err
-      | isTransient err -> throwError (ProviderUnavailable (show err))
-      | otherwise       -> pure (Left (Malformed (show err)))
+      | isTransient err -> throwError (ProviderUnavailable (T.pack (show err)))
+      | otherwise       -> pure (Left (Malformed (T.pack (show err))))
     Right resp          -> pure (decodeResp cfg req resp)
 
 -- | A __streaming__ oracle: identical to 'completeWith' in what it returns, but
@@ -207,7 +209,7 @@ streamingComplete cfg onDelta onThink req = do
       ops = (buildChatOps cfg req) { stream = Just (onChunk, pure ()) }
   result <- chat ops (Just ollamaCfg)
   case result of
-    Left err -> pure (Left (Malformed (show err)))
+    Left err -> pure (Left (Malformed (T.pack (show err))))
     Right _  -> do
       said       <- (T.concat . reverse) <$> readIORef accRef
       mcalls     <- readIORef callsRef
@@ -216,7 +218,7 @@ streamingComplete cfg onDelta onThink req = do
         if overflowByEstimate cfg (sentText req)
           then Left Overflow
           else Right Response
-            { say   = T.unpack said
+            { say   = said
             , calls = maybe [] (map toCall) mcalls
             , usage = Usage { inTok = pin, outTok = out }
             }
@@ -245,7 +247,7 @@ buildChatOps cfg req =
       native = concatMap toOllamaMsgs (reqMessages req)
       msgs   = case native of
                  (m : ms) -> m :| ms
-                 []       -> userMessage (T.pack promptText) :| []
+                 []       -> userMessage promptText :| []
   in  defaultChatOps
         { modelName = T.pack (ocModel cfg)
         , messages  = msgs
@@ -260,16 +262,16 @@ buildChatOps cfg req =
 -- system message, an assistant turn as an assistant message carrying its
 -- @tool_calls@, and a tool result as a @tool@-role message.
 toOllamaMsgs :: ChatMsg -> [Message]
-toOllamaMsgs (MsgUser t)              = [userMessage (T.pack t)]
+toOllamaMsgs (MsgUser t)              = [userMessage t]
 toOllamaMsgs (MsgAssistant sy cs)     =
   -- An assistant turn that only calls tools has no text, but ollama-haskell
   -- always serialises 'content' and this model rejects an empty-content message
   -- (the native protocol's @content: null@ is not expressible here), so use a
   -- minimal non-empty placeholder when there is no commentary.
-  let txt  = if null sy then "." else T.pack sy
+  let txt  = if T.null sy then "." else sy
       base = assistantMessage txt
   in  [ if null cs then base else base { tool_calls = Just (map toOllamaToolCall cs) } ]
-toOllamaMsgs (MsgToolResult _ (Obs o)) = [toolMessage (T.pack o)]
+toOllamaMsgs (MsgToolResult _ (Obs o)) = [toolMessage o]
 
 -- | Rebuild a native 'ToolCall' from a harness 'Call' so a replayed assistant
 -- turn carries the calls it made (the @tool@ results that follow are matched to
@@ -278,8 +280,8 @@ toOllamaMsgs (MsgToolResult _ (Obs o)) = [toolMessage (T.pack o)]
 toOllamaToolCall :: Call -> ToolCall
 toOllamaToolCall c = ToolCall
   { outputFunction = OutputFunction
-      { outputFunctionName = T.pack (tool c)
-      , arguments          = fromMaybe Map.empty (decode (BSLC.pack (args c)))
+      { outputFunctionName = tool c
+      , arguments          = fromMaybe Map.empty (decode (BL.fromStrict (TE.encodeUtf8 (args c))))
       }
   }
 
@@ -297,7 +299,7 @@ toInputTool t =
   InputTool
     { toolType = "function"
     , function = FunctionDef
-        { functionName        = T.pack (specName t)
+        { functionName        = specName t
         , functionDescription = Nothing
         , functionParameters  = Just (schemaOf (specSchema t))
         , functionStrict      = Nothing
@@ -308,7 +310,7 @@ toInputTool t =
 -- @"{path:string,body:string}"@) into a typed 'FunctionParameters' object, so a
 -- strict tool-calling model emits correctly-named arguments instead of guessing.
 -- The old empty-schema advertisement is why a stricter model emitted @{}@.
-schemaOf :: String -> FunctionParameters
+schemaOf :: T.Text -> FunctionParameters
 schemaOf spec = FunctionParameters
   { parameterType        = "object"
   , parameterProperties  = Just (Map.fromList [ (n, leaf ty) | (n, ty) <- props ])
@@ -329,11 +331,11 @@ schemaOf spec = FunctionParameters
 -- source of the DSL, shared with the admission layer ('Harness.State.admit') so
 -- the two cannot drift — and this function only adds the provider-specific type
 -- column: mapping each declared type to the JSON-schema type Ollama expects.
-parseSpec :: String -> [(T.Text, T.Text)]
+parseSpec :: T.Text -> [(T.Text, T.Text)]
 parseSpec raw =
-  [ (T.pack k, jsonType ty) | (k, ty) <- schemaFields raw ]
+  [ (k, jsonType ty) | (k, ty) <- schemaFields raw ]
   where
-    jsonType :: String -> T.Text
+    jsonType :: T.Text -> T.Text
     jsonType ty
       | ty `elem` ["int", "integer", "number"] = "number"
       | ty `elem` ["bool", "boolean"]          = "boolean"
@@ -347,12 +349,12 @@ parseSpec raw =
 -- 'streamingComplete') cannot drift. [design]
 sentText :: Request -> String
 sentText req = case reqMessages req of
-  [] -> let Prompt p = reqPrompt req in p
+  [] -> let Prompt p = reqPrompt req in T.unpack p
   ms -> concatMap renderMsg ms
   where
-    renderMsg (MsgUser t)               = t
-    renderMsg (MsgAssistant t cs)       = t ++ concatMap (\c -> " " ++ tool c ++ " " ++ args c) cs
-    renderMsg (MsgToolResult _ (Obs o)) = o
+    renderMsg (MsgUser t)               = T.unpack t
+    renderMsg (MsgAssistant t cs)       = T.unpack t ++ concatMap (\c -> " " ++ T.unpack (tool c) ++ " " ++ T.unpack (args c)) cs
+    renderMsg (MsgToolResult _ (Obs o)) = T.unpack o
 
 -- | Infer prompt overflow from the CONFIGURED window, not from
 -- @promptEvalCount@. Estimate prompt tokens at ~4 chars/token and compare to
@@ -381,7 +383,7 @@ decodeResp :: OllamaCfg -> Request -> ChatResponse -> Either Refusal Response
 decodeResp cfg req resp
   | overflowByEstimate cfg (sentText req) = Left Overflow
   | otherwise  = Right Response
-      { say   = maybe "" (T.unpack . content) (message resp)
+      { say   = maybe "" content (message resp)
       , calls = maybe [] (map toCall) (message resp >>= tool_calls)
       , usage = Usage
           { inTok  = maybe 0 fromIntegral (promptEvalCount resp)
@@ -392,14 +394,14 @@ decodeResp cfg req resp
 -- | Convert one library @ToolCall@ into our 'Harness.Alphabet.Call'.
 --
 -- __How.__ Takes the function name verbatim and re-encodes its @arguments@ back
--- to a compact JSON string, because the harness carries tool arguments as raw
--- text (the sandbox executor re-parses them). [design]
+-- to a compact JSON text, because the harness carries tool arguments as 'T.Text'
+-- (the sandbox executor re-parses them). [design]
 toCall :: ToolCall -> Call
 toCall tc =
   let fn   = outputFunction tc
-      name = T.unpack (outputFunctionName fn)
-      args = BSLC.unpack (encode (arguments fn))
-  in  Call { tool = name, args = args }
+      name = outputFunctionName fn
+      astr = T.pack (BSLC.unpack (encode (arguments fn)))
+  in  Call { tool = name, args = astr }
 
 -- ---------------------------------------------------------------------------
 -- Internal: local retry for transient errors

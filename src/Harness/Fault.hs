@@ -6,7 +6,8 @@
 -- same state later. The pure analyser (@probe@) never raises one.
 module Harness.Fault (ProviderError (..)) where
 
+import Data.Text (Text)
 import GHC.Generics (Generic)
 
-data ProviderError = ProviderUnavailable String
+data ProviderError = ProviderUnavailable Text
   deriving stock (Eq, Show, Generic)

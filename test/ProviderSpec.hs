@@ -18,7 +18,7 @@ spec = do
   describe "provider transport failure" $
     it "surfaces as Left ProviderError, not a terminal Outcome" $ do
       let env = Env { oracle = \_ -> throwError (ProviderUnavailable "boom")
-                    , world  = \c -> pure (Obs (tool c ++ ":ok")) }
+                    , world  = \c -> pure (Obs (tool c <> ":ok")) }
       res <- run env (harness (startState 400))
       res `shouldBe` Left (ProviderUnavailable "boom")
 

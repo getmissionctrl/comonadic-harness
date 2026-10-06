@@ -52,6 +52,7 @@ import Control.Comonad.Cofree (Cofree ((:<)))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Writer (runWriter)
 import Data.Monoid (Sum (..), Any (..))
+import Data.Text (Text)
 import GHC.Generics (Generic, Generically (..))
 import Harness.Alphabet
 import Harness.Fault (ProviderError)
@@ -110,7 +111,7 @@ data Risk = Risk
     -- horizon, i.e. the machine 'Halt's before fuel runs out. This is the field
     -- 'Harness.Evolve.outerLoop' reads as its trigger: a coalgebra whose
     -- forecast does /not/ terminate is discarded unrun.
-  , irreversible :: [String]
+  , irreversible :: [Text]
     -- ^ The names of the irreversible tools (@\"write\"@, @\"commit\"@) the
     -- forecast will 'Harness.Alphabet.Perform'. Accumulated as a list, not a
     -- count, so the /which/ survives — a gate can veto on the identity of the

@@ -9,6 +9,8 @@ module Gen
 
 import Test.QuickCheck
 import Control.Comonad.Cofree (Cofree)
+import Data.Text (Text)
+import qualified Data.Text as T
 import Harness.Alphabet
 import Harness.State
 import Harness.Coalgebra (harness, step)
@@ -24,7 +26,7 @@ startState b = S { transcript = [], pending = [], budget = b, mode = Working, to
 -- Without this, a multi-field tool like @write@ (@{path,body}@) called with the
 -- placeholder @"x"@ would be rejected, silently weakening every genHypo-driven
 -- trace test. @bash@ is name-rejected regardless, so its args are irrelevant.
-validArgs :: String -> String
+validArgs :: Text -> Text
 validArgs "write"  = "{\"path\":\"f.txt\",\"body\":\"x\"}"
 validArgs "read"   = "{\"path\":\"f.txt\"}"
 validArgs "commit" = "{\"msg\":\"wip\"}"
@@ -41,10 +43,10 @@ genHypo = do
     { guessOracle = \(Request (Prompt p) tools _) ->
         if null tools
           then Right (Response "summary" [] (Usage 300 20))
-          else if length (lines p) >= overflowAt
+          else if length (T.lines p) >= overflowAt
                  then Left Overflow
                  else Right (Response "step" [Call toolChoice (validArgs toolChoice)] (Usage tokIn 40))
-    , guessWorld = \c -> Obs (tool c ++ ":ok")
+    , guessWorld = \c -> Obs (tool c <> ":ok")
     }
 
 -- | Reachable @(S, tree)@ pairs, walked at the S level via 'step' and resolved
@@ -67,7 +69,7 @@ genTurn = oneof
   , Summary <$> genTok
   ]
   where
-    genTok      = elements ["a", "bb", "ccc", "note", "done"]
+    genTok      = elements (["a", "bb", "ccc", "note", "done"] :: [Text])
     genCall     = (\t -> Call t (validArgs t)) <$> elements ["read", "write", "bash", "commit"]
     genResponse = Response <$> genTok <*> resize 3 (listOf genCall) <*> pure (Usage 100 20)
 

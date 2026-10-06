@@ -107,8 +107,8 @@ prepareSandbox root readmeSrc = do
 -- next. [established]
 sandboxAct :: FilePath -> Call -> IO Obs
 sandboxAct root c = do
-  result <- try (dispatch root (tool c) (parseArgs (args c)))
-  pure $ Obs $ case result of
+  result <- try (dispatch root (T.unpack (tool c)) (parseArgs (T.unpack (args c))))
+  pure $ Obs $ T.pack $ case result of
     Left (e :: SomeException) -> "error: " ++ show e
     Right out                 -> out
 
@@ -126,10 +126,10 @@ sandboxAct root c = do
 -- through the default world — the opt-in must be explicit. [design]
 dispatch :: FilePath -> String -> Args -> IO String
 dispatch root tl a = case tl of
-  "read"   -> readTool root (arg (keySynonyms "path") a)
-  "write"  -> writeTool root (arg (keySynonyms "path") a)
-                             (arg (keySynonyms "body") a)
-  "commit" -> commitTool root (arg (keySynonyms "msg") a)
+  "read"   -> readTool root (arg (map T.unpack (keySynonyms "path")) a)
+  "write"  -> writeTool root (arg (map T.unpack (keySynonyms "path")) a)
+                             (arg (map T.unpack (keySynonyms "body")) a)
+  "commit" -> commitTool root (arg (map T.unpack (keySynonyms "msg")) a)
   "bash"   -> pure "error: shell disabled (use trustedShellWorld to opt in)"
   other    -> pure ("error: unknown tool " ++ other)
 
@@ -169,8 +169,8 @@ writeTool root (Just rel) mbody = withSafePath root rel $ \p -> do
 trustedShellWorld :: FilePath -> Call -> IO Obs
 trustedShellWorld root c
   | tool c == "bash" = do
-      result <- try (trustedShell root (arg ["cmd", "command", "script"] (parseArgs (args c))))
-      pure $ Obs $ case result of
+      result <- try (trustedShell root (arg ["cmd", "command", "script"] (parseArgs (T.unpack (args c)))))
+      pure $ Obs $ T.pack $ case result of
         Left (e :: SomeException) -> "error: " ++ show e
         Right out                 -> out
   | otherwise = sandboxAct root c

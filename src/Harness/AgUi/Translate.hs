@@ -84,7 +84,7 @@ runStartEvents t r b tools m =
   , StateSnapshot (object
       [ "budget" .= b
       , "mode" .= modeText m
-      , "tools" .= map (pack . specName) tools
+      , "tools" .= map specName tools
       ])
   ]
 
@@ -100,7 +100,7 @@ oracleEvents r st0 =
        [] ->
          let (mid, st2) = mint "msg-" st1
              evs = [ TextMessageStart mid "assistant"
-                   , TextMessageContent mid (pack (say r))
+                   , TextMessageContent mid (say r)
                    , TextMessageEnd mid
                    , budgetDelta (rsBudget st2)
                    ]
@@ -108,8 +108,8 @@ oracleEvents r st0 =
        cs ->
          let step (acc, s) c =
                let (tid, s') = mint "tc-" s
-                   trio = [ ToolCallStart tid (pack (tool c))
-                          , ToolCallArgs tid (pack (args c))
+                   trio = [ ToolCallStart tid (tool c)
+                          , ToolCallArgs tid (args c)
                           , ToolCallEnd tid
                           ]
                in (acc ++ trio, s' { rsLastTC = Just (tid, "tcmsg-" <> tid) })
@@ -136,8 +136,8 @@ oracleEventsStreamed r st0 =
        cs ->
          let step (acc, s) c =
                let (tid, s') = mint "tc-" s
-                   trio = [ ToolCallStart tid (pack (tool c))
-                          , ToolCallArgs tid (pack (args c))
+                   trio = [ ToolCallStart tid (tool c)
+                          , ToolCallArgs tid (args c)
                           , ToolCallEnd tid
                           ]
                in (acc ++ trio, s' { rsLastTC = Just (tid, "tcmsg-" <> tid) })
@@ -162,7 +162,7 @@ refusalEvents (Malformed _) st = ([], st)
 -- nothing to correlate, so it emits none.
 worldEvents :: Obs -> RunState -> ([AgUiEvent], RunState)
 worldEvents (Obs o) st = case rsLastTC st of
-  Just (tid, mid) -> ([ToolCallResult mid tid (pack o)], st { rsLastTC = Nothing })
+  Just (tid, mid) -> ([ToolCallResult mid tid o], st { rsLastTC = Nothing })
   Nothing         -> ([], st)
 
 -- | The terminal @RUN_FINISHED@ for an 'Outcome', carrying a small result object
@@ -189,7 +189,7 @@ forecastEvent r = Custom "harness.forecast" (object
 -- | The JSON shape of an 'Outcome' embedded in @RUN_FINISHED@.
 outcomeValue :: Outcome -> Value
 outcomeValue = \case
-  Done s    -> object ["status" .= ("done" :: Text), "answer" .= pack s]
+  Done s    -> object ["status" .= ("done" :: Text), "answer" .= s]
   Exhausted -> object ["status" .= ("exhausted" :: Text)]
-  Failed s  -> object ["status" .= ("failed" :: Text), "reason" .= pack s]
-  Stuck s   -> object ["status" .= ("stuck" :: Text), "reason" .= pack s]
+  Failed s  -> object ["status" .= ("failed" :: Text), "reason" .= s]
+  Stuck s   -> object ["status" .= ("stuck" :: Text), "reason" .= s]

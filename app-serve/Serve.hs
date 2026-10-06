@@ -123,7 +123,7 @@ liveWorld :: Manager -> T.Text -> FilePath -> Call -> IO Obs
 liveWorld mgr apiKey root c
   | tool c == "scrape_url" = do
       md <- scrapeUrl mgr apiKey (urlArg (args c))
-      pure (Obs (T.unpack md))
+      pure (Obs md)
   | otherwise = sandboxAct root c
 
 -- | The streaming live 'Env'. The oracle streams the model's text to the client
@@ -184,9 +184,9 @@ streamingBuilder cfg0 mgr apiKey root opts sink stv rid = pure Env
         Right resp -> emitVia sink stv (oracleEventsStreamed resp)
       pure eresp
   , world = \call -> do
-      logLn rid ("world: " <> tool call <> " args=" <> clip 200 (args call))
+      logLn rid ("world: " <> T.unpack (tool call) <> " args=" <> clip 200 (T.unpack (args call)))
       obs@(Obs o) <- liveWorld mgr apiKey root call
-      logLn rid ("world -> obs=" <> show (length o) <> "chars")
+      logLn rid ("world -> obs=" <> show (T.length o) <> "chars")
       emitVia sink stv (worldEvents obs)
       pure obs
   }
@@ -201,7 +201,7 @@ streamingBuilder cfg0 mgr apiKey root opts sink stv rid = pure Env
 logOracleReq :: RunId -> OllamaCfg -> Request -> IO ()
 logOracleReq rid cfg req =
   let Prompt p = reqPrompt req
-      chars    = length p
+      chars    = T.length p
       estTok   = chars `div` 4
   in logLn rid $ "oracle: prompt=" <> show chars <> "chars (~" <> show estTok
        <> "tok) num_ctx=" <> show (ocNumCtx cfg)
@@ -214,8 +214,8 @@ logOracleReq rid cfg req =
 logOracleResp :: RunId -> Either Refusal Response -> IO ()
 logOracleResp rid = \case
   Left Overflow      -> logLn rid "oracle -> OVERFLOW (prompt truncated past num_ctx; compacting)"
-  Left (Malformed e) -> logLn rid ("oracle -> MALFORMED: " <> clip 300 e)
-  Right resp         -> logLn rid $ "oracle -> ok: say=" <> show (length (say resp))
+  Left (Malformed e) -> logLn rid ("oracle -> MALFORMED: " <> clip 300 (T.unpack e))
+  Right resp         -> logLn rid $ "oracle -> ok: say=" <> show (T.length (say resp))
     <> "chars calls=" <> show (length (calls resp))
     <> " tok(in/out)=" <> show (inTok (usage resp)) <> "/" <> show (outTok (usage resp))
 

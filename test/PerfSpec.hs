@@ -77,7 +77,7 @@ longHypo :: Hypo
 longHypo = Hypo
   { guessOracle = \_ ->
       Right (Response "step" [Call "read" "x"] (Usage 1 0))
-  , guessWorld  = \c -> Obs (tool c ++ ":ok")
+  , guessWorld  = \c -> Obs (tool c <> ":ok")
   }
 
 -- | Time both strategies at a target depth and return a formatted table row.

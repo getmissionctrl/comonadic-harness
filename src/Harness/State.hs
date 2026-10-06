@@ -36,8 +36,10 @@ module Harness.State
 import Data.Aeson (Value (Object), decode)
 import Data.Aeson.Key qualified as K
 import Data.Aeson.KeyMap qualified as KM
-import Data.ByteString.Lazy.Char8 qualified as BSLC
-import Data.List (isPrefixOf)
+import Data.ByteString.Lazy qualified as BL
+import Data.Text (Text)
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as TE
 import GHC.Generics (Generic)
 import Harness.Alphabet
 import Harness.Schema (requiredKeys, keySynonyms)
@@ -72,7 +74,7 @@ data Turn
     -- repaired) 'Harness.Alphabet.Call' paired with its
     -- 'Harness.Alphabet.Obs'. Grouped into one turn so consecutive tool
     -- observations append to the same 'User' line rather than proliferating.
-  | Summary String
+  | Summary Text
     -- ^ A compaction marker. Produced by a 'Summarising' turn (replacing the
     -- transcript it summarises) or by the coalgebra to record a
     -- 'Harness.Alphabet.Malformed' refusal.
@@ -104,7 +106,7 @@ data S = S
   , tools :: [ToolSpec]
     -- ^ The tools afforded to THIS session. 'afford' filters this per turn.
     -- The coding demo seeds @tools = allTools@; other agents supply their own.
-  , failure :: Maybe String
+  , failure :: Maybe Text
     -- ^ Set by a terminal 'Harness.Alphabet.Malformed' refusal (see
     -- 'Harness.Coalgebra.working'); when present, 'Harness.Coalgebra.step' halts
     -- with 'Harness.Alphabet.Failed' rather than 'Exhausted', so a decode\/model
@@ -145,10 +147,10 @@ data Ctx = Ctx
 -- the end of the prompt, leaving the cached prefix untouched — the property a
 -- KV-cache relies on). Keeping this the /only/ turn-to-text function means the
 -- law is about one definition, not two that might drift. [established]
-renderLine :: Turn -> String
-renderLine (Assistant r) = "A: " ++ say r ++ concatMap (\c -> " <" ++ tool c ++ ">") (calls r)
-renderLine (User rs)     = "U: " ++ concatMap (\(c, Obs o) -> tool c ++ "=" ++ o ++ " ") rs
-renderLine (Summary t)   = "S: " ++ t
+renderLine :: Turn -> Text
+renderLine (Assistant r) = "A: " <> say r <> foldMap (\c -> " <" <> tool c <> ">") (calls r)
+renderLine (User rs)     = "U: " <> foldMap (\(c, Obs o) -> tool c <> "=" <> o <> " ") rs
+renderLine (Summary t)   = "S: " <> t
 
 -- | Quotient 1: the projection @S -> Prompt@. Lossy (it keeps only the rendered
 -- transcript, discarding 'pending', 'budget' and 'mode'), total, and recomputed
@@ -157,7 +159,7 @@ renderLine (Summary t)   = "S: " ++ t
 -- Its lossiness is the whole point: distinct states sharing a 'Prompt' is the
 -- collapse that compaction exploits and the bisimulation law quantifies.
 project :: S -> Prompt
-project s = Prompt (unlines (map renderLine (reverse (transcript s))))
+project s = Prompt (T.unlines (map renderLine (reverse (transcript s))))
 
 -- | The default catalogue of tools the harness can offer. 'afford' selects a
 -- subset of this list per turn; nothing outside it is ever afforded. Kept as a
@@ -196,7 +198,7 @@ afford s
     -- Failed, rejected, or hallucinated writes (whose Obs begins "error: ") must
     -- not unlock commit — the safety invariant is keyed on world state, not on
     -- the mere presence of a write call in memory (review1 #1). [established]
-    wrote (User rs) = any (\(c, Obs o) -> tool c == "write" && not ("error: " `isPrefixOf` o)) rs
+    wrote (User rs) = any (\(c, Obs o) -> tool c == "write" && not ("error: " `T.isPrefixOf` o)) rs
     wrote _ = False
 
 -- | The admission pass. Split the model's pending calls into those the current
@@ -234,13 +236,13 @@ admit :: [ToolSpec] -> [Call] -> ([Call], [(Call, Obs)])
 admit specs = foldr classify ([], [])
   where
     classify c (ok, bad) = case lookupSpec c of
-      Nothing -> (ok, (c, Obs ("error: tool not afforded: " ++ tool c)) : bad)
+      Nothing -> (ok, (c, Obs ("error: tool not afforded: " <> tool c)) : bad)
       Just spec
         | argsSatisfy spec c -> (c : ok, bad)
         | otherwise ->
             ( ok
-            , (c, Obs ("error: invalid arguments for " ++ tool c
-                       ++ "; expected " ++ specSchema spec)) : bad )
+            , (c, Obs ("error: invalid arguments for " <> tool c
+                       <> "; expected " <> specSchema spec)) : bad )
     lookupSpec c = case [ s | s <- specs, specName s == tool c ] of
                      (s : _) -> Just s
                      []      -> Nothing
@@ -262,10 +264,10 @@ admit specs = foldr classify ([], [])
 argsSatisfy :: ToolSpec -> Call -> Bool
 argsSatisfy spec c = case requiredKeys (specSchema spec) of
   []    -> True
-  [_]   -> not (null (args c))
-  keys  -> case decode (BSLC.pack (args c)) of
+  [_]   -> not (T.null (args c))
+  keys  -> case decode (BL.fromStrict (TE.encodeUtf8 (args c))) of
              Just (Object o) ->
-               all (\k -> any (\syn -> KM.member (K.fromString syn) o) (keySynonyms k)) keys
+               all (\k -> any (\syn -> KM.member (K.fromText syn) o) (keySynonyms k)) keys
              _               -> False
 
 -- | Apply one admission pass: fold rejected (unafforded) calls into the
@@ -296,7 +298,7 @@ request s = case mode s of
   Working -> Request (project s) (afford s) (toChatMsgs s)
   Summarising ->
     let Prompt p = project s
-     in Request (Prompt (p ++ "\n[summarise the above in one line]")) [] []
+     in Request (Prompt (p <> "\n[summarise the above in one line]")) [] []
 
 -- | The structured transcript in reading order, for native chat transport
 -- ('Harness.Alphabet.reqMessages'). A 'Summary' becomes a system message, an
@@ -317,7 +319,7 @@ toChatMsgs s = concatMap turnMsgs (reverse (transcript s))
 -- on 'Harness.Alphabet.Call' so no construction site changes for data nothing
 -- consumes yet; promote it to a 'Call'\/'ToolSpec' field if\/when D4's resume
 -- engine is built. [design] [unbuilt: the resume engine]
-replayOf :: String -> ReplaySafety
+replayOf :: Text -> ReplaySafety
 replayOf "read"   = ReplaySafe
 replayOf "write"  = ReplayUnsafe
 replayOf "commit" = ReplayUnsafe

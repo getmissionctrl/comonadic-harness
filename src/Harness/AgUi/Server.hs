@@ -33,7 +33,8 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), eitherDecode, object, withObject, (.:), (.:?), (.!=), (.=), encode)
 import qualified Data.ByteString.Builder as BB
 import qualified Data.Map.Strict as Map
-import Data.Text (Text, pack, unpack)
+import Data.Text (Text, pack)
+import qualified Data.Text as T
 import Network.HTTP.Types (status200, status204, status400, status404)
 import qualified Network.HTTP.Types.Header as H
 import qualified Network.Wai as Wai
@@ -217,7 +218,7 @@ startH :: ServeConfig -> Registry -> StartReq -> Handler StartResp
 startH cfg (Registry regv) sr = liftIO $ do
   logv <- newEventLog
   slot <- newInputSlot
-  let seeded = S { transcript = [Summary (unpack (task sr))]
+  let seeded = S { transcript = [Summary (task sr)]
                  , pending = [], budget = scfBudget cfg, mode = Working, tools = scfTools cfg
                  , failure = Nothing }
   rid <- atomically $ do
@@ -258,7 +259,7 @@ defaultHypo = Hypo
   { guessOracle = \(Request (Prompt p) ts _) ->
       if null ts
         then Right (Response "summary" [] (Usage 300 20))
-        else if length (lines p) >= 5
+        else if length (T.lines p) >= 5
                then Left Overflow
                else Right (Response "guess" [Call "write" "g.txt"] (Usage 120 40))
   , guessWorld = \c -> Obs (tool c)
@@ -274,7 +275,7 @@ defaultHypo = Hypo
 finishEvents :: Text -> RunId -> Either ProviderError Outcome -> [AgUiEvent]
 finishEvents t r (Right o) = runFinishEvents t r o
 finishEvents t r (Left (ProviderUnavailable msg)) =
-  RunError (pack ("provider unavailable: " <> msg))
+  RunError ("provider unavailable: " <> msg)
     : runFinishEvents t r (Stuck ("provider unavailable: " <> msg))
 
 -- | @POST /runs/{id}/input@: fill the run's input slot with a text 'Response',
@@ -286,7 +287,7 @@ inputH (Registry regv) rid (InputReq t) = do
     Nothing -> throwError err404
     Just h  -> do
       liftIO $ atomically $ provideInput (rhSlot h)
-        (Right (Response (unpack t) [] (Usage 0 0)))
+        (Right (Response t [] (Usage 0 0)))
       pure NoContent
 
 -- | @GET /runs/{id}/events@: SSE. Replay the log from the start, then follow it
@@ -353,8 +354,8 @@ seedTranscript msgs = case reverse (concatMap toTurn msgs) of
   ts -> ts
   where
     toTurn (Msg role content)
-      | role == "assistant" = [Assistant (Response (unpack content) [] (Usage 0 0))]
-      | role == "user"      = [Summary (unpack content)]
+      | role == "assistant" = [Assistant (Response content [] (Usage 0 0))]
+      | role == "user"      = [Summary content]
       | otherwise           = []
 
 -- | @POST /agent@: the standard AG-UI HTTP transport. Accepts a @RunAgentInput@,

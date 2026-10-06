@@ -2,6 +2,7 @@ module AgUiTranslateSpec (spec) where
 
 import Test.Hspec
 import qualified Data.Monoid
+import Data.Text (Text)
 import Harness.Alphabet
 import Harness.State (Mode (..))
 import Harness.Probe (Risk (..))
@@ -21,7 +22,7 @@ evType = \case
   Custom{}             -> "CUSTOM"
   _                    -> "OTHER"
 
-resp :: String -> [Call] -> Response
+resp :: Text -> [Call] -> Response
 resp s cs = Response s cs (Usage 10 5)
 
 spec :: Spec

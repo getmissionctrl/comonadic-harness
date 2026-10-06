@@ -22,7 +22,7 @@ the small, fixed set of actions the harness can take.
 >
 > import Control.Comonad (extract)
 > import Control.Comonad.Cofree (Cofree)
-> import Data.List (isInfixOf)
+> import qualified Data.Text as T
 > import Harness.Alphabet
 > import Harness.State (S (..), Ctx, Mode (Working), allTools)
 > import Harness.Coalgebra (harness)
@@ -128,12 +128,12 @@ in the prompt, declares itself done (a `Response` with no calls, which halts):
 >   { guessOracle = \(Request (Prompt prompt) tools _) ->
 >       if null tools
 >         then Right (Response "summarised" [] (Usage 40 10))
->         else if "read" `isInfixOf` prompt
+>         else if "read" `T.isInfixOf` prompt
 >                then Right (Response "done, nothing more to do" [] (Usage 40 10))
 >                else Right (Response "reading the file"
 >                                     [Call "read" "{\"path\":\"README.md\"}"]
 >                                     (Usage 120 30))
->   , guessWorld = \c -> Obs (tool c ++ " -> ok")
+>   , guessWorld = \c -> Obs (tool c <> " -> ok")
 >   }
 
 `probe` drives the tree under that hypothesis to a fuel bound and returns the

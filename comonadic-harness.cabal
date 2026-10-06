@@ -94,12 +94,13 @@ library tutorial
     , comonadic-harness
     , comonad            >= 5.0  && < 5.1
     , free               >= 5.2  && < 5.3
+    , text
 
 executable demo
   import:           warnings, exts
   hs-source-dirs:   app
   main-is:          Main.hs
-  build-depends:    base, comonadic-harness, comonad, free, mtl
+  build-depends:    base, comonadic-harness, comonad, free, mtl, text
 
 executable serve
   import:           warnings, exts
@@ -121,3 +122,4 @@ test-suite spec
     , warp, http-client, http-types
     , temporary
     , directory, filepath
+    , text

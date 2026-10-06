@@ -37,6 +37,7 @@ module Harness.Alphabet
   , ReplaySafety (..)
   ) where
 
+import Data.Text (Text)
 import GHC.Generics (Generic)
 
 -- | The text actually handed to the model on a turn: the transcript projected
@@ -44,8 +45,8 @@ import GHC.Generics (Generic)
 -- 'Harness.State.project', so two distinct states can share a 'Prompt' — that
 -- collapse is what compaction exploits and what the bisimulation law measures.
 -- Wrapped in a @newtype@ so a projected prompt is never confused with an
--- arbitrary 'String' at a call site.
-newtype Prompt = Prompt String
+-- arbitrary 'Text' at a call site.
+newtype Prompt = Prompt Text
   deriving stock (Eq, Show, Generic)
 
 -- | A tool the provider is told it may call. Carried in the 'Request' so it
@@ -55,12 +56,12 @@ newtype Prompt = Prompt String
 -- 'Harness.State.afford', which is why the interface is polynomial rather than a
 -- fixed signature. [established]
 data ToolSpec = ToolSpec
-  { specName   :: String
+  { specName   :: Text
     -- ^ The tool's name, e.g. @"read"@ or @"commit"@. This is the key against
     -- which 'Harness.Coalgebra.admit' checks a model's 'Call': a 'tool' whose
     -- name is not among the afforded 'specName's is repaired into a synthetic
     -- error rather than performed.
-  , specSchema :: String
+  , specSchema :: Text
     -- ^ A description of the tool's argument shape (a JSON-schema-ish blob such
     -- as @"{path:string}"@). Not merely advisory: it is shown to the model to
     -- shape its 'args', /and/ 'Harness.State.admit' validates a call's arguments
@@ -101,10 +102,10 @@ data Request = Request
 -- afforded. An unafforded call is not a 'Refusal' and not a clean 'Response'; it
 -- is repaired in the coalgebra into an error 'Obs' and the run continues (D3\/D12).
 data Call = Call
-  { tool :: String
+  { tool :: Text
     -- ^ The name of the tool to invoke. Checked against the afforded
     -- 'ToolSpec' 'specName's; an unmatched name is the trigger for repair.
-  , args :: String
+  , args :: Text
     -- ^ The raw argument payload the model supplied (typically a JSON string).
     -- Passed opaquely to the world; this module does not parse it.
   }
@@ -116,7 +117,7 @@ data Call = Call
 -- is a function @Obs -> x@. A synthetic error 'Obs' is also how the coalgebra
 -- reports an unafforded call back to the model. Wrapped in a @newtype@ to keep
 -- a tool observation distinct from arbitrary text.
-newtype Obs = Obs String
+newtype Obs = Obs Text
   deriving stock (Eq, Show, Generic)
 
 -- | A structured transcript entry for native chat transport (see
@@ -126,11 +127,11 @@ newtype Obs = Obs String
 -- instead of the flattened 'Harness.State.project'ion which is retained only for
 -- compaction and the bisimulation analysis.
 data ChatMsg
-  = MsgUser String          -- ^ the task / compacted context (a 'Summary' turn),
-                            --   rendered as a USER message (chat APIs require a
-                            --   user turn; the seed task is the user's request)
-  | MsgAssistant String [Call] -- ^ the model's text plus the tool calls it made
-  | MsgToolResult Call Obs  -- ^ one tool result, paired with the call it answers
+  = MsgUser Text             -- ^ the task / compacted context (a 'Summary' turn),
+                             --   rendered as a USER message (chat APIs require a
+                             --   user turn; the seed task is the user's request)
+  | MsgAssistant Text [Call] -- ^ the model's text plus the tool calls it made
+  | MsgToolResult Call Obs   -- ^ one tool result, paired with the call it answers
   deriving stock (Eq, Show, Generic)
 
 -- | Token usage as reported by the provider for one 'Response'. Budget is spent
@@ -151,7 +152,7 @@ data Usage = Usage
 -- mode is how the agent signals it is finished — the coalgebra turns it into a
 -- @Halt (Done ...)@.
 data Response = Response
-  { say   :: String
+  { say   :: Text
     -- ^ The model's natural-language output for this turn. Recorded in the
     -- transcript as the assistant line, and returned as the final answer when a
     -- turn ends the run.
@@ -176,7 +177,7 @@ data Refusal
     -- refusal: the coalgebra's 'Harness.Coalgebra.working' continuation responds
     -- by flipping to 'Harness.State.Summarising' mode, which is compaction. It
     -- is not a failure of the run, it is the trigger for the run to compact.
-  | Malformed String
+  | Malformed Text
     -- ^ A terminal decode failure the provider could not repair (payload carries
     -- the diagnostic). Unlike an unafforded 'Call' — which is repaired into an
     -- 'Obs' and continued — a 'Malformed' refusal ends the run: the coalgebra
@@ -186,20 +187,20 @@ data Refusal
 -- | How a run ends. Carried by the terminal 'Halt' position, so an 'Outcome' is
 -- a leaf of the unfolded tree — it has no direction and thus no successor.
 data Outcome
-  = Done String
+  = Done Text
     -- ^ The agent finished cleanly. The payload is the final assistant 'say',
     -- reached when a 'Harness.State.Working'-mode 'Response' carries no tool
     -- 'calls'.
   | Exhausted
     -- ^ The budget ran out before the agent finished. Emitted when
     -- 'Harness.State.budget' reaches zero without a terminal decode failure.
-  | Failed String
+  | Failed Text
     -- ^ A terminal decode\/model failure the provider could not repair (payload
     -- carries the diagnostic). Distinct from 'Exhausted' (budget ran out) so a
     -- decode death is not mistaken for ordinary budget exhaustion (review1 #9).
     -- Fires when 'Harness.State.failure' is set by a 'Malformed' refusal reaching
     -- 'Harness.Coalgebra.working'.
-  | Stuck String
+  | Stuck Text
     -- ^ The agent could make no progress for a non-budget reason (payload
     -- carries the explanation). [design]
   deriving stock (Eq, Show, Generic)

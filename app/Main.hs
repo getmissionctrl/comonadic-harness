@@ -17,6 +17,7 @@ import Control.Comonad.Cofree (Cofree ((:<)))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class (liftIO)
 import Data.Monoid (Any (..), Sum (..))
+import qualified Data.Text as T
 import Harness.Alphabet
 import Harness.Coalgebra (harness)
 import Harness.Fault (ProviderError (..))
@@ -41,10 +42,10 @@ fakeOracle (Request (Prompt p) tools _)
     | lns == 2   = pure (Right (Response "editing" [Call "write" "notes.md"] (Usage 140 40)))
     | otherwise  = pure (Right (Response "landing" [Call "commit" "wip"] (Usage 160 40)))
   where
-    lns = length (lines p)
+    lns = length (T.lines p)
 
 fakeWorld :: Call -> IO Obs
-fakeWorld c = pure (Obs (tool c ++ ":ok"))
+fakeWorld c = pure (Obs (tool c <> ":ok"))
 
 hypo :: Hypo
 hypo =
@@ -53,7 +54,7 @@ hypo =
             if null tools
                 then Right (Response "summary" [] (Usage 300 20))
                 else
-                    if length (lines p) >= 5
+                    if length (T.lines p) >= 5
                         then Left Overflow
                         else Right (Response "guess" [Call "write" "g.txt"] (Usage 120 40))
         , guessWorld = \c -> Obs (tool c)
@@ -105,7 +106,7 @@ nodeLine c r =
         ++ " mode="
         ++ pad 12 (show (ctxMode c))
         ++ " ctx="
-        ++ pad 3 (show (length (lines p)) ++ "ln")
+        ++ pad 3 (show (length (T.lines p)) ++ "ln")
         ++ " tools="
         ++ pad 30 (show (map specName ts))
         ++ " risk="
@@ -127,12 +128,12 @@ printOracle (Right x) = do
         ( "    ORACLE "
             ++ show (inTok (usage x) + outTok (usage x))
             ++ "tok -> "
-            ++ say x
+            ++ T.unpack (say x)
             ++ " "
             ++ show (map tool (calls x))
         )
     mapM_
-        (\cl -> putStrLn ("      call " ++ tool cl ++ " args=" ++ args cl))
+        (\cl -> putStrLn ("      call " ++ T.unpack (tool cl) ++ " args=" ++ T.unpack (args cl)))
         (calls x)
 
 -- | Print the tool 'Call' actually run at a 'Perform' node with its raw args
@@ -140,7 +141,7 @@ printOracle (Right x) = do
 -- 'Obs'.
 printPerform :: Call -> Obs -> IO ()
 printPerform call (Obs t) =
-    putStrLn ("    PERFORM " ++ tool call ++ " " ++ args call ++ " -> " ++ t)
+    putStrLn ("    PERFORM " ++ T.unpack (tool call) ++ " " ++ T.unpack (args call) ++ " -> " ++ T.unpack t)
 
 pad :: Int -> String -> String
 pad n s = s ++ replicate (n - length s) ' '
@@ -225,7 +226,7 @@ live args = do
         -- 'sandboxAct' is plain IO, lifted with 'liftIO'. There is no bundled
         -- no-op world (F6) — the world half is supplied explicitly here.
         env  = Env (ollamaOracle cfg) (liftIO . sandboxAct sandboxDir) :: Env Live
-        seeded = start { transcript = [Summary task], budget = loBudget o }
+        seeded = start { transcript = [Summary (T.pack task)], budget = loBudget o }
     prepareSandbox sandboxDir "README.md"
     putStrLn
         ( "== live run: model=" ++ ocModel cfg
@@ -239,7 +240,7 @@ live args = do
     case result of
         Right outcome -> putStrLn ("live outcome: " ++ show outcome)
         Left (ProviderUnavailable e) ->
-            putStrLn ("live run could not reach the provider: " ++ e)
+            putStrLn ("live run could not reach the provider: " ++ T.unpack e)
 
 -- ---------------------------------------------------------------------------
 -- Entry point

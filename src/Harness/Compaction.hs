@@ -45,6 +45,7 @@ module Harness.Compaction
 import Data.List (sort)
 import Data.Maybe (listToMaybe)
 import Data.Monoid (Sum (..), Last (..))
+import Data.Text (Text)
 import Harness.Alphabet
 import Harness.Interp (Ev (..))
 import Harness.Path (Hypo (..))
@@ -125,7 +126,7 @@ data Behaviour = Behaviour
     -- ^ The terminal 'Outcome', if the trace reached one (@'Data.Monoid.Last'@
     -- keeps the /final/ halt). Answers: does the task end, and end the /same/
     -- way, after compaction?
-  , bWrites   :: [String]
+  , bWrites   :: [Text]
     -- ^ The sorted multiset of /irreversible/ tool names invoked (@write@ and
     -- @commit@). These are the calls compaction must never add, drop, or
     -- reorder-into-existence, because they touch the world. Sorted so that a
@@ -134,7 +135,7 @@ data Behaviour = Behaviour
     -- ^ The number of oracle consultations (@'Harness.Interp.Asked'@ events).
     -- A proxy for /cost/: if compaction changed how many times the model was
     -- called, it changed the token bill even when the outcome matched.
-  , bTurnSets :: [[String]]
+  , bTurnSets :: [[Text]]
     -- ^ The per-turn call sets: one sorted list of tool names per turn, in turn
     -- order. Finer than 'bWrites' (it sees /every/ tool, and /when/) but still
     -- order-insensitive /within/ a turn, because pi runs the calls of a single

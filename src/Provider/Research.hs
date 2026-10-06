@@ -22,7 +22,6 @@ import Data.Aeson (Value (..), decode, encode, object, (.=))
 import qualified Data.Aeson.Key as K
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy as BL
-import qualified Data.ByteString.Lazy.Char8 as BLC
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Encoding (encodeUtf8)
@@ -86,8 +85,8 @@ scrapeMarkdown b = case decode b of
 -- @"url"@ key, but a model may emit the URL under an invented key, so fall back
 -- to the first string value so the call still round-trips instead of silently
 -- becoming an empty-URL error.
-urlArg :: String -> Text
-urlArg s = case decode (BLC.pack s) :: Maybe Value of
+urlArg :: Text -> Text
+urlArg s = case decode (BL.fromStrict (encodeUtf8 s)) :: Maybe Value of
   Just (Object o) -> case KM.lookup (K.fromString "url") o of
     Just (String t) -> t
     _               -> case [ t | String t <- KM.elems o ] of
