@@ -35,7 +35,6 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson (decode, encode)
 import Data.IORef (modifyIORef', newIORef, readIORef, writeIORef)
 import Data.ByteString.Lazy qualified as BL
-import Data.ByteString.Lazy.Char8 qualified as BSLC
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
@@ -347,14 +346,14 @@ parseSpec raw =
 -- single flattened message). Used only for the overflow token estimate, and
 -- kept as ONE definition so the two decode paths ('decodeResp' and
 -- 'streamingComplete') cannot drift. [design]
-sentText :: Request -> String
+sentText :: Request -> T.Text
 sentText req = case reqMessages req of
-  [] -> let Prompt p = reqPrompt req in T.unpack p
-  ms -> concatMap renderMsg ms
+  [] -> let Prompt p = reqPrompt req in p
+  ms -> foldMap renderMsg ms
   where
-    renderMsg (MsgUser t)               = T.unpack t
-    renderMsg (MsgAssistant t cs)       = T.unpack t ++ concatMap (\c -> " " ++ T.unpack (tool c) ++ " " ++ T.unpack (args c)) cs
-    renderMsg (MsgToolResult _ (Obs o)) = T.unpack o
+    renderMsg (MsgUser t)               = t
+    renderMsg (MsgAssistant t cs)       = t <> foldMap (\c -> " " <> tool c <> " " <> args c) cs
+    renderMsg (MsgToolResult _ (Obs o)) = o
 
 -- | Infer prompt overflow from the CONFIGURED window, not from
 -- @promptEvalCount@. Estimate prompt tokens at ~4 chars/token and compare to
@@ -364,9 +363,9 @@ sentText req = case reqMessages req of
 -- mistook for truncation (F3). Still [speculative] — it is an estimate; a native
 -- overflow signal or an exact tokeniser would supersede it. See
 -- @docs\/ollama-notes.md@.
-overflowByEstimate :: OllamaCfg -> String -> Bool
+overflowByEstimate :: OllamaCfg -> T.Text -> Bool
 overflowByEstimate cfg promptText =
-  let estTokens    = length promptText `div` 4
+  let estTokens    = T.length promptText `div` 4
       budgetTokens = (ocNumCtx cfg * 85) `div` 100  -- ~15% headroom for template/tool overhead
   in  estTokens > budgetTokens
 
@@ -400,7 +399,7 @@ toCall :: ToolCall -> Call
 toCall tc =
   let fn   = outputFunction tc
       name = outputFunctionName fn
-      astr = T.pack (BSLC.unpack (encode (arguments fn)))
+      astr = TE.decodeUtf8 (BL.toStrict (encode (arguments fn)))
   in  Call { tool = name, args = astr }
 
 -- ---------------------------------------------------------------------------

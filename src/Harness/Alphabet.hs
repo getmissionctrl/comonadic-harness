@@ -41,7 +41,7 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 
 -- | The text actually handed to the model on a turn: the transcript projected
--- down to a flat prompt string. It is the output of the lossy quotient
+-- down to a flat prompt text. It is the output of the lossy quotient
 -- 'Harness.State.project', so two distinct states can share a 'Prompt' — that
 -- collapse is what compaction exploits and what the bisimulation law measures.
 -- Wrapped in a @newtype@ so a projected prompt is never confused with an

@@ -2,6 +2,7 @@ module ProviderSpec (spec) where
 
 import Test.Hspec
 import Control.Monad.Except (throwError)
+import Data.Text qualified as T
 import Harness.Alphabet
 import Harness.Fault (ProviderError (..))
 import Harness.Coalgebra (harness)
@@ -28,6 +29,6 @@ spec = do
   -- estimate is independent of any token count returned by the model.
   describe "overflow estimate (uses numCtx, not evalCount)" $ do
     it "flags overflow when estimated prompt tokens exceed numCtx" $
-      overflowByEstimate (defaultOllamaCfg { ocNumCtx = 64 }) (replicate 400 'x') `shouldBe` True
+      overflowByEstimate (defaultOllamaCfg { ocNumCtx = 64 }) (T.replicate 400 "x") `shouldBe` True
     it "does not flag a prompt that fits, regardless of eval count" $
-      overflowByEstimate (defaultOllamaCfg { ocNumCtx = 2048 }) (replicate 400 'x') `shouldBe` False
+      overflowByEstimate (defaultOllamaCfg { ocNumCtx = 2048 }) (T.replicate 400 "x") `shouldBe` False
