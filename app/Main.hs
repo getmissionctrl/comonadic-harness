@@ -26,7 +26,9 @@ import Harness.Probe (Hypo (..), Risk (..), assess, probe)
 import Harness.Run (Env (..), Live, hoistEnv, runNoTrace)
 import Harness.State (Ctx (..), Mode (..), S (..), Turn (..), allTools)
 import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaOracle)
-import Provider.Tools (prepareSandbox, sandboxAct)
+import Data.IORef (newIORef)
+import Harness.Ref (emptyStore)
+import Provider.Tools (prepareSandbox, sandboxAct, refWorld)
 import System.Environment (getArgs)
 import Text.Read (readMaybe)
 
@@ -219,13 +221,18 @@ live args = do
     let o    = parseLive args
         task = if null (loTask o) then defaultTask else loTask o
         cfg  = defaultOllamaCfg { ocModel = loModel o, ocNumCtx = loCtx o }
-        -- Real oracle (Ollama) + real sandboxed world (Provider.Tools), built
+    -- Per-run reference store: keeps large tool results out of the transcript
+    -- while leaving them navigable via jsonpath/deref. Created once here at the
+    -- IO boundary and passed into 'refWorld', which owns the mutable state.
+    -- The pure decisions (absorb/selector) live in 'Harness.Ref'. [design]
+    store <- newIORef emptyStore
+    let -- Real oracle (Ollama) + real sandboxed world (Provider.Tools), built
         -- directly in the 'Live' stack the interpreter walks in. 'ollamaOracle'
         -- is monad-polymorphic and so fits 'Live' as-is (a transport fault it
         -- raises rides the 'ExceptT' channel past the coalgebra, invariant 5);
         -- 'sandboxAct' is plain IO, lifted with 'liftIO'. There is no bundled
         -- no-op world (F6) — the world half is supplied explicitly here.
-        env  = Env (ollamaOracle cfg) (liftIO . sandboxAct sandboxDir) :: Env Live
+        env  = Env (ollamaOracle cfg) (liftIO . refWorld store (sandboxAct sandboxDir)) :: Env Live
         seeded = start { transcript = [Summary (T.pack task)], budget = loBudget o }
     prepareSandbox sandboxDir "README.md"
     putStrLn

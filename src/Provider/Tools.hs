@@ -23,6 +23,7 @@ module Provider.Tools
   ( prepareSandbox
   , sandboxAct
   , trustedShellWorld
+  , refWorld
   , parseArgs
   , arg
   ) where
@@ -32,6 +33,7 @@ import Data.Aeson (Value (..), decode, encode)
 import qualified Data.Aeson.Key as K
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy.Char8 as BSLC
+import Data.IORef (IORef, atomicModifyIORef')
 import Data.List (isPrefixOf)
 import Data.Maybe (listToMaybe, mapMaybe)
 import qualified Data.Text as T
@@ -59,6 +61,7 @@ import System.Process
 import System.Timeout (timeout)
 
 import Harness.Alphabet (Call (..), Obs, inline)
+import Harness.Ref (Store, absorb, selector)
 import Harness.Schema (keySynonyms)
 
 -- | Prepare the sandbox directory so a live run has somewhere real to work.
@@ -112,6 +115,23 @@ sandboxAct root c = do
     Left (e :: SomeException) -> "error: " ++ show e
     Right out                 -> out
 
+-- | Decorate a base world with the reference store. Selector calls
+-- (@jsonpath@\/@deref@) are resolved from the store; every other result is
+-- thresholded — parked under a ref and previewed when large, passed through
+-- inline when small. Keeps large tool output out of the transcript so the
+-- model's context stays small while the full value remains retrievable. The
+-- store is per-run mutable state owned here at the IO boundary; the decisions
+-- are the pure 'Harness.Ref' functions. [design]
+refWorld :: IORef Store -> (Call -> IO Obs) -> Call -> IO Obs
+refWorld ref base c
+  | tool c `elem` ["jsonpath", "deref"] =
+      atomicModifyIORef' ref (\st -> swap (selector c st))
+  | otherwise = do
+      o <- base c
+      atomicModifyIORef' ref (\st -> swap (absorb o st))
+  where
+    swap (a, b) = (b, a)
+
 -- ---------------------------------------------------------------------------
 -- Dispatch
 -- ---------------------------------------------------------------------------
@@ -133,17 +153,18 @@ dispatch root tl a = case tl of
   "bash"   -> pure "error: shell disabled (use trustedShellWorld to opt in)"
   other    -> pure ("error: unknown tool " ++ other)
 
--- | @read@: return a clipped view of a file's contents. Path-confined through
--- @withSafePath@; a missing path or missing file is a plain error string.
+-- | @read@: return the raw file body. Path-confined through @withSafePath@; a
+-- missing path or missing file is a plain error string. The raw body is
+-- returned without decoration or clipping so that a parked JSON file remains
+-- valid JSON that @jsonpath@ can navigate; the 'refWorld' decorator handles
+-- size thresholding before the result enters the transcript.
 readTool :: FilePath -> Maybe String -> IO String
 readTool _ Nothing = pure "error: read: no path argument"
 readTool root (Just rel) = withSafePath root rel $ \p -> do
   ok <- doesFileExist p
   if not ok
     then pure ("error: no such file: " ++ rel)
-    else do
-      body <- readFile p
-      pure ("read " ++ rel ++ " (" ++ show (length body) ++ " bytes):\n" ++ clip 800 body)
+    else readFile p
 
 -- | @write@: create or overwrite a file, making any missing parent directories.
 -- Path-confined through @withSafePath@; an absent body is treated as empty. This
@@ -220,7 +241,7 @@ trustedShell root (Just cmd)
         out <- maybe (pure "") hGetContents mout
         mcode <- timeout (10 * 1000000) (length out `seq` waitForProcess ph)
         case mcode of
-          Just code -> pure ("bash " ++ showExit code ++ "\n" ++ clip 800 out)
+          Just code -> pure ("bash " ++ showExit code ++ "\n" ++ out)
           Nothing   -> do
             interruptProcessGroupOf ph
             _ <- timeout (2 * 1000000) (waitForProcess ph)

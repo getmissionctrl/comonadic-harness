@@ -181,6 +181,8 @@ allTools =
   [ ToolSpec "read" "{path:string}"
   , ToolSpec "write" "{path:string,body:string}"
   , ToolSpec "commit" "{msg:string}"
+  , ToolSpec "jsonpath" "{ref:string,expr:string}"
+  , ToolSpec "deref" "{ref:string}"
   ]
 
 -- | Quotient 2: the affordance fold @S -> [ToolSpec]@. Mode-dependent and a fold

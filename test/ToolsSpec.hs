@@ -2,8 +2,10 @@ module ToolsSpec (spec) where
 
 import Test.Hspec
 import qualified Data.Text as T
-import Harness.Alphabet (Call (..), obsRender)
-import Provider.Tools (sandboxAct, prepareSandbox, trustedShellWorld, parseArgs, arg)
+import Data.IORef (newIORef)
+import Harness.Alphabet (Call (..), Obs (..), obsRender, obsRef, RefId (..))
+import Harness.Ref (emptyStore)
+import Provider.Tools (sandboxAct, prepareSandbox, trustedShellWorld, refWorld, parseArgs, arg)
 import System.IO.Temp (withSystemTempDirectory)
 import System.Directory (createFileLink)
 import System.FilePath ((</>))
@@ -86,3 +88,31 @@ spec = do
     it "returns Nothing for a key absent from a JSON object" $
       arg ["nope"] (parseArgs "{\"path\":\"x\"}")
         `shouldBe` Nothing
+
+  describe "pass-by-reference world" $ do
+    it "parks a large JSON read and lets jsonpath navigate it" $
+      withSystemTempDirectory "harness-ref" $ \root -> do
+        prepareSandbox root "README.md"
+        let body = "{\"users\":[{\"email\":\"a@x.com\"}],\"pad\":\""
+                     ++ replicate 300 'x' ++ "\"}"
+        writeFile (root </> "data.json") body
+        store <- newIORef emptyStore
+        let w = refWorld store (sandboxAct root)
+        o1 <- w (Call "read" "{\"path\":\"data.json\"}")
+        obsRef o1 `shouldSatisfy` (/= Nothing)     -- large read is parked
+        case obsRef o1 of
+          Just (RefId r) -> do
+            o2 <- w (Call "jsonpath"
+                       ("{\"ref\":\"" <> r <> "\",\"expr\":\"$.users[0].email\"}"))
+            obsRender o2 `shouldSatisfy` T.isInfixOf "a@x.com"
+          Nothing -> expectationFailure "large read should have been parked"
+
+    it "leaves a small read inline (no ref)" $
+      withSystemTempDirectory "harness-ref" $ \root -> do
+        prepareSandbox root "README.md"
+        writeFile (root </> "tiny.txt") "hello"
+        store <- newIORef emptyStore
+        let w = refWorld store (sandboxAct root)
+        o <- w (Call "read" "{\"path\":\"tiny.txt\"}")
+        obsRef o `shouldBe` Nothing
+        obsRender o `shouldBe` "hello"
