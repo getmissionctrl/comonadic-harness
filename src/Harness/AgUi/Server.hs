@@ -262,7 +262,7 @@ defaultHypo = Hypo
         else if length (T.lines p) >= 5
                then Left Overflow
                else Right (Response "guess" [Call "write" "g.txt"] (Usage 120 40))
-  , guessWorld = \c -> Obs (tool c)
+  , guessWorld = \c -> inline (tool c)
   }
 
 -- | Translate a run's result into its terminal AG-UI events. A @'Right' o@ is a
@@ -413,6 +413,6 @@ serveWith port cfg = mkAppWith cfg >>= Warp.run port
 fakeProviderFactory :: ProviderFactory
 fakeProviderFactory _ = pure Env
   { oracle = \_ -> pure (Right (Response "hi" [] (Usage 1 1)))
-  , world  = \_ -> pure (Obs "")
+  , world  = \_ -> pure (inline "")
   }
 

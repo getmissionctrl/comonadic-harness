@@ -149,7 +149,12 @@ data Ctx = Ctx
 -- law is about one definition, not two that might drift. [established]
 renderLine :: Turn -> Text
 renderLine (Assistant r) = "A: " <> say r <> foldMap (\c -> " <" <> tool c <> ">") (calls r)
-renderLine (User rs)     = "U: " <> foldMap (\(c, Obs o) -> tool c <> "=" <> o <> " ") rs
+renderLine (User rs)     = "U: " <> foldMap renderOne rs
+  where
+    renderOne (c, o) = tool c <> "=" <> body o <> " "
+    body o = case obsRef o of
+      Nothing        -> obsRender o
+      Just (RefId r) -> r <> " <" <> obsRender o <> ">"
 renderLine (Summary t)   = "S: " <> t
 
 -- | Quotient 1: the projection @S -> Prompt@. Lossy (it keeps only the rendered
@@ -198,7 +203,7 @@ afford s
     -- Failed, rejected, or hallucinated writes (whose Obs begins "error: ") must
     -- not unlock commit — the safety invariant is keyed on world state, not on
     -- the mere presence of a write call in memory (review1 #1). [established]
-    wrote (User rs) = any (\(c, Obs o) -> tool c == "write" && not ("error: " `T.isPrefixOf` o)) rs
+    wrote (User rs) = any (\(c, o) -> tool c == "write" && not ("error: " `T.isPrefixOf` obsRender o)) rs
     wrote _ = False
 
 -- | The admission pass. Split the model's pending calls into those the current
@@ -236,13 +241,13 @@ admit :: [ToolSpec] -> [Call] -> ([Call], [(Call, Obs)])
 admit specs = foldr classify ([], [])
   where
     classify c (ok, bad) = case lookupSpec c of
-      Nothing -> (ok, (c, Obs ("error: tool not afforded: " <> tool c)) : bad)
+      Nothing -> (ok, (c, inline ("error: tool not afforded: " <> tool c)) : bad)
       Just spec
         | argsSatisfy spec c -> (c : ok, bad)
         | otherwise ->
             ( ok
-            , (c, Obs ("error: invalid arguments for " <> tool c
-                       <> "; expected " <> specSchema spec)) : bad )
+            , (c, inline ("error: invalid arguments for " <> tool c
+                          <> "; expected " <> specSchema spec)) : bad )
     lookupSpec c = case [ s | s <- specs, specName s == tool c ] of
                      (s : _) -> Just s
                      []      -> Nothing

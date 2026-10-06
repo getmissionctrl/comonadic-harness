@@ -161,8 +161,8 @@ refusalEvents (Malformed _) st = ([], st)
 -- for the most recent tool-call proposal. If no proposal is outstanding there is
 -- nothing to correlate, so it emits none.
 worldEvents :: Obs -> RunState -> ([AgUiEvent], RunState)
-worldEvents (Obs o) st = case rsLastTC st of
-  Just (tid, mid) -> ([ToolCallResult mid tid o], st { rsLastTC = Nothing })
+worldEvents o st = case rsLastTC st of
+  Just (tid, mid) -> ([ToolCallResult mid tid (obsRender o)], st { rsLastTC = Nothing })
   Nothing         -> ([], st)
 
 -- | The terminal @RUN_FINISHED@ for an 'Outcome', carrying a small result object

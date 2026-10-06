@@ -42,7 +42,7 @@ spec = do
   describe "terminal Malformed outcome" $
     it "a terminal Malformed halts as Failed, not Exhausted" $ do
       let env = Env { oracle = \_ -> pure (Left (Malformed "boom"))
-                    , world  = \c -> pure (Obs (tool c <> ":ok")) }
+                    , world  = \c -> pure (inline (tool c <> ":ok")) }
       res <- run env (harness (startState 400))
       res `shouldBe` Right (Failed "boom")
   where
@@ -73,7 +73,7 @@ runSeed seed =
 hostileEnv :: Int -> Env Live
 hostileEnv seed = Env oracle' world'
   where
-    world' c = pure (Obs (tool c <> ":ok"))
+    world' c = pure (inline (tool c <> ":ok"))
     oracle' (Request (Prompt p) _tools _) =
       pure (hostileReply ((seed + length (T.lines p)) `mod` 8))
 

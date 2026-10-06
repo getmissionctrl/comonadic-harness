@@ -31,7 +31,7 @@ import System.Environment (getArgs, lookupEnv, setEnv)
 import Text.Read (readMaybe)
 
 import Harness.Alphabet
-  ( Call (..), Obs (..), Prompt (..), Refusal (..), Request, Response (..)
+  ( Call (..), Obs, obsRender, inline, Prompt (..), Refusal (..), Request, Response (..)
   , Usage (..), reqMessages, reqPrompt, reqTools )
 import Harness.Fault (ProviderError (..))
 import Harness.Run (Env (..), Live, runNoTrace)
@@ -123,7 +123,7 @@ liveWorld :: Manager -> T.Text -> FilePath -> Call -> IO Obs
 liveWorld mgr apiKey root c
   | tool c == "scrape_url" = do
       md <- scrapeUrl mgr apiKey (urlArg (args c))
-      pure (Obs md)
+      pure (inline md)
   | otherwise = sandboxAct root c
 
 -- | The streaming live 'Env'. The oracle streams the model's text to the client
@@ -185,8 +185,8 @@ streamingBuilder cfg0 mgr apiKey root opts sink stv rid = pure Env
       pure eresp
   , world = \call -> do
       logLn rid ("world: " <> T.unpack (tool call) <> " args=" <> clip 200 (T.unpack (args call)))
-      obs@(Obs o) <- liveWorld mgr apiKey root call
-      logLn rid ("world -> obs=" <> show (T.length o) <> "chars")
+      obs <- liveWorld mgr apiKey root call
+      logLn rid ("world -> obs=" <> show (T.length (obsRender obs)) <> "chars")
       emitVia sink stv (worldEvents obs)
       pure obs
   }

@@ -46,7 +46,7 @@ spec = describe "Harness.AgUi.Translate" $ do
   it "worldEvents emits a TOOL_CALL_RESULT correlated to the last tool id" $ do
     let st0 = initRunState 1000 Working
         (_, st1) = oracleEvents (resp "" [Call "read" "{}"]) st0
-        (evs, _) = worldEvents (Obs "file contents") st1
+        (evs, _) = worldEvents (inline "file contents") st1
     map evType evs `shouldBe` ["TOOL_CALL_RESULT"]
 
   it "forecastEvent emits a CUSTOM harness.forecast with the risk fields" $ do

@@ -12,7 +12,7 @@ spec = describe "Harness.AgUi.HumanEnv" $
   it "blocks the oracle until input is provided, then returns it" $ do
     slot <- newInputSlot
     emitted <- newTVarIO (0 :: Int)
-    let autoWorld = \_ -> pure (Obs "auto")
+    let autoWorld = \_ -> pure (inline "auto")
         env = humanEnv (\_ -> atomically (modifyTVar' emitted (+1))) slot autoWorld
     -- fork the blocking oracle call
     result <- newEmptyTMVarIO

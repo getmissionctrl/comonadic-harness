@@ -28,7 +28,9 @@ module Harness.Alphabet
   , Request (..)
   , ChatMsg (..)
   , Call (..)
+  , RefId (..)
   , Obs (..)
+  , inline
   , Usage (..)
   , Response (..)
   , Refusal (..)
@@ -111,14 +113,26 @@ data Call = Call
   }
   deriving stock (Eq, Show, Generic)
 
--- | The world's reply to a performed 'Call' — the observation fed back into the
--- next turn. It is the direction of a 'Perform' position: the harness controls
--- /that/ it performs the call, never /what/ comes back, so the successor state
--- is a function @Obs -> x@. A synthetic error 'Obs' is also how the coalgebra
--- reports an unafforded call back to the model. Wrapped in a @newtype@ to keep
--- a tool observation distinct from arbitrary text.
-newtype Obs = Obs Text
+-- | A handle to a full observation value parked in the world store. The model
+-- never sees the full value inline for a large result; it sees this id in the
+-- transcript and dereferences it with a selector 'Call' (@jsonpath@\/@deref@).
+newtype RefId = RefId Text
+  deriving stock (Eq, Ord, Show, Generic)
+
+-- | The world's reply to a 'Perform'. 'obsRender' is what enters the transcript
+-- (inline text, or a bounded structural preview); 'obsRef' is 'Just' the store
+-- handle when the full value was too large to inline. Still the direction of a
+-- 'Perform' position — no new alphabet constructor. [design]
+data Obs = Obs
+  { obsRender :: Text
+  , obsRef    :: Maybe RefId
+  }
   deriving stock (Eq, Show, Generic)
+
+-- | Smart constructor for an observation whose full value is small enough to
+-- live inline in the transcript (no store entry).
+inline :: Text -> Obs
+inline t = Obs t Nothing
 
 -- | A structured transcript entry for native chat transport (see
 -- 'Request.reqMessages'). Provider-neutral: a provider maps these to its own

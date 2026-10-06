@@ -2,7 +2,7 @@ module ToolsSpec (spec) where
 
 import Test.Hspec
 import qualified Data.Text as T
-import Harness.Alphabet (Call (..), Obs (..))
+import Harness.Alphabet (Call (..), obsRender)
 import Provider.Tools (sandboxAct, prepareSandbox, trustedShellWorld, parseArgs, arg)
 import System.IO.Temp (withSystemTempDirectory)
 import System.Directory (createFileLink)
@@ -14,33 +14,33 @@ spec = do
     it "refuses bash by default (shell is opt-in)" $
       withSystemTempDirectory "harness-tools" $ \root -> do
         prepareSandbox root "README.md"
-        Obs o <- sandboxAct root (Call "bash" "{\"cmd\":\"echo hi\"}")
+        o <- obsRender <$> sandboxAct root (Call "bash" "{\"cmd\":\"echo hi\"}")
         o `shouldSatisfy` \s -> T.take 6 s == "error:"
 
     it "trustedShellWorld runs a command and returns its output" $
       withSystemTempDirectory "harness-tools" $ \root -> do
         prepareSandbox root "README.md"
-        Obs o <- trustedShellWorld root (Call "bash" "{\"cmd\":\"echo hi\"}")
+        o <- obsRender <$> trustedShellWorld root (Call "bash" "{\"cmd\":\"echo hi\"}")
         o `shouldSatisfy` \s -> "hi" `elem` T.words s
         o `shouldSatisfy` \s -> T.take 5 s == "bash "
 
     it "trustedShellWorld forwards non-bash calls to sandboxAct" $
       withSystemTempDirectory "harness-tools" $ \root -> do
         prepareSandbox root "README.md"
-        Obs o <- trustedShellWorld root (Call "read" "{\"path\":\"README.md\"}")
+        o <- obsRender <$> trustedShellWorld root (Call "read" "{\"path\":\"README.md\"}")
         o `shouldSatisfy` \s -> T.take 6 s /= "error:"
 
   describe "path safety (withSafePath)" $ do
     it "refuses an absolute path" $
       withSystemTempDirectory "harness-tools" $ \root -> do
         prepareSandbox root "README.md"
-        Obs o <- sandboxAct root (Call "read" "{\"path\":\"/etc/passwd\"}")
+        o <- obsRender <$> sandboxAct root (Call "read" "{\"path\":\"/etc/passwd\"}")
         o `shouldSatisfy` \s -> T.take 6 s == "error:"
 
     it "refuses a '..' escape" $
       withSystemTempDirectory "harness-tools" $ \root -> do
         prepareSandbox root "README.md"
-        Obs o <- sandboxAct root (Call "read" "{\"path\":\"../../etc/passwd\"}")
+        o <- obsRender <$> sandboxAct root (Call "read" "{\"path\":\"../../etc/passwd\"}")
         o `shouldSatisfy` \s -> T.take 6 s == "error:"
 
     it "refuses a symlink planted inside the sandbox pointing out" $
@@ -50,7 +50,7 @@ spec = do
         -- On most systems /etc/passwd exists; if not, the canonicalisation
         -- layer still detects the escape via the resolved target. [established]
         createFileLink "/etc/passwd" (root </> "escape")
-        Obs o <- sandboxAct root (Call "read" "{\"path\":\"escape\"}")
+        o <- obsRender <$> sandboxAct root (Call "read" "{\"path\":\"escape\"}")
         -- Either the canonicalisation layer emits "escapes sandbox" or the
         -- overall error prefix is present.
         o `shouldSatisfy` \s -> "escapes sandbox" `T.isInfixOf` s || T.take 6 s == "error:"
@@ -59,9 +59,9 @@ spec = do
       withSystemTempDirectory "harness-tools" $ \root -> do
         prepareSandbox root "README.md"
         -- Write a file first, then read it back.
-        Obs w <- sandboxAct root (Call "write" "{\"path\":\"note.txt\",\"body\":\"hi\"}")
+        w <- obsRender <$> sandboxAct root (Call "write" "{\"path\":\"note.txt\",\"body\":\"hi\"}")
         w `shouldSatisfy` \s -> T.take 6 s /= "error:"
-        Obs o <- sandboxAct root (Call "read" "{\"path\":\"note.txt\"}")
+        o <- obsRender <$> sandboxAct root (Call "read" "{\"path\":\"note.txt\"}")
         o `shouldSatisfy` \s -> T.take 6 s /= "error:"
         o `shouldSatisfy` T.isInfixOf "hi"
 

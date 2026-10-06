@@ -46,7 +46,7 @@ genHypo = do
           else if length (T.lines p) >= overflowAt
                  then Left Overflow
                  else Right (Response "step" [Call toolChoice (validArgs toolChoice)] (Usage tokIn 40))
-    , guessWorld = \c -> Obs (tool c <> ":ok")
+    , guessWorld = \c -> inline (tool c <> ":ok")
     }
 
 -- | Reachable @(S, tree)@ pairs, walked at the S level via 'step' and resolved
@@ -65,7 +65,7 @@ reachableStates h fuel b = go fuel (startState b)
 genTurn :: Gen Turn
 genTurn = oneof
   [ Assistant <$> genResponse
-  , User <$> resize 3 (listOf ((,) <$> genCall <*> (Obs <$> genTok)))
+  , User <$> resize 3 (listOf ((,) <$> genCall <*> (inline <$> genTok)))
   , Summary <$> genTok
   ]
   where

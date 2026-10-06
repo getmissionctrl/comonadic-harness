@@ -133,7 +133,7 @@ in the prompt, declares itself done (a `Response` with no calls, which halts):
 >                else Right (Response "reading the file"
 >                                     [Call "read" "{\"path\":\"README.md\"}"]
 >                                     (Usage 120 30))
->   , guessWorld = \c -> Obs (tool c <> " -> ok")
+>   , guessWorld = \c -> inline (tool c <> " -> ok")
 >   }
 
 `probe` drives the tree under that hypothesis to a fuel bound and returns the

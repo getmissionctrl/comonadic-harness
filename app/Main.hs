@@ -45,7 +45,7 @@ fakeOracle (Request (Prompt p) tools _)
     lns = length (T.lines p)
 
 fakeWorld :: Call -> IO Obs
-fakeWorld c = pure (Obs (tool c <> ":ok"))
+fakeWorld c = pure (inline (tool c <> ":ok"))
 
 hypo :: Hypo
 hypo =
@@ -57,7 +57,7 @@ hypo =
                     if length (T.lines p) >= 5
                         then Left Overflow
                         else Right (Response "guess" [Call "write" "g.txt"] (Usage 120 40))
-        , guessWorld = \c -> Obs (tool c)
+        , guessWorld = \c -> inline (tool c)
         }
 
 -- ---------------------------------------------------------------------------
@@ -140,8 +140,8 @@ printOracle (Right x) = do
 -- (for a @write@ that is the file body the model proposed) and the resulting
 -- 'Obs'.
 printPerform :: Call -> Obs -> IO ()
-printPerform call (Obs t) =
-    putStrLn ("    PERFORM " ++ T.unpack (tool call) ++ " " ++ T.unpack (args call) ++ " -> " ++ T.unpack t)
+printPerform call o =
+    putStrLn ("    PERFORM " ++ T.unpack (tool call) ++ " " ++ T.unpack (args call) ++ " -> " ++ T.unpack (obsRender o))
 
 pad :: Int -> String -> String
 pad n s = s ++ replicate (n - length s) ' '

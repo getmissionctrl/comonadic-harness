@@ -167,16 +167,16 @@ spec = do
 
   describe "afford: only a successful write unlocks commit (review1 #1)" $ do
     it "a failed write does not unlock commit" $ do
-      let s = startStateWith [User [(Call "write" "x", Obs "error: absolute path not allowed: /etc/x")]]
+      let s = startStateWith [User [(Call "write" "x", inline "error: absolute path not allowed: /etc/x")]]
       map specName (afford s) `shouldNotContain` ["commit"]
     it "a successful write unlocks commit" $ do
-      let s = startStateWith [User [(Call "write" "notes.md", Obs "wrote 12 bytes to notes.md")]]
+      let s = startStateWith [User [(Call "write" "notes.md", inline "wrote 12 bytes to notes.md")]]
       map specName (afford s) `shouldContain` ["commit"]
 
   describe "budget liveness (F4)" $
     it "a zero-usage looping oracle still terminates" $ do
       let env = Env { oracle = \_ -> pure (Right (Response "x" [Call "read" "{}"] (Usage 0 0)))
-                    , world  = \c -> pure (Obs (tool c <> ":ok")) }
+                    , world  = \c -> pure (inline (tool c <> ":ok")) }
       res <- run env (harness (startState 50))
       res `shouldBe` Right Exhausted
 
@@ -196,7 +196,7 @@ spec = do
       -- event is the repaired one — a random hypo could emit further calls and
       -- make the assertion non-deterministic.
       let h   = Hypo { guessOracle = \_ -> Right (Response "done" [] (Usage 1 1))
-                     , guessWorld  = \c -> Obs (tool c) }
+                     , guessWorld  = \c -> inline (tool c) }
           s   = (startState 1000) { pending = [Call "commit" "{}"] }
           evs = probe h 50 (harness s)
       any (\e -> case e of Repaired (Call "commit" _) _ -> True; _ -> False) evs
@@ -208,7 +208,7 @@ spec = do
       -- must not go on to perform a (valid) write. A random hypo can emit a
       -- schema-valid write later in the walk, which made this test flaky.
       let h   = Hypo { guessOracle = \_ -> Right (Response "done" [] (Usage 1 1))
-                     , guessWorld  = \c -> Obs (tool c) }
+                     , guessWorld  = \c -> inline (tool c) }
           s   = (startState 1000) { pending = [Call "write" "not json"] }  -- write needs {path,body}
           evs = probe h 50 (harness s)
       any (\e -> case e of Repaired (Call "write" _) _ -> True; _ -> False) evs `shouldBe` True
@@ -218,7 +218,7 @@ spec = do
       -- The sandbox executor accepts synonym argument keys (filename/content),
       -- so the admission gate must too, or a valid write is silently repaired.
       let h   = Hypo { guessOracle = \_ -> Right (Response "done" [] (Usage 1 1))
-                     , guessWorld  = \c -> Obs (tool c) }
+                     , guessWorld  = \c -> inline (tool c) }
           s   = (startState 1000)
                   { pending = [Call "write" "{\"filename\":\"f\",\"content\":\"x\"}"] }
           evs = probe h 50 (harness s)

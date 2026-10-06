@@ -270,7 +270,7 @@ toOllamaMsgs (MsgAssistant sy cs)     =
   let txt  = if T.null sy then "." else sy
       base = assistantMessage txt
   in  [ if null cs then base else base { tool_calls = Just (map toOllamaToolCall cs) } ]
-toOllamaMsgs (MsgToolResult _ (Obs o)) = [toolMessage o]
+toOllamaMsgs (MsgToolResult _ o) = [toolMessage (obsRender o)]
 
 -- | Rebuild a native 'ToolCall' from a harness 'Call' so a replayed assistant
 -- turn carries the calls it made (the @tool@ results that follow are matched to
@@ -353,7 +353,7 @@ sentText req = case reqMessages req of
   where
     renderMsg (MsgUser t)               = t
     renderMsg (MsgAssistant t cs)       = t <> foldMap (\c -> " " <> tool c <> " " <> args c) cs
-    renderMsg (MsgToolResult _ (Obs o)) = o
+    renderMsg (MsgToolResult _ o) = obsRender o
 
 -- | Infer prompt overflow from the CONFIGURED window, not from
 -- @promptEvalCount@. Estimate prompt tokens at ~4 chars/token and compare to

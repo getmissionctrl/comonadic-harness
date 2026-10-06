@@ -58,7 +58,7 @@ import System.Process
   )
 import System.Timeout (timeout)
 
-import Harness.Alphabet (Call (..), Obs (..))
+import Harness.Alphabet (Call (..), Obs, inline)
 import Harness.Schema (keySynonyms)
 
 -- | Prepare the sandbox directory so a live run has somewhere real to work.
@@ -108,7 +108,7 @@ prepareSandbox root readmeSrc = do
 sandboxAct :: FilePath -> Call -> IO Obs
 sandboxAct root c = do
   result <- try (dispatch root (T.unpack (tool c)) (parseArgs (T.unpack (args c))))
-  pure $ Obs $ T.pack $ case result of
+  pure $ inline $ T.pack $ case result of
     Left (e :: SomeException) -> "error: " ++ show e
     Right out                 -> out
 
@@ -170,7 +170,7 @@ trustedShellWorld :: FilePath -> Call -> IO Obs
 trustedShellWorld root c
   | tool c == "bash" = do
       result <- try (trustedShell root (arg ["cmd", "command", "script"] (parseArgs (T.unpack (args c)))))
-      pure $ Obs $ T.pack $ case result of
+      pure $ inline $ T.pack $ case result of
         Left (e :: SomeException) -> "error: " ++ show e
         Right out                 -> out
   | otherwise = sandboxAct root c

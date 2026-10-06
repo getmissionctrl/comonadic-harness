@@ -15,7 +15,7 @@ import Control.Comonad.Cofree (Cofree)
 import Data.Monoid (Sum (..))
 import System.CPUTime (getCPUTime)
 import Harness.Alphabet
-  (HarnessF, Response (..), Usage (..), Call (..), Obs (..))
+  (HarnessF, Response (..), Usage (..), Call (..), inline)
 import Harness.State (Ctx)
 import Harness.Coalgebra (harness)
 import Harness.Path (Hypo (..), takeWalk)
@@ -77,7 +77,7 @@ longHypo :: Hypo
 longHypo = Hypo
   { guessOracle = \_ ->
       Right (Response "step" [Call "read" "x"] (Usage 1 0))
-  , guessWorld  = \c -> Obs (tool c <> ":ok")
+  , guessWorld  = \c -> inline (tool c <> ":ok")
   }
 
 -- | Time both strategies at a target depth and return a formatted table row.

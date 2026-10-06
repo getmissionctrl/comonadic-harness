@@ -24,7 +24,7 @@ spec = describe "Harness.AgUi.Sink tracing decorator" $
     let sink e = atomically (modifyTVar' log' (++ [e]))
         inner = Env
           { oracle = \_ -> pure (Right (Response "answer" [] (Usage 1 1)))
-          , world  = \_ -> pure (Obs "obs")
+          , world  = \_ -> pure (inline "obs")
           }
     st <- newTVarIO (initRunState 100 Working)
     let traced = traceEnv sink st inner
