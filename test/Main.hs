@@ -11,6 +11,7 @@ import qualified AgUiTranslateSpec
 import qualified AgUiSinkSpec
 import qualified AgUiHumanEnvSpec
 import qualified AgUiServerSpec
+import qualified PreviewSpec
 
 main :: IO ()
 main = hspec $ do
@@ -24,3 +25,4 @@ main = hspec $ do
   AgUiSinkSpec.spec
   AgUiHumanEnvSpec.spec
   AgUiServerSpec.spec
+  PreviewSpec.spec
