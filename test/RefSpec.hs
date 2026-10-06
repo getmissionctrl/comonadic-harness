@@ -63,3 +63,15 @@ spec = describe "Harness.Ref" $ do
   it "jsonpath on an unknown ref is an error, not a crash" $ do
     let (o, _) = selector (Call "jsonpath" "{\"ref\":\"obs#999\",\"expr\":\"$\"}") emptyStore
     obsRender o `shouldSatisfy` T.isPrefixOf "error:"
+
+  it "deref on an unknown ref is an error, not a crash" $ do
+    let (o, _) = selector (Call "deref" "{\"ref\":\"obs#999\"}") emptyStore
+    obsRender o `shouldSatisfy` T.isPrefixOf "error:"
+
+  it "deref with no ref argument is an error" $ do
+    let (o, _) = selector (Call "deref" "{}") emptyStore
+    obsRender o `shouldBe` "error: deref requires ref"
+
+  it "a non-selector tool is an error observation" $ do
+    let (o, _) = selector (Call "read" "{}") emptyStore
+    obsRender o `shouldSatisfy` T.isInfixOf "not a selector"

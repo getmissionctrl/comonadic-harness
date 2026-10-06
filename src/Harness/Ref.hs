@@ -31,7 +31,8 @@ import Harness.Preview (preview, previewResult, previewThreshold, clipText)
 -- | A monotonic, per-run store of full observation values keyed by handle.
 data Store = Store { refs :: Map RefId Text, nextId :: Int }
 
--- | An empty store (no entries, ids start at @obs#0@).
+-- | The store a run starts with: no parked values yet. Each run gets a fresh
+-- one so refs never collide across runs. (Ids begin at @obs#0@.)
 emptyStore :: Store
 emptyStore = Store Map.empty 0
 
@@ -41,10 +42,11 @@ put t st =
       r = RefId ("obs#" <> T.pack (show n))
    in (r, Store (Map.insert r t (refs st)) (n + 1))
 
--- | Threshold a freshly-produced observation. Over 'previewThreshold' chars:
--- park the full value and return a structural preview (JSON if it parses,
--- otherwise a clipped-text preview) plus the ref. Otherwise pass it through
--- inline, untouched.
+-- | Keep a large tool result out of the transcript without losing it: park the
+-- full value under a ref and surface only a bounded preview (JSON-structural if
+-- it parses, otherwise a clipped-text preview), so the model's context stays
+-- small while the data remains retrievable. Small results (at or under
+-- 'previewThreshold' chars) pass through inline, untouched.
 absorb :: Obs -> Store -> (Obs, Store)
 absorb o st
   | T.length (obsRender o) <= previewThreshold = (o, st)
@@ -56,10 +58,11 @@ absorb o st
                    Nothing -> clipText previewThreshold full
        in (Obs prev (Just r), st')
 
--- | Resolve a selector 'Call' against the store. Handles @jsonpath@ and
--- @deref@; anything else is an error observation (it should never be afforded).
--- Never throws — a bad ref, non-JSON ref, or malformed expression all become
--- error observations the model can read and recover from.
+-- | Let the model pull just the part of a parked value it needs, instead of
+-- re-reading the whole thing into context. Resolves @jsonpath@ (navigate with a
+-- JSONPath expression) and @deref@ (retrieve the full parked value) against the
+-- store. Never throws — a bad ref, non-JSON ref, or malformed expression all
+-- become error observations the model can read and recover from.
 selector :: Call -> Store -> (Obs, Store)
 selector c st = case tool c of
   "deref" -> case lookupArg "ref" c of
@@ -73,12 +76,12 @@ selector c st = case tool c of
       Just full -> case decodeStrict (TE.encodeUtf8 full) :: Maybe Value of
         Nothing -> (inline ("error: ref " <> r <> " is not JSON"), st)
         Just v  -> case P.parse pQuery "jsonpath" (T.unpack expr) of
-          Left perr -> (inline ("error: " <> T.pack (unwords (lines (show perr)))), st)
+          Left perr -> (inline ("error: " <> T.replace "\n" " " (T.pack (show perr))), st)
           Right q   ->
             let vs = qQuery q QueryState { rootVal = v, curVal = v, executeQuery = qQuery }
              in absorb (Obs (previewResult vs) Nothing) st
     _ -> (inline "error: jsonpath requires ref and expr", st)
-  other -> (inline ("error: not a selector: " <> other), st)
+  other -> (inline ("error: not a selector: " <> other), st)  -- [design] selector set and afforded set stay in sync
 
 -- | Minimal single-key lookup in a call's JSON args (the selectors use flat
 -- @{\"ref\":…,\"expr\":…}@ objects).
