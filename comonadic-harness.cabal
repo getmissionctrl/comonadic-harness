@@ -59,6 +59,7 @@ library
     , text                 >= 2.0  && < 2.2
     , bytestring           >= 0.11 && < 0.13
     , aeson                >= 2.1  && < 2.3
+    , aeson-jsonpath       >= 0.3  && < 0.5
     -- Provider.Tools' sandboxed world executor (real read/write/bash/commit).
     , process              >= 1.6  && < 1.7
     , directory            >= 1.3  && < 1.4
