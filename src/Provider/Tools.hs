@@ -26,6 +26,7 @@ module Provider.Tools
   , sandboxAct
   , trustedShellWorld
   , refWorld
+  , onceReadWorld
   , parseArgs
   , arg
   ) where
@@ -35,8 +36,9 @@ import Data.Aeson (Value (..), decode, encode)
 import qualified Data.Aeson.Key as K
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import Data.IORef (IORef, atomicModifyIORef')
+import Data.IORef (IORef, atomicModifyIORef', readIORef)
 import Data.List (isPrefixOf)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe, mapMaybe)
 import qualified Data.Text as T
 import System.Directory
@@ -62,7 +64,7 @@ import System.Process
   )
 import System.Timeout (timeout)
 
-import Harness.Alphabet (Call (..), Obs, inline)
+import Harness.Alphabet (Call (..), Obs, inline, obsRender, obsRef)
 import Harness.Ref (Store, absorb, selector)
 import Harness.Schema (keySynonyms)
 
@@ -133,6 +135,66 @@ refWorld ref base c
       atomicModifyIORef' ref (\st -> swap (absorb o st))
   where
     swap (a, b) = (b, a)
+
+-- | Decorate a base world so that re-reading an __unchanged__ file does not
+-- re-append its full content to the transcript. The first @read@ of a path
+-- returns the real result; a later @read@ of the same path whose content is
+-- byte-identical returns a short note instead, telling the model it already has
+-- the file and should not fetch it again.
+--
+-- __Why this exists.__ A weak model will, for some task phrasings, re-issue an
+-- identical @read@ of a file it has just read rather than acting on it (observed:
+-- @qwen3:8b@ re-reads a just-read 9 KB README ~100% of the time for
+-- \"read X, summarise it, overwrite Y\"). Each re-read re-appends the whole file,
+-- so the context grows a file-width per turn and overflows @num_ctx@ in a few
+-- turns — a run-ending 'Harness.Alphabet.Overflow' driven entirely by the model
+-- spinning. Collapsing the redundant re-read to a one-line note removes the
+-- amplification (the transcript no longer grows) and, by naming the redundancy,
+-- usually breaks the spin as well. It is the idempotent-read dual of 'refWorld':
+-- @refWorld@ keeps a /large/ result out of the transcript; this keeps a
+-- /repeated/ result out of it. [established]
+--
+-- __Scope, deliberately narrow.__ Only @read@ is guarded (the one idempotent,
+-- 'Harness.State.ReplaySafe' file tool), and only when its result came back
+-- /inline/: a result 'refWorld' already parked under a reference is a small
+-- preview that cannot overflow anything, so it is passed through untouched.
+-- Sameness is judged on the returned render, so a file a prior @write@ changed
+-- reads fresh (its render differs) and is returned in full. The per-run memory
+-- is an 'IORef' owned at the IO boundary, mirroring 'refWorld'\'s store. [design]
+--
+-- __Caveat after compaction.__ The memory is not cleared when the transcript is
+-- compacted to a 'Harness.State.Summary', so a re-read following a compaction is
+-- still collapsed even though the file's full text is no longer literally
+-- \"above\" — only its summary is. This is the intended outcome regardless: after
+-- compaction the model /should/ work from the summary rather than re-flood the
+-- context with the whole file, which is exactly what the note steers it to do.
+-- [design]
+onceReadWorld :: IORef (Map.Map T.Text T.Text) -> (Call -> IO Obs) -> Call -> IO Obs
+onceReadWorld ref base c
+  | tool c == "read" = do
+      o <- base c
+      case obsRef o of
+        Just _  -> pure o   -- already parked by refWorld: a small preview, cannot overflow
+        Nothing -> do
+          let path = readPath c
+          seen <- readIORef ref
+          case Map.lookup path seen of
+            Just prev | prev == obsRender o -> pure (inline (alreadyRead path))
+            _ -> do
+              atomicModifyIORef' ref (\m -> (Map.insert path (obsRender o) m, ()))
+              pure o
+  | otherwise = base c
+  where
+    -- Normalise through the same synonym lattice the dispatcher uses, so
+    -- @{"path":…}@ and @{"file":…}@ collapse to one key; fall back to the raw
+    -- argument text when no path key is present.
+    readPath call =
+      maybe (args call) T.pack
+        (arg (map T.unpack (keySynonyms "path")) (parseArgs (T.unpack (args call))))
+    alreadyRead path =
+      "already read " <> path <> " earlier in this run; its content is already "
+        <> "in the conversation above. Do not read it again \8212 use what you "
+        <> "have and continue the task."
 
 -- ---------------------------------------------------------------------------
 -- Dispatch

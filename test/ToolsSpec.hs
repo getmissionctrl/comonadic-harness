@@ -3,10 +3,11 @@ module ToolsSpec (spec) where
 import Test.Hspec
 import qualified Data.Text as T
 import Data.IORef (newIORef)
+import qualified Data.Map.Strict as Map
 import Harness.Alphabet (Call (..), Obs (..), obsRender, obsRef, RefId (..))
 import Harness.Preview (previewThreshold)
 import Harness.Ref (emptyStore)
-import Provider.Tools (sandboxAct, prepareSandbox, trustedShellWorld, refWorld, parseArgs, arg)
+import Provider.Tools (sandboxAct, prepareSandbox, trustedShellWorld, refWorld, onceReadWorld, parseArgs, arg)
 import System.IO.Temp (withSystemTempDirectory)
 import System.Directory (createFileLink)
 import System.FilePath ((</>))
@@ -117,3 +118,63 @@ spec = do
         o <- w (Call "read" "{\"path\":\"tiny.txt\"}")
         obsRef o `shouldBe` Nothing
         obsRender o `shouldBe` "hello"
+
+  describe "idempotent-read guard (onceReadWorld)" $ do
+    it "collapses an unchanged re-read to a note, not the full content" $
+      withSystemTempDirectory "harness-once" $ \root -> do
+        prepareSandbox root "README.md"
+        writeFile (root </> "f.txt") "the quick brown fox"
+        store <- newIORef emptyStore
+        seen  <- newIORef Map.empty
+        let w = onceReadWorld seen (refWorld store (sandboxAct root))
+        o1 <- w (Call "read" "{\"path\":\"f.txt\"}")
+        obsRender o1 `shouldBe` "the quick brown fox"   -- first read: full content
+        o2 <- w (Call "read" "{\"path\":\"f.txt\"}")
+        obsRender o2 `shouldSatisfy` T.isInfixOf "already read"
+        obsRender o2 `shouldSatisfy` \s -> not (T.isInfixOf "quick" s)  -- content NOT re-appended
+
+    it "re-reads in full when the file content has changed" $
+      withSystemTempDirectory "harness-once" $ \root -> do
+        prepareSandbox root "README.md"
+        store <- newIORef emptyStore
+        seen  <- newIORef Map.empty
+        let w = onceReadWorld seen (refWorld store (sandboxAct root))
+        _  <- w (Call "write" "{\"path\":\"f.txt\",\"body\":\"one\"}")
+        o1 <- w (Call "read" "{\"path\":\"f.txt\"}")
+        obsRender o1 `shouldBe` "one"
+        _  <- w (Call "write" "{\"path\":\"f.txt\",\"body\":\"two is different\"}")
+        o2 <- w (Call "read" "{\"path\":\"f.txt\"}")
+        obsRender o2 `shouldBe` "two is different"       -- changed ⇒ not collapsed
+
+    it "resolves a synonym path key so {path} and {file} share one entry" $
+      withSystemTempDirectory "harness-once" $ \root -> do
+        prepareSandbox root "README.md"
+        writeFile (root </> "f.txt") "contents here"
+        store <- newIORef emptyStore
+        seen  <- newIORef Map.empty
+        let w = onceReadWorld seen (refWorld store (sandboxAct root))
+        _  <- w (Call "read" "{\"path\":\"f.txt\"}")
+        o2 <- w (Call "read" "{\"file\":\"f.txt\"}")
+        obsRender o2 `shouldSatisfy` T.isInfixOf "already read"
+
+    it "passes non-read calls through unchanged" $
+      withSystemTempDirectory "harness-once" $ \root -> do
+        prepareSandbox root "README.md"
+        store <- newIORef emptyStore
+        seen  <- newIORef Map.empty
+        let w = onceReadWorld seen (refWorld store (sandboxAct root))
+        o <- w (Call "write" "{\"path\":\"g.txt\",\"body\":\"x\"}")
+        obsRender o `shouldSatisfy` T.isInfixOf "wrote"
+
+    it "does not collapse a parked (large) read — its preview cannot overflow" $
+      withSystemTempDirectory "harness-once" $ \root -> do
+        prepareSandbox root "README.md"
+        writeFile (root </> "big.txt") (replicate (previewThreshold + 100) 'x')
+        store <- newIORef emptyStore
+        seen  <- newIORef Map.empty
+        let w = onceReadWorld seen (refWorld store (sandboxAct root))
+        o1 <- w (Call "read" "{\"path\":\"big.txt\"}")
+        obsRef o1 `shouldSatisfy` (/= Nothing)   -- parked
+        o2 <- w (Call "read" "{\"path\":\"big.txt\"}")
+        obsRef o2 `shouldSatisfy` (/= Nothing)   -- still parked, not a note
+        obsRender o2 `shouldSatisfy` \s -> not (T.isInfixOf "already read" s)

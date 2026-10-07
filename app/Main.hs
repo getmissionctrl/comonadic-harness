@@ -31,7 +31,8 @@ import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaOracle)
 import Data.IORef (newIORef)
 import Data.Maybe (fromMaybe)
 import Harness.Ref (emptyStore)
-import Provider.Tools (prepareSandbox, sandboxAct, refWorld)
+import Provider.Tools (prepareSandbox, sandboxAct, refWorld, onceReadWorld)
+import qualified Data.Map.Strict as Map
 import System.Environment (getArgs, lookupEnv)
 import Text.Read (readMaybe)
 
@@ -240,13 +241,17 @@ live args = do
     -- IO boundary and passed into 'refWorld', which owns the mutable state.
     -- The pure decisions (absorb/selector) live in 'Harness.Ref'. [design]
     store <- newIORef emptyStore
+    seen  <- newIORef Map.empty   -- per-run idempotent-read memory (onceReadWorld)
     let -- Real oracle (Ollama) + real sandboxed world (Provider.Tools), built
         -- directly in the 'Live' stack the interpreter walks in. 'ollamaOracle'
         -- is monad-polymorphic and so fits 'Live' as-is (a transport fault it
         -- raises rides the 'ExceptT' channel past the coalgebra, invariant 5);
         -- 'sandboxAct' is plain IO, lifted with 'liftIO'. There is no bundled
         -- no-op world (F6) — the world half is supplied explicitly here.
-        env  = Env (ollamaOracle cfg) (liftIO . refWorld store (sandboxAct sandboxDir)) :: Env Live
+        -- 'onceReadWorld' collapses a redundant re-read of an unchanged file so a
+        -- model that spins on @read@ cannot grow the transcript into overflow.
+        env  = Env (ollamaOracle cfg)
+                   (liftIO . onceReadWorld seen (refWorld store (sandboxAct sandboxDir))) :: Env Live
         seeded = start { transcript = [Summary (T.pack task)], budget = loBudget o }
     prepareSandbox sandboxDir "README.md"
     putStrLn

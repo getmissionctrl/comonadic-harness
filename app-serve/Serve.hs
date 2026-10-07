@@ -39,7 +39,8 @@ import Harness.State (allTools)
 import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaOracle, streamingComplete)
 import Provider.Research (scrapeUrl, scrapeUrlSpec, urlArg)
 import Harness.Ref (emptyStore)
-import Provider.Tools (prepareSandbox, refWorld, sandboxAct)
+import Provider.Tools (prepareSandbox, refWorld, onceReadWorld, sandboxAct)
+import qualified Data.Map.Strict as Map
 import Harness.AgUi.Event (AgUiEvent (..), RunId)
 import Harness.AgUi.Sink (Sink)
 import Harness.AgUi.Translate
@@ -86,9 +87,10 @@ main = do
       -- streaming path preserves the error channel properly).
       factory _rid = do
         store <- newIORef emptyStore
+        seen  <- newIORef Map.empty
         pure Env
           { oracle = ioOracle cfg
-          , world  = refWorld store (liveWorld mgr (T.pack apiKey) sandboxDir)
+          , world  = onceReadWorld seen (refWorld store (liveWorld mgr (T.pack apiKey) sandboxDir))
           }
       -- read/write/bash/commit + scrape_url, subject to the harness's affordance
       -- policy (no tools while summarising; commit withheld until a write).
@@ -139,6 +141,7 @@ liveWorld mgr apiKey root c
 streamingBuilder :: OllamaCfg -> Manager -> T.Text -> FilePath -> EnvBuilder
 streamingBuilder cfg0 mgr apiKey root opts sink stv rid = do
   store <- newIORef emptyStore
+  seen  <- newIORef Map.empty  -- per-run idempotent-read memory (onceReadWorld)
   pure $ Env
     { oracle = \req -> do
       logOracleReq rid cfg req
@@ -187,7 +190,7 @@ streamingBuilder cfg0 mgr apiKey root opts sink stv rid = do
       pure eresp
     , world = \call -> do
         logLn rid ("world: " <> T.unpack (tool call) <> " args=" <> clip 200 (T.unpack (args call)))
-        obs <- refWorld store (liveWorld mgr apiKey root) call
+        obs <- onceReadWorld seen (refWorld store (liveWorld mgr apiKey root)) call
         logLn rid ("world -> obs=" <> show (T.length (obsRender obs)) <> "chars")
         emitVia sink stv (worldEvents obs)
         pure obs
