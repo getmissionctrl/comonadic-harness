@@ -31,9 +31,11 @@ module Provider.Ollama
 
 import Control.Concurrent (threadDelay)
 import Control.Monad (when)
+import Data.Foldable (toList)
+import System.Environment (lookupEnv)
 import Control.Monad.Except (MonadError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Aeson (decode, encode)
+import Data.Aeson (decode, encode, object, (.=))
 import Data.IORef (modifyIORef', newIORef, readIORef, writeIORef)
 import Data.ByteString.Lazy qualified as BL
 import Data.List.NonEmpty (NonEmpty (..))
@@ -223,6 +225,7 @@ streamingComplete cfg onDelta onThink req = do
             ( maybe 0 fromIntegral (promptEvalCount cr)
             , maybe 0 fromIntegral (evalCount cr) )
       ops = (buildChatOps cfg req) { stream = Just (onChunk, pure ()) }
+  traceWire ops
   result <- chat ops (Just ollamaCfg)
   case result of
     Left err -> nonStreamingFallback cfg onDelta req err ollamaCfg
@@ -238,6 +241,23 @@ streamingComplete cfg onDelta onThink req = do
             , calls = maybe [] (map toCall) mcalls
             , usage = Usage { inTok = pin, outTok = out }
             }
+
+-- | Diagnostic: when @HARNESS_WIRE_TRACE@ names a file, append one JSON line
+-- holding the /exact/ message list sent to Ollama for this turn (the literal
+-- wire payload after 'buildChatOps'\/'toOllamaMsgs' translation). This is the
+-- ground truth for debugging transcript-assembly faults — reconstructing the
+-- payload by hand is error-prone, as a read\/re-read loop that reproduced only
+-- on the real path (never under a hand-built replica) demonstrated. No-op when
+-- the variable is unset, so it costs nothing in normal operation. [design]
+traceWire :: ChatOps -> IO ()
+traceWire ops = do
+  mp <- lookupEnv "HARNESS_WIRE_TRACE"
+  case mp of
+    Nothing -> pure ()
+    Just fp -> BL.appendFile fp
+      (encode (object [ "messages" .= toList (messages ops)
+                      , "options"  .= options ops
+                      , "think"    .= think ops ]) <> "\n")
 
 -- | Non-streaming fallback invoked by 'streamingComplete' when the streaming
 -- attempt returns a decode fault.
