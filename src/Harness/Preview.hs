@@ -20,10 +20,16 @@ import qualified Data.Text as T
 import qualified Data.Vector as V
 
 -- | Results larger than this many characters are parked in the store and
--- previewed; smaller ones stay inline. The one knob that wants empirical tuning
--- for a given local model / context window. [design]
+-- previewed; smaller ones stay inline. Sized so that only results that would
+-- consume a large fraction of a typical context window get parked — roughly
+-- half of an 8k-token window (~16k chars). A smaller value (e.g. 256) parks
+-- ordinary files that fit the window perfectly well, which needlessly pushes
+-- the model into a @deref@ round-trip (and, observed with small models, a
+-- re-fetch loop) instead of just using the content. Ideally this tracks the
+-- run's @num_ctx@; for now it is a fixed, deliberately generous constant.
+-- [design]
 previewThreshold :: Int
-previewThreshold = 256
+previewThreshold = 16000
 
 -- | A depth-1 structural summary of a JSON value.
 preview :: Value -> Text

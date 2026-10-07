@@ -216,6 +216,8 @@ systemPrompt = T.intercalate "\n"
   , "  deref {\"ref\":\"obs#N\"}            to get the complete value, or"
   , "  jsonpath {\"ref\":\"obs#N\",\"expr\":\"$...\"}   to pull just the part you need if it is JSON."
   , "A reference is only valid within the current task run."
+  , ""
+  , "Fetch each thing AT MOST ONCE. After you read a file, or deref/jsonpath a reference, you already HAVE that content in the conversation — do NOT read or deref the same thing again. Use what you already have and move on to finish the task. Prefer jsonpath for one field over deref of a whole large value."
   ]
 
 -- | Quotient 2: the affordance fold @S -> [ToolSpec]@. Mode-dependent and a fold

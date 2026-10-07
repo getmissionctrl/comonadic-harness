@@ -8,11 +8,12 @@ import Harness.Alphabet (Call (..), Obs (..), RefId (..), inline)
 import Harness.Preview (previewThreshold)
 import Harness.Ref (emptyStore, absorb, selector)
 
--- Padded so it exceeds previewThreshold (256) and therefore gets parked by absorb.
+-- Padded past previewThreshold (threshold-relative, so it stays correct if the
+-- threshold changes) so absorb parks it.
 bigJson :: T.Text
 bigJson =
   "{\"users\":[{\"email\":\"a@x.com\"},{\"email\":\"b@x.com\"}],\"total\":2,\"pad\":\""
-    <> T.replicate 300 "x" <> "\"}"
+    <> T.replicate (previewThreshold + 100) "x" <> "\"}"
 
 spec :: Spec
 spec = describe "Harness.Ref" $ do
@@ -22,10 +23,10 @@ spec = describe "Harness.Ref" $ do
     obsRender o `shouldBe` "ok"
 
   it "parks a large observation and returns a preview + ref" $ do
-    let big = inline (T.replicate 400 "x")
+    let big = inline (T.replicate (previewThreshold + 100) "x")
         (o, _) = absorb big emptyStore
     obsRef o `shouldSatisfy` (/= Nothing)
-    T.length (obsRender o) `shouldSatisfy` (< 400)
+    T.length (obsRender o) `shouldSatisfy` (<= previewThreshold + 3)
 
   it "jsonpath navigates a stored JSON value" $ do
     let (parked, st) = absorb (inline bigJson) emptyStore
