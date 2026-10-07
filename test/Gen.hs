@@ -19,7 +19,7 @@ import Harness.Probe (Hypo (..))
 
 -- | The genuine initial state — the only hand-written S permitted.
 startState :: Int -> S
-startState b = S { transcript = [], pending = [], budget = b, mode = Working, tools = allTools, failure = Nothing }
+startState b = S { transcript = [], pending = [], budget = b, window = 8192, mode = Working, tools = allTools, failure = Nothing }
 
 -- | Schema-valid arguments per tool, so a generated 'Call' is a genuine perform
 -- (survives 'Harness.State.admit''s argument gate, D3) rather than being repaired.

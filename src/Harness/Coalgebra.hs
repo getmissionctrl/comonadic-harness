@@ -99,10 +99,14 @@ step s0 =
 -- (a 'Refusal' or a 'Response') becomes the next state. Three cases, one per
 -- shape of @'Either' 'Refusal' 'Response'@:
 --
--- * __'Overflow'__: flip 'mode' to 'Summarising' and change nothing else. The
---   context grew past the window; the only correct response is a state
---   transition into compaction, and the coalgebra is the only thing that can
---   make one. The next 'step' takes the 'Summarising' branch. [design]
+-- * __'Overflow'__: 'backoff' the transcript (shrink it so the summarise turn
+--   will fit) and flip 'mode' to 'Summarising'. The context grew past the
+--   window; the only correct response is a state transition into compaction, and
+--   the coalgebra is the only thing that can make one. Shrinking here — rather
+--   than leaving the whole transcript for the summarise request to project — is
+--   what stops the summarise turn overflowing in turn (see 'Harness.State.backoff'
+--   and the 'Summarising'-mode 'Overflow' case below). The next 'step' takes the
+--   'Summarising' branch. [design]
 --
 -- * __'Malformed' m__: terminal. Set the 'failure' field to @Just m@; the next
 --   'step' checks 'failure' FIRST and halts with @'Failed' m@, so a decode death
@@ -116,7 +120,7 @@ step s0 =
 --   will 'admit'), and debit the 'budget' by the reported token 'usage'
 --   (@'inTok' + 'outTok'@).
 working :: S -> Either Refusal Response -> S
-working s (Left Overflow)      = s & gfield @"mode" .~ Summarising
+working s (Left Overflow)      = backoff s & gfield @"mode" .~ Summarising
 working s (Left (Malformed m)) = s & gfield @"failure" .~ Just m
 working s (Right r) =
   s & gfield @"transcript" %~ (Assistant r :)

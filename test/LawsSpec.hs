@@ -8,6 +8,7 @@ import Control.Comonad.Cofree (Cofree ((:<)))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Writer (runWriter, tell)
 import Data.Text (Text)
+import qualified Data.Text as T
 import Harness.Alphabet
 import Harness.Fault (ProviderError)
 import Harness.Interp (Ev (..), interp)
@@ -68,7 +69,7 @@ afforded (performed, tools) =
 -- 'project' is a pure function of the transcript, so reachability is irrelevant
 -- here — we are testing an algebraic law of 'project', not running the coalgebra.
 startStateWith :: [Turn] -> S
-startStateWith ts = S { transcript = ts, pending = [], budget = 1, mode = Working, tools = allTools, failure = Nothing }
+startStateWith ts = S { transcript = ts, pending = [], budget = 1, window = 8192, mode = Working, tools = allTools, failure = Nothing }
 
 spec :: Spec
 spec = do
@@ -250,6 +251,35 @@ spec = do
       r <- measureRate compactViaSummary
       putStrLn (renderRate r)
       nStates r `shouldSatisfy` (>= 1000)
+
+  describe "backoff: shrink an overflowing transcript so the summarise turn fits (§B)" $ do
+    let bigObs    = inline (T.replicate 5000 "x")
+        parkedObs = Obs (T.replicate 5000 "y") (Just (RefId "obs#3"))
+        userTurn o = User [(Call "read" "{\"path\":\"f.txt\"}", o)]
+        withWindow w ts = (startStateWith ts) { window = w }
+        projLen s = let Prompt p = project s in T.length p
+
+    it "shrinks an overflowing transcript to within ~window (cap = window*2 chars)" $ do
+      let s = withWindow 500 (replicate 6 (userTurn bigObs))  -- ~30k chars, cap 1000
+      projLen s `shouldSatisfy` (> 1000)
+      projLen (backoff s) `shouldSatisfy` (<= 1000)
+
+    it "keeps the obs#N handle when it elides a parked result (deref still possible)" $ do
+      let s = withWindow 300 [userTurn parkedObs, userTurn bigObs]
+          Prompt after = project (backoff s)
+      after `shouldSatisfy` T.isInfixOf "obs#3"
+
+    it "is idempotent (a fixed point under sustained pressure)" $ do
+      let s = withWindow 500 (replicate 6 (userTurn bigObs))
+      backoff (backoff s) `shouldBe` backoff s
+
+    it "is the identity when the transcript already fits" $ do
+      let s = withWindow 8192 [userTurn (inline "small")]
+      backoff s `shouldBe` s
+
+    it "never drops the newest turn, even under a tiny window" $ do
+      let s = withWindow 1 (replicate 6 (userTurn bigObs))
+      transcript (backoff s) `shouldSatisfy` (not . null)
 
 -- The compaction-rate machinery: a product of four observations, reported as a
 -- rate with a per-component breakdown (D10). NOT a boolean.

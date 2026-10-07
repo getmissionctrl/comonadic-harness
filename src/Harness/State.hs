@@ -23,6 +23,7 @@ module Harness.State
   , S (..)
   , Ctx (..)
   , project
+  , backoff
   , allTools
   , systemPrompt
   , afford
@@ -100,6 +101,17 @@ data S = S
     -- ^ Remaining token budget. Spent in __tokens, not turns__: each successful
     -- turn debits @inTok + outTok@ of its 'Harness.Alphabet.Usage'. Reaching
     -- zero halts the run with 'Harness.Alphabet.Exhausted'. [established]
+  , window :: Int
+    -- ^ The model's context window, in __tokens__ — the same number the provider
+    -- sends as @num_ctx@, seeded here at run construction beside 'budget'. It is a
+    -- resource bound the coalgebra reasons about (exactly as it reasons about
+    -- 'budget'), so it belongs in @S@, not in the 'Ctx' annotation: 'backoff'
+    -- reads it to size compaction to the /actual/ window rather than a blind
+    -- constant. Keeping it in @S@ (read by 'Harness.Coalgebra.step'), not in
+    -- 'Ctx' (read only by analysis), is what keeps invariant 2 intact — the
+    -- window informs execution, so it is state, not annotation. The provider's
+    -- own overflow check stays the source of truth for actual truncation; this is
+    -- the coalgebra's proactive estimate. [design]
   , mode :: Mode
     -- ^ The current turn-shape. The single field that lets one
     -- 'Harness.Alphabet.Ask' constructor serve both a task turn and a
@@ -165,7 +177,73 @@ renderLine (Summary t)   = "S: " <> t
 -- Its lossiness is the whole point: distinct states sharing a 'Prompt' is the
 -- collapse that compaction exploits and the bisimulation law quantifies.
 project :: S -> Prompt
-project s = Prompt (T.unlines (map renderLine (reverse (transcript s))))
+project s = Prompt (renderTranscript (transcript s))
+
+-- | Render a whole transcript (newest-first) to the flattened prompt text, in
+-- reading order. Factored out of 'project' so 'backoff' can size a candidate
+-- transcript with the /same/ renderer the prompt uses — the two cannot drift.
+renderTranscript :: [Turn] -> Text
+renderTranscript ts = T.unlines (map renderLine (reverse ts))
+
+-- | Shrink an overflowing transcript so the summarisation turn can actually fit.
+--
+-- __Why.__ On 'Harness.Alphabet.Overflow' the harness flips to 'Summarising' and
+-- asks the model to summarise — but the summarise 'request' projects the /whole/
+-- transcript, which is the very thing that overflowed. Without a back-off the
+-- summarise turn overflows too and 'Harness.Coalgebra.summarising' can only give
+-- up (zero the budget → 'Exhausted'). A long conversation then dies instead of
+-- compacting. 'backoff' is the deterministic shrink that makes the summarise
+-- prompt fit, so compaction can make progress. [established]
+--
+-- __How, window-aware.__ The target is derived from 'window' (the context size
+-- in @S@, so this is a coalgebra decision, not annotation-reading — see
+-- 'window'): aim for roughly half the window in tokens (≈ @window * 2@ chars at
+-- ~4 chars/token), leaving generous room for the system prompt and the
+-- summarise instruction the request also carries. If the transcript already
+-- fits, 'backoff' is the identity (a fixed point, so repeated firing under
+-- sustained pressure is safe). Otherwise it shrinks in two escalating steps:
+--
+--   1. __Elide bulky tool-result bodies.__ Every tool observation whose render
+--      exceeds a small keep-size is replaced by a one-line marker. A /parked/
+--      result keeps its @obs#N@ handle (the marker says how to @deref@ it), so no
+--      information is lost — the full value is still in the world store and the
+--      model retains @deref@\/@jsonpath@ after compaction. An unparked large
+--      inline result (rare now that 'Provider.Tools.refWorld' parks eagerly) is
+--      genuinely dropped, named as elided.
+--   2. __Drop oldest turns.__ If eliding is not enough, keep the newest-first
+--      prefix of turns that fits the target and drop the rest — but never drop
+--      everything: at least the newest turn survives.
+--
+-- The result is idempotent: a second application sees a transcript that already
+-- fits (markers are below the keep-size, the prefix already fits) and returns it
+-- unchanged. [design]
+backoff :: S -> S
+backoff s
+  | fits (transcript s)  = s
+  | fits elided          = s { transcript = elided }
+  | otherwise            = s { transcript = trimOldest elided }
+  where
+    cap     = max 1 (window s) * 2          -- chars; ≈ half the window in tokens
+    keepSz  = 200                           -- a tool result at/under this stays verbatim
+    fits ts = T.length (renderTranscript ts) <= cap
+    elided  = map elide (transcript s)
+    elide (User rs) = User [ (c, shrinkObs o) | (c, o) <- rs ]
+    elide t         = t
+    shrinkObs o
+      | T.length (obsRender o) <= keepSz = o
+      | otherwise = case obsRef o of
+          Just (RefId r) ->
+            Obs ("[elided \8212 deref {\"ref\":\"" <> r <> "\"} for the full value]") (Just (RefId r))
+          Nothing -> inline "[elided large result]"
+    -- Keep the newest-first prefix whose cumulative render fits 'cap'; always
+    -- keep at least the newest turn so the model never loses its latest context.
+    trimOldest ts = case prefix 0 ts of
+      [] -> take 1 ts
+      ks -> ks
+    prefix _   []       = []
+    prefix acc (t : ts) =
+      let l = T.length (renderLine t) + 1   -- +1 for the newline 'renderTranscript' adds
+       in if acc + l <= cap then t : prefix (acc + l) ts else []
 
 -- | The default catalogue of tools the harness can offer. 'afford' selects a
 -- subset of this list per turn; nothing outside it is ever afforded. Kept as a

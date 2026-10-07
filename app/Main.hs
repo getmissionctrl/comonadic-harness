@@ -157,7 +157,9 @@ pad n s = s ++ replicate (n - length s) ' '
 -- ---------------------------------------------------------------------------
 
 start :: S
-start = S [] [] 1200 Working allTools Nothing
+start = S [] [] 1200 2048 Working allTools Nothing
+  -- fields: transcript pending budget window mode tools failure
+  -- (window is the default num_ctx; the live path overrides it from --num-ctx)
 
 -- ---------------------------------------------------------------------------
 -- Modes
@@ -252,7 +254,7 @@ live args = do
         -- model that spins on @read@ cannot grow the transcript into overflow.
         env  = Env (ollamaOracle cfg)
                    (liftIO . onceReadWorld seen (refWorld store (sandboxAct sandboxDir))) :: Env Live
-        seeded = start { transcript = [Summary (T.pack task)], budget = loBudget o }
+        seeded = start { transcript = [Summary (T.pack task)], budget = loBudget o, window = loCtx o }
     prepareSandbox sandboxDir "README.md"
     putStrLn
         ( "== live run: model=" ++ ocModel cfg

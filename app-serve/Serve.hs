@@ -99,6 +99,7 @@ main = do
         { scfFactory    = factory  -- non-streaming fallback (unused while a builder is set)
         , scfTools      = tools
         , scfBudget     = budget
+        , scfWindow     = numCtx
         , scfEnvBuilder = Just (streamingBuilder cfg mgr (T.pack apiKey) sandboxDir)
         , scfThinkVar   = Just thinkVar
         }

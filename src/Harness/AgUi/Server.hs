@@ -89,6 +89,10 @@ data ServeConfig = ServeConfig
   { scfFactory    :: ProviderFactory
   , scfTools      :: [ToolSpec]
   , scfBudget     :: Int
+  , scfWindow     :: Int
+  -- ^ The context window in tokens, seeded into each run's 'Harness.State.window'
+  -- so the coalgebra can size compaction ('Harness.State.backoff') to the real
+  -- @num_ctx@. Mirrors 'scfBudget'.
   , scfEnvBuilder :: Maybe EnvBuilder
   , scfThinkVar   :: Maybe (TVar Bool)
   -- ^ When 'Just', the server exposes @POST \/config@ so a client can toggle
@@ -100,7 +104,7 @@ data ServeConfig = ServeConfig
 -- builder, no control endpoint. Matches the pre-config behaviour so existing
 -- callers ('mkApp'\/'serve'') are unchanged.
 defaultServeConfig :: ProviderFactory -> ServeConfig
-defaultServeConfig f = ServeConfig f [] 1200 Nothing Nothing
+defaultServeConfig f = ServeConfig f [] 1200 8192 Nothing Nothing
 
 -- | Everything the transport needs to reach a live run: its event log (for SSE)
 -- and its input slot (for a human-driven oracle). The threaded @RunState@ that
@@ -223,7 +227,8 @@ startH cfg (Registry regv) sr = liftIO $ do
   logv <- newEventLog
   slot <- newInputSlot
   let seeded = S { transcript = [Summary (task sr)]
-                 , pending = [], budget = scfBudget cfg, mode = Working, tools = scfTools cfg
+                 , pending = [], budget = scfBudget cfg, window = scfWindow cfg
+                 , mode = Working, tools = scfTools cfg
                  , failure = Nothing }
   rid <- atomically $ do
     m <- readTVar regv
@@ -376,7 +381,8 @@ aguiH cfg (Registry regv) req respond = do
       logv <- newEventLog
       slot <- newInputSlot
       let seeded = S { transcript = seedTranscript msgs
-                     , pending = [], budget = scfBudget cfg, mode = Working, tools = scfTools cfg
+                     , pending = [], budget = scfBudget cfg, window = scfWindow cfg
+                     , mode = Working, tools = scfTools cfg
                      , failure = Nothing }
       stv <- newTVarIO (initRunStateFor rid (budget seeded) (mode seeded))
       atomically (modifyTVar' regv (Map.insert rid (RunHandle logv slot)))

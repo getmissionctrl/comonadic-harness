@@ -81,9 +81,9 @@ harness = unfold (\s -> (view s, step s))
 A start state, and the tree it denotes:
 
 > -- | An empty starting state: no transcript, no pending calls, a 500-token
-> -- budget, in 'Working' mode.
+> -- budget, an 8k-token context window, in 'Working' mode.
 > demoStart :: S
-> demoStart = S { transcript = [], pending = [], budget = 500, mode = Working, tools = allTools, failure = Nothing }
+> demoStart = S { transcript = [], pending = [], budget = 500, window = 8192, mode = Working, tools = allTools, failure = Nothing }
 >
 > -- | The tree of every reachable future from 'demoStart' — a denotation.
 > demoTree :: Cofree HarnessF Ctx

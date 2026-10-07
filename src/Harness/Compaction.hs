@@ -99,7 +99,7 @@ compact s
 -- quantify (review1 #7). [established]
 compactViaSummary :: Hypo -> S -> S
 compactViaSummary h s =
-  let s'  = s { mode = Summarising }
+  let s'  = backoff (s { mode = Summarising })
       ans = guessOracle h (request s')
    in summarising s' ans
 
