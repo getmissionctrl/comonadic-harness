@@ -3,11 +3,13 @@
 -- Default (@cabal run demo@): reproduces the recorded reference trace in
 -- @runs\/oracle-output.txt@ using a fake oracle and world.
 --
--- @cabal run demo live [--model M] [--ctx N] your task words...@: runs against
--- the real Ollama provider, printing the same annotated trace as the
+-- @cabal run demo live [--model M] [--ctx N] [--base-url URL] your task words...@:
+-- runs against the real Ollama provider, printing the same annotated trace as the
 -- scripted demo but driven by the live model. The trailing words become the
 -- initial task (seeded as the opening transcript turn, so the first prompt is
--- non-empty); @--model@\/@--ctx@ tune the provider. Defaults: @qwen3:8b@,
+-- non-empty); @--model@\/@--ctx@\/@--budget@ tune the provider, and @--base-url@
+-- (or the @OLLAMA_BASE_URL@ env var) points it at a remote Ollama host (e.g.
+-- @--base-url http:\/\/hq:11434@). Defaults: @qwen3:8b@,
 -- @num_ctx@ 512 (small, to provoke the Summarising compaction), and a built-in
 -- read\/write\/commit task. Example:
 -- @cabal run demo live --ctx 4096 add a haskell function that reverses a list@.
@@ -27,9 +29,10 @@ import Harness.Run (Env (..), Live, hoistEnv, runNoTrace)
 import Harness.State (Ctx (..), Mode (..), S (..), Turn (..), allTools)
 import Provider.Ollama (OllamaCfg (..), defaultOllamaCfg, ollamaOracle)
 import Data.IORef (newIORef)
+import Data.Maybe (fromMaybe)
 import Harness.Ref (emptyStore)
 import Provider.Tools (prepareSandbox, sandboxAct, refWorld)
-import System.Environment (getArgs)
+import System.Environment (getArgs, lookupEnv)
 import Text.Read (readMaybe)
 
 -- ---------------------------------------------------------------------------
@@ -182,24 +185,28 @@ sandboxDir = "runs/agent-sandbox"
 
 -- | Options for a live run, parsed from the args after @live@.
 data LiveOpts = LiveOpts
-    { loModel  :: String
-    , loCtx    :: Int
-    , loBudget :: Int
-    , loTask   :: String
+    { loModel   :: String
+    , loCtx     :: Int
+    , loBudget  :: Int
+    , loTask    :: String
+    , loBaseUrl :: Maybe String
+    -- ^ An explicit @--base-url@ override. 'Nothing' falls back to the
+    -- @OLLAMA_BASE_URL@ environment variable, then to 'defaultOllamaCfg'.
     }
 
--- | Parse @[--model M] [--ctx N] [--budget N] word...@: the recognised flags
+-- | Parse @[--model M] [--ctx N] [--budget N] [--base-url URL] word...@: the recognised flags
 -- tune the run; every other argument is joined (on spaces) into the initial
 -- task. Unknown or dangling flags simply fall through into the task text rather
 -- than aborting — this is a demo, not a CLI to defend. A non-numeric flag value
 -- keeps the default.
 parseLive :: [String] -> LiveOpts
-parseLive = go (LiveOpts (ocModel defaultOllamaCfg) 512 6000 "")
+parseLive = go (LiveOpts (ocModel defaultOllamaCfg) 512 6000 "" Nothing)
   where
-    go o ("--model" : m : rest)  = go o { loModel = m } rest
-    go o ("--ctx" : n : rest)    = go o { loCtx = maybe (loCtx o) id (readMaybe n) } rest
-    go o ("--budget" : n : rest) = go o { loBudget = maybe (loBudget o) id (readMaybe n) } rest
-    go o (w : rest)              = go o { loTask = appendWord (loTask o) w } rest
+    go o ("--model" : m : rest)    = go o { loModel = m } rest
+    go o ("--ctx" : n : rest)      = go o { loCtx = maybe (loCtx o) id (readMaybe n) } rest
+    go o ("--budget" : n : rest)   = go o { loBudget = maybe (loBudget o) id (readMaybe n) } rest
+    go o ("--base-url" : u : rest) = go o { loBaseUrl = Just u } rest
+    go o (w : rest)                = go o { loTask = appendWord (loTask o) w } rest
     go o []                      = o
     appendWord ""  w = w
     appendWord acc w = acc ++ " " ++ w
@@ -220,7 +227,14 @@ live :: [String] -> IO ()
 live args = do
     let o    = parseLive args
         task = if null (loTask o) then defaultTask else loTask o
-        cfg  = defaultOllamaCfg { ocModel = loModel o, ocNumCtx = loCtx o }
+    -- Base URL precedence: explicit @--base-url@, then @OLLAMA_BASE_URL@, then
+    -- 'defaultOllamaCfg' (localhost). Lets the demo drive a remote Ollama (e.g.
+    -- an @hq@ box) without a code change — the same env var 'serve' already uses.
+    envUrl <- lookupEnv "OLLAMA_BASE_URL"
+    let base = case loBaseUrl o of
+                 Just u  -> u
+                 Nothing -> fromMaybe (ocBaseUrl defaultOllamaCfg) envUrl
+        cfg  = defaultOllamaCfg { ocModel = loModel o, ocNumCtx = loCtx o, ocBaseUrl = base }
     -- Per-run reference store: keeps large tool results out of the transcript
     -- while leaving them navigable via jsonpath/deref. Created once here at the
     -- IO boundary and passed into 'refWorld', which owns the mutable state.
