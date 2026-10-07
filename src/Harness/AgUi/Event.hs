@@ -79,6 +79,11 @@ data AgUiEvent
   | ReasoningMessageStart MessageId                  -- ^ messageId (role is always "reasoning")
   | ReasoningMessageContent MessageId Text           -- ^ messageId, delta
   | ReasoningMessageEnd MessageId                    -- ^ messageId
+  | ThinkingStart (Maybe Text)       -- ^ Bracket a reasoning block; optional title for UI labelling.
+  | ThinkingTextMessageStart         -- ^ Begin the streamed thinking text within a 'ThinkingStart'\/'ThinkingEnd' block.
+  | ThinkingTextMessageContent Text  -- ^ One streamed delta of reasoning text.
+  | ThinkingTextMessageEnd           -- ^ End the streamed thinking text.
+  | ThinkingEnd                      -- ^ Close the reasoning block opened by 'ThinkingStart'.
   deriving stock (Eq, Show)
 
 instance ToJSON AgUiEvent where
@@ -107,3 +112,8 @@ instance ToJSON AgUiEvent where
     ReasoningMessageStart m     -> object ["type" .= ("REASONING_MESSAGE_START" :: Text), "messageId" .= m, "role" .= ("reasoning" :: Text)]
     ReasoningMessageContent m d -> object ["type" .= ("REASONING_MESSAGE_CONTENT" :: Text), "messageId" .= m, "delta" .= d]
     ReasoningMessageEnd m       -> object ["type" .= ("REASONING_MESSAGE_END" :: Text), "messageId" .= m]
+    ThinkingStart mt            -> object (["type" .= ("THINKING_START" :: Text)] ++ maybe [] (\t -> ["title" .= t]) mt)
+    ThinkingTextMessageStart    -> object ["type" .= ("THINKING_TEXT_MESSAGE_START" :: Text)]
+    ThinkingTextMessageContent d-> object ["type" .= ("THINKING_TEXT_MESSAGE_CONTENT" :: Text), "delta" .= d]
+    ThinkingTextMessageEnd      -> object ["type" .= ("THINKING_TEXT_MESSAGE_END" :: Text)]
+    ThinkingEnd                 -> object ["type" .= ("THINKING_END" :: Text)]

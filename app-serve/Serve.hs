@@ -143,29 +143,26 @@ streamingBuilder cfg0 mgr apiKey root opts sink stv rid = do
     { oracle = \req -> do
       logOracleReq rid cfg req
       startedRef  <- newIORef Nothing  -- Maybe MessageId: answer id, minted on first token
-      thinkingRef <- newIORef Nothing  -- Maybe MessageId: reasoning message id while streaming
-      -- Reasoning ("thinking") is streamed as its own assistant text message,
-      -- prefixed with a marker, rather than via the AG-UI @REASONING_*@ events:
-      -- @\@ag-ui\/client\@0.0.59@ rejects a reasoning-role message with a ZodError
-      -- and aborts the whole run, whereas an ordinary text message renders and
-      -- streams reliably. It precedes the answer message and is closed before it.
-      let closeThinking = readIORef thinkingRef >>= mapM_ (\m -> do
-            sink (TextMessageEnd m)
-            writeIORef thinkingRef Nothing)
+      thinkingRef <- newIORef False    -- Bool: whether a thinking block is currently open
+      -- Reasoning ("thinking") is streamed via the proper AG-UI @THINKING_*@ events.
+      -- The block is opened on the first reasoning token and closed before the answer
+      -- begins (or after a tool-call turn with no answer text).
+      let closeThinking = readIORef thinkingRef >>= \open ->
+            if open
+              then do
+                sink ThinkingTextMessageEnd
+                sink ThinkingEnd
+                writeIORef thinkingRef False
+              else pure ()
           onThink t = do
-            m <- readIORef thinkingRef >>= \case
-              Just m  -> pure m
-              Nothing -> do
-                m <- atomically $ do
-                  st <- readTVar stv
-                  let (m', st') = mintMessageId st
-                  writeTVar stv st'
-                  pure m'
-                sink (TextMessageStart m "assistant")
-                sink (TextMessageContent m "💭 ")
-                writeIORef thinkingRef (Just m)
-                pure m
-            sink (TextMessageContent m t)
+            open <- readIORef thinkingRef
+            if open
+              then pure ()
+              else do
+                sink (ThinkingStart Nothing)
+                sink ThinkingTextMessageStart
+                writeIORef thinkingRef True
+            sink (ThinkingTextMessageContent t)
           onDelta d = do
             closeThinking  -- the answer has begun; end the reasoning block first
             mid <- readIORef startedRef >>= \case

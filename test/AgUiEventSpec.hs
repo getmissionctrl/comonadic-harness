@@ -53,3 +53,27 @@ spec = describe "Harness.AgUi.Event ToJSON wire shapes" $ do
   it "ReasoningMessageContent uses REASONING_MESSAGE_CONTENT + messageId + delta" $
     enc (ReasoningMessageContent "rsn-1" "let me think")
       `shouldBe` object ["type" .= ("REASONING_MESSAGE_CONTENT"::String), "messageId" .= ("rsn-1"::String), "delta" .= ("let me think"::String)]
+
+  it "ThinkingStart with no title emits only type field" $
+    enc (ThinkingStart Nothing)
+      `shouldBe` object ["type" .= ("THINKING_START"::String)]
+
+  it "ThinkingStart with a title emits type and title fields" $
+    enc (ThinkingStart (Just "planning"))
+      `shouldBe` object ["type" .= ("THINKING_START"::String), "title" .= ("planning"::String)]
+
+  it "ThinkingTextMessageStart emits only type field" $
+    enc ThinkingTextMessageStart
+      `shouldBe` object ["type" .= ("THINKING_TEXT_MESSAGE_START"::String)]
+
+  it "ThinkingTextMessageContent carries delta with no messageId" $
+    enc (ThinkingTextMessageContent "step one")
+      `shouldBe` object ["type" .= ("THINKING_TEXT_MESSAGE_CONTENT"::String), "delta" .= ("step one"::String)]
+
+  it "ThinkingTextMessageEnd emits only type field" $
+    enc ThinkingTextMessageEnd
+      `shouldBe` object ["type" .= ("THINKING_TEXT_MESSAGE_END"::String)]
+
+  it "ThinkingEnd emits only type field" $
+    enc ThinkingEnd
+      `shouldBe` object ["type" .= ("THINKING_END"::String)]
