@@ -26,6 +26,7 @@ module Provider.Ollama
   , ollamaProvider
   , streamingComplete
   , overflowByEstimate
+  , renderToolObs
   ) where
 
 import Control.Concurrent (threadDelay)
@@ -44,6 +45,7 @@ import Data.Ollama.Chat
   , assistantMessage
   , chat
   , defaultChatOps
+  , systemMessage
   , toolMessage
   , userMessage
   )
@@ -63,6 +65,7 @@ import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Harness.Alphabet
 import Harness.Fault (ProviderError (..))
+import Harness.State (systemPrompt)
 import Harness.Schema (schemaFields)
 import Provider.Class (Provider (..))
 
@@ -244,9 +247,9 @@ buildChatOps cfg req =
       -- the single flattened user message when 'reqMessages' is empty (the
       -- Summarising/compaction path, and any provider that only sets reqPrompt).
       native = concatMap toOllamaMsgs (reqMessages req)
-      msgs   = case native of
-                 (m : ms) -> m :| ms
-                 []       -> userMessage promptText :| []
+      msgs   = systemMessage systemPrompt :| case native of
+                 (m : ms) -> m : ms
+                 []       -> [userMessage promptText]
   in  defaultChatOps
         { modelName = T.pack (ocModel cfg)
         , messages  = msgs
@@ -256,6 +259,20 @@ buildChatOps cfg req =
         , options   = Just defaultModelOptions { numCtx = Just (ocNumCtx cfg) }
         , think     = ocThink cfg
         }
+
+-- | Render a tool observation for the model. An inline (small) result is shown
+-- verbatim; a result that was parked under a reference is shown as its bounded
+-- preview, prefixed with the handle and an instruction to expand it — so the
+-- model fetches the rest itself (via 'deref'\/'jsonpath') instead of stalling and
+-- asking the user. [design]
+renderToolObs :: Obs -> T.Text
+renderToolObs o = case obsRef o of
+  Nothing        -> obsRender o
+  Just (RefId r) ->
+    "[truncated preview \8212 the full result is stored under reference " <> r <> ".\n"
+      <> "Call deref {\"ref\":\"" <> r <> "\"} for the complete value, or "
+      <> "jsonpath {\"ref\":\"" <> r <> "\",\"expr\":\"<JSONPath>\"} to query it if it is JSON.]\n"
+      <> obsRender o
 
 -- | Map one harness 'ChatMsg' to native Ollama 'Message's: a summary/system as a
 -- system message, an assistant turn as an assistant message carrying its
@@ -270,7 +287,7 @@ toOllamaMsgs (MsgAssistant sy cs)     =
   let txt  = if T.null sy then "." else sy
       base = assistantMessage txt
   in  [ if null cs then base else base { tool_calls = Just (map toOllamaToolCall cs) } ]
-toOllamaMsgs (MsgToolResult _ o) = [toolMessage (obsRender o)]
+toOllamaMsgs (MsgToolResult _ o) = [toolMessage (renderToolObs o)]
 
 -- | Rebuild a native 'ToolCall' from a harness 'Call' so a replayed assistant
 -- turn carries the calls it made (the @tool@ results that follow are matched to
@@ -353,7 +370,7 @@ sentText req = case reqMessages req of
   where
     renderMsg (MsgUser t)               = t
     renderMsg (MsgAssistant t cs)       = t <> foldMap (\c -> " " <> tool c <> " " <> args c) cs
-    renderMsg (MsgToolResult _ o) = obsRender o
+    renderMsg (MsgToolResult _ o) = renderToolObs o
 
 -- | Infer prompt overflow from the CONFIGURED window, not from
 -- @promptEvalCount@. Estimate prompt tokens at ~4 chars/token and compare to

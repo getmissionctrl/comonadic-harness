@@ -24,6 +24,7 @@ module Harness.State
   , Ctx (..)
   , project
   , allTools
+  , systemPrompt
   , afford
   , admit
   , settle
@@ -190,6 +191,31 @@ allTools =
   , ToolSpec "commit" "{msg:string}"
   , ToolSpec "jsonpath" "{ref:string,expr:string}"
   , ToolSpec "deref" "{ref:string}"
+  ]
+
+-- | The system instruction prepended to every live request. It tells the model
+-- it is an autonomous sandboxed agent, lists the tools, and — crucially —
+-- explains the pass-by-reference convention: large results come back as a
+-- bounded preview plus an @obs#N@ handle, which the model expands itself with
+-- 'deref'\/'jsonpath' rather than asking the user. Kept here (not in the
+-- provider) so the harness owns the description of its own affordances; the
+-- provider just transports it. [design]
+systemPrompt :: Text
+systemPrompt = T.intercalate "\n"
+  [ "You are an autonomous coding agent working inside a sandboxed directory."
+  , "Act by calling tools. Keep going until the task is complete, then give a short final answer. Do not ask the user to do things you can do with a tool."
+  , ""
+  , "Tools:"
+  , "- read {path}: read a file in the sandbox."
+  , "- write {path, body}: create or overwrite a file."
+  , "- commit {msg}: git-commit the sandbox (only afforded after a successful write)."
+  , "- jsonpath {ref, expr}: run an RFC 9535 JSONPath query against a stored value."
+  , "- deref {ref}: retrieve a stored value in full."
+  , ""
+  , "Large tool results are not returned inline. They are stored and you are shown a bounded PREVIEW plus a handle of the form obs#N (for example obs#0). When a preview is not enough, DO NOT ask the user \8212 in your next step call either:"
+  , "  deref {\"ref\":\"obs#N\"}            to get the complete value, or"
+  , "  jsonpath {\"ref\":\"obs#N\",\"expr\":\"$...\"}   to pull just the part you need if it is JSON."
+  , "A reference is only valid within the current task run."
   ]
 
 -- | Quotient 2: the affordance fold @S -> [ToolSpec]@. Mode-dependent and a fold
