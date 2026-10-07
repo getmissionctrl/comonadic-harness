@@ -65,7 +65,8 @@ import System.Process
 import System.Timeout (timeout)
 
 import Harness.Alphabet (Call (..), Obs, inline, obsRender, obsRef)
-import Harness.Ref (Store, absorb, selector)
+import Harness.Ref (Store, absorbWith, selector)
+import Harness.Preview (previewThreshold, scrapeThreshold)
 import Harness.Schema (keySynonyms)
 
 -- | Prepare the sandbox directory so a live run has somewhere real to work.
@@ -132,9 +133,15 @@ refWorld ref base c
       atomicModifyIORef' ref (\st -> swap (selector c st))
   | otherwise = do
       o <- base c
-      atomicModifyIORef' ref (\st -> swap (absorb o st))
+      atomicModifyIORef' ref (\st -> swap (absorbWith (parkThreshold (tool c)) o st))
   where
     swap (a, b) = (b, a)
+    -- Per-tool park policy: a web fetch is parked eagerly (pages are large and
+    -- navigable, and several would otherwise accumulate inline past the window),
+    -- every other tool keeps the generous default that leaves ordinary files
+    -- inline. See 'Harness.Preview.scrapeThreshold'. [design]
+    parkThreshold "scrape_url" = scrapeThreshold
+    parkThreshold _            = previewThreshold
 
 -- | Decorate a base world so that re-reading an __unchanged__ file does not
 -- re-append its full content to the transcript. The first @read@ of a path

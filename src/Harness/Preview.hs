@@ -8,6 +8,7 @@ module Harness.Preview
   ( preview
   , previewResult
   , previewThreshold
+  , scrapeThreshold
   , clipText
   ) where
 
@@ -30,6 +31,17 @@ import qualified Data.Vector as V
 -- [design]
 previewThreshold :: Int
 previewThreshold = 16000
+
+-- | The park threshold for @scrape_url@ results specifically — far lower than
+-- 'previewThreshold'. A scraped web page is large by default and the model
+-- navigates it rather than needing every byte inline, so it is parked eagerly:
+-- the transcript carries a bounded preview + an @obs#N@ handle and the full page
+-- stays in the store for @deref@\/@jsonpath@. Low enough that several fetches in
+-- one run cannot accumulate inline past a small context window (the failure this
+-- addresses), but not so low that an ordinary short page is needlessly parked.
+-- [design]
+scrapeThreshold :: Int
+scrapeThreshold = 2000
 
 -- | A depth-1 structural summary of a JSON value.
 preview :: Value -> Text

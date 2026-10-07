@@ -8,6 +8,7 @@ module Harness.Ref
   ( Store
   , emptyStore
   , absorb
+  , absorbWith
   , selector
   ) where
 
@@ -48,14 +49,27 @@ put t st =
 -- small while the data remains retrievable. Small results (at or under
 -- 'previewThreshold' chars) pass through inline, untouched.
 absorb :: Obs -> Store -> (Obs, Store)
-absorb o st
-  | T.length (obsRender o) <= previewThreshold = (o, st)
+absorb = absorbWith previewThreshold
+
+-- | 'absorb' with the park threshold supplied by the caller, so a world can set
+-- a /per-tool/ policy. The default ('absorb', at 'previewThreshold') is tuned for
+-- @read@ — a local file the model usually needs in full, parked only when it is
+-- genuinely huge. A web fetch (@scrape_url@) is different: pages are large by
+-- default and the model navigates them, so 'Provider.Tools.refWorld' parks them
+-- at a much lower threshold ('Harness.Preview.scrapeThreshold'). This stops many
+-- medium results accumulating inline past the window — the single-result guard
+-- does not catch accumulation, which is how three ~8 KB scrapes once overflowed
+-- an 8 K-token context between them. The parked page stays retrievable via
+-- @deref@\/@jsonpath@. [established]
+absorbWith :: Int -> Obs -> Store -> (Obs, Store)
+absorbWith threshold o st
+  | T.length (obsRender o) <= threshold = (o, st)
   | otherwise =
       let full = obsRender o
           (r, st') = put full st
           prev = case decodeStrict (TE.encodeUtf8 full) :: Maybe Value of
                    Just v  -> preview v
-                   Nothing -> clipText previewThreshold full
+                   Nothing -> clipText threshold full
        in (Obs prev (Just r), st')
 
 -- | Let the model pull just the part of a parked value it needs, instead of

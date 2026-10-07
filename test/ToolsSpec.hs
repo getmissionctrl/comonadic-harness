@@ -4,7 +4,7 @@ import Test.Hspec
 import qualified Data.Text as T
 import Data.IORef (newIORef)
 import qualified Data.Map.Strict as Map
-import Harness.Alphabet (Call (..), Obs (..), obsRender, obsRef, RefId (..))
+import Harness.Alphabet (Call (..), Obs (..), obsRender, obsRef, RefId (..), inline)
 import Harness.Preview (previewThreshold)
 import Harness.Ref (emptyStore)
 import Provider.Tools (sandboxAct, prepareSandbox, trustedShellWorld, refWorld, onceReadWorld, parseArgs, arg)
@@ -118,6 +118,19 @@ spec = do
         o <- w (Call "read" "{\"path\":\"tiny.txt\"}")
         obsRef o `shouldBe` Nothing
         obsRender o `shouldBe` "hello"
+
+    it "parks a scrape_url result eagerly, yet leaves a same-size read inline" $ do
+      -- A ~8 KB payload sits between scrapeThreshold (2000) and previewThreshold
+      -- (16000): the per-tool policy parks it for scrape_url (web pages
+      -- accumulate) but leaves it inline for read (local files the model needs).
+      store <- newIORef emptyStore
+      let payload = T.replicate 8000 "x"
+          base _  = pure (inline payload)
+          w       = refWorld store base
+      scraped <- w (Call "scrape_url" "{\"url\":\"https://example\"}")
+      obsRef scraped `shouldSatisfy` (/= Nothing)
+      red <- w (Call "read" "{\"path\":\"f.txt\"}")
+      obsRef red `shouldBe` Nothing
 
   describe "idempotent-read guard (onceReadWorld)" $ do
     it "collapses an unchanged re-read to a note, not the full content" $
