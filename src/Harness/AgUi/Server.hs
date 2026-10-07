@@ -167,8 +167,12 @@ router :: ServeConfig -> Registry -> Wai.Application -> Wai.Application
 router cfg reg jsonApp req respond =
   case (Wai.requestMethod req, Wai.pathInfo req) of
     ("GET",     ["runs", rid, "events"]) -> sseH reg rid req respond
-    ("POST",    ["agent"])               -> aguiH cfg reg req respond
-    ("OPTIONS", ["agent"])               -> respond (Wai.responseLBS status204 preflightHeaders "")
+    -- Accept the flat @/agent@ /and/ the dojo all-features @/agent/<feature>@
+    -- suffix: the harness is feature-agnostic, so every sub-path runs the same
+    -- agent (it is the tool-call stream the client renders, not a per-feature
+    -- contract). [design]
+    ("POST",    ("agent" : _))           -> aguiH cfg reg req respond
+    ("OPTIONS", ("agent" : _))           -> respond (Wai.responseLBS status204 preflightHeaders "")
     ("POST",    ["config"])              -> configH cfg req respond
     ("OPTIONS", ["config"])              -> respond (Wai.responseLBS status204 preflightHeaders "")
     _                                    -> jsonApp req respond
