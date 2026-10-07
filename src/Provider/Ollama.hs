@@ -181,6 +181,20 @@ completeWith cfg req = do
 -- transient fault surfaces as 'Malformed' and ends the run (a fair trade for
 -- clean streaming). Reasoning is /not/ accumulated into the 'Response': it is
 -- presentation only and never part of the answer the coalgebra consumes. [design]
+--
+-- __Streaming-decode-fault recovery.__ A split NDJSON chunk mid-stream (common
+-- on large turns with thinking enabled — observed: a ~2400-token turn after a
+-- @deref@ that floods a big file into context raises
+-- @\"Unexpected end-of-input while parsing string literal\"@) causes the
+-- library to return @Left err@, which previously surfaced as a terminal
+-- 'Malformed' and killed the run. On such a fault the turn is retried ONCE in
+-- non-streaming mode (a single complete JSON response has no chunk-splitting
+-- problem); the answer text is then emitted once via @onDelta@ so the AG-UI
+-- client still receives it as a delta. Reasoning is NOT re-emitted via
+-- @onThink@: partial reasoning may already have streamed, and re-emitting would
+-- duplicate it. If the non-streaming retry also fails, /then/ 'Malformed' is
+-- returned. Live token streaming is lost for that one turn but the run
+-- completes. [design]
 streamingComplete
   :: OllamaCfg
   -> (T.Text -> IO ())  -- ^ @onDelta@: a fragment of the answer text
@@ -211,7 +225,7 @@ streamingComplete cfg onDelta onThink req = do
       ops = (buildChatOps cfg req) { stream = Just (onChunk, pure ()) }
   result <- chat ops (Just ollamaCfg)
   case result of
-    Left err -> pure (Left (Malformed (T.pack (show err))))
+    Left err -> nonStreamingFallback cfg onDelta req err ollamaCfg
     Right _  -> do
       said       <- (T.concat . reverse) <$> readIORef accRef
       mcalls     <- readIORef callsRef
@@ -224,6 +238,38 @@ streamingComplete cfg onDelta onThink req = do
             , calls = maybe [] (map toCall) mcalls
             , usage = Usage { inTok = pin, outTok = out }
             }
+
+-- | Non-streaming fallback invoked by 'streamingComplete' when the streaming
+-- attempt returns a decode fault.
+--
+-- Retries the same request ONCE without @stream@ set (a complete JSON response
+-- has no chunk-splitting problem). On success the answer text is emitted once
+-- via @onDelta@ — the AG-UI client receives it as a single delta — and the
+-- decoded 'Response' is returned. Reasoning is NOT forwarded via @onThink@:
+-- partial reasoning may already have streamed during the failed streaming
+-- attempt; re-emitting would duplicate it. If the non-streaming attempt also
+-- fails, 'Malformed' is returned with the second error (the streaming error is
+-- considered superseded). [design]
+nonStreamingFallback
+  :: OllamaCfg
+  -> (T.Text -> IO ())         -- ^ @onDelta@ from the caller
+  -> Request
+  -> OllamaError               -- ^ the streaming decode fault (for context)
+  -> OllamaConfig
+  -> IO (Either Refusal Response)
+nonStreamingFallback cfg onDelta req _streamErr ollamaCfg = do
+  let opsNS = buildChatOps cfg req   -- no 'stream' field ⇒ non-streaming
+  result2 <- chat opsNS (Just ollamaCfg)
+  case result2 of
+    Left err2 -> pure (Left (Malformed (T.pack (show err2))))
+    Right resp -> do
+      let decoded = decodeResp cfg req resp
+      case decoded of
+        Left r      -> pure (Left r)
+        Right rresp -> do
+          let t = say rresp
+          when (not (T.null t)) (onDelta t)
+          pure (Right rresp)
 
 -- | Translate our 'Request' plus an 'OllamaCfg' into the client's @ChatOps@.
 --
