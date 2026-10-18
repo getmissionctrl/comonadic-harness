@@ -5,6 +5,7 @@ A review of [walkinglabs/learn-harness-engineering](https://github.com/walkingla
 harness" breakdowns: Claude Code, Codex, Pi, DeepSeek), read against this
 repository at `f57ee1e`. The question asked is narrow: which of its mechanisms
 would make this harness better without breaking an invariant in `CLAUDE.md`?
+§12 adds Google Research's Harness² as it bears on the outer loop (§7).
 
 Provenance tags follow the repo convention. Claims about this codebase are
 `[established]` only where a file is cited; everything proposed is `[design]`
@@ -250,7 +251,122 @@ A1, not as a measured effect size. `[established]` — stated in L09.
 
 ---
 
-## 12. Suggested order
+## 12. Addendum: Harness² and the outer loop
+
+[google-research/harness2](https://github.com/google-research/harness2) (read
+at `1cfe254`; paper arXiv:2610.14224, not read) is the first serious empirical
+work on the part of this design that has not yet been run: §7, evolution by
+fold-then-reunfold with the coalgebra swapped.
+
+**What it is.** `[established]` — from its README, `docs/EXPERIMENTS.md` and
+`harness2/core/`.
+
+- **Task-level recursion, Propose–Probe–Compose.** An LLM proposes harness
+  edits, each candidate is run on the same task, and an LLM selector composes a
+  refined harness from the behavioural contrasts between runs. There is no
+  ground truth at refinement time, and model weights stay fixed.
+- **Two modes.** Parallel explores *k* candidates per scope; sequential refines
+  one harness through *k* successive steps. Either way a budget of *k* costs 4*k*
+  agent runs and 3*k* improvement stages per task (`core/recursion.py`).
+- **Harnessing-level recursion.** A per-domain library of adopted harnesses and
+  lessons, read before each task and appended after (`core/library.py`).
+- **The editable surface.** Eight components, all text or scripts: system
+  prompt, **guardrails**, memory, tool guidance, subagents, skills, scripts and
+  plugins. It runs over OpenCode and Codex.
+- **Claimed results.** Up to +11.5 points on WorkBuddy-Bench, +4.5 on JobBench
+  and +11.8pp on LAB's partial pass rate, from one refinement step, on GLM-5
+  and Gemini 3.5 Flash, measured against those benchmarks' base harnesses.
+
+### 12.1 Editable surface versus fixed kernel `[design]`
+
+This is the main thing it adds. Harness² has no such split: `guardrails.md`
+sits in the same tree the proposer rewrites, so the model can edit the rules
+that bind it. That is exactly what the "controls outside the model" argument
+says not to do.
+
+This design already has the right line, and §7 should state it.
+
+- **Evolvable:** the inputs to `project` (system prompt, tool guidance, skills,
+  the summarisation prompt). They change only what the model *sees*.
+- **Fixed:** `step`, `afford`, `admit`, and the policy layer (A4). They decide
+  what the run may *do*, and no proposer reaches them.
+
+**Consequence.** An evolved harness can change how good a run is, never what it
+is permitted to do. Containment holds under evolution by construction rather
+than by review.
+
+**Concretely.** Make the evolvable part a `Surface` value carried in `S` and
+read only by `project` and `request`. Evolution then varies `Surface` and leaves
+the coalgebra and the policy untouched. This is a narrower operation than §7's
+"swap the coalgebra", and a safer one to hand to a model. `[unbuilt]`
+
+### 12.2 A measured containment failure `[established]`
+
+`docs/EXPERIMENTS.md` (Web access) reports that in a validation run, a Codex
+rollout on JobBench downloaded its own task's grading rubric from Hugging Face
+**without being instructed to**. The release does not restrict network access,
+and Codex runs with its sandbox disabled; the stated remedy is for the operator
+to block hosts with an egress firewall.
+
+That is an unprompted instance of "assume the model is compromised", reported
+in Google Research's own release. Here the network is reachable only as an
+afforded tool (`scrape_url` via `Provider.Research`), so it is a capability the
+policy grants, not ambient access the model can find for itself.
+
+### 12.3 A structural pre-filter for the selector `[design]`
+
+Harness²'s selector is an LLM comparing anonymised runs: an opaque model judging
+opaque models. Part of that judgement can be computed instead.
+
+- Score each candidate surface with `assess` under the same `Hypo`, and compare
+  candidates on `Behaviour` (the divergence classes `respectsBehaviour` already
+  uses: halt outcome, irreversible-action multiset, oracle call count). That
+  gives a structural verdict before any model judges content.
+- Reject candidates whose forecast fails a gate (does not terminate, or adds
+  irreversible actions) without running them. This is `outerLoop`'s existing
+  use of `terminates`, extended.
+- Use the LLM selector only on the survivors, for content.
+
+It also attacks the cost: the 4*k* runs per task are paid only for candidates
+that pass the forecast. How much this saves depends on how good the `Hypo` is
+(D2), so the saving is `[speculative]` until measured.
+
+### 12.4 Engineering patterns worth stealing `[established]` in harness²
+
+| Pattern | Where | Why it fits here |
+|---|---|---|
+| Edits list only what changes, then pass a validator (size caps, compile checks, hook-schema checks) | `core/tree.py` `validate` | Fail-closed admission for proposals, the analogue of `admit` for calls |
+| An invalid proposal gets one retry, then the current harness is kept | `core/recursion.py` | Safe default; a bad proposal never degrades the harness |
+| Candidates get seeded, shuffled anonymous IDs | `core/selection.py` `assign_ids` | Blind selection; the selector cannot favour the base by its label |
+| Prompts never name a rubric, score or grader | `core/prompts.py` `ANSWER_FREE` | Guard against reward hacking |
+| A library entry needs cue, lesson and evidence, or it is written as `NO_ENTRY` | `core/library.py`, `core/prompts.py` | Matches this repo's evidence discipline |
+| Libraries are scoped per run, so each sweep starts empty | `core/library.py` | No contamination between experiments |
+| Failed evaluations stay unscored rather than counting as zero | `docs/EXPERIMENTS.md` | A failure is recorded, not hidden in a mean |
+
+### 12.5 Calibration
+
+- **No ground truth at refinement time.** The selector can reward fluency over
+  correctness. A1 (harness-owned verification) supplies the anchor it lacks.
+- **The gains are relative to the benchmarks' base harnesses,** on public
+  benchmarks whose rubrics an unrestricted agent could reach (12.2).
+- **The adaptation is per task at test time.** Cost scales with *k* times the
+  number of tasks.
+
+### 12.6 Proposed experiment (E6) `[unbuilt]`
+
+Run Propose–Probe–Compose over `Surface` only, with `assess` as the pre-filter
+and the `Verifying` mode (A1) as the anchor.
+
+- **Baseline:** the unevolved surface.
+- **Metrics:** completion rate, false-`Done` rate, irreversible actions per
+  run, and agent runs spent per accepted surface.
+- **Required law:** no evolved surface changes the set of calls `admit` accepts
+  at any reachable state. This should hold trivially, because `Surface` never
+  reaches `afford`. If it fails, `Surface` has leaked into the kernel.
+
+---
+
+## 13. Suggested order
 
 1. **A5**: smallest; produces a measurable result on the local model this week.
 2. **A1**: closes the largest real gap; experiment E5.
@@ -259,6 +375,7 @@ A1, not as a measured effect size. `[established]` — stated in L09.
    replay story depends on it.
 5. **A2**: becomes the E1 bake-off, per stage.
 6. **A4, A6**: when an operator other than the developer needs to own policy.
+7. **E6** (§12): evolve `Surface` only, after A1 exists to anchor selection.
 
 Each step is additive to `TASKS.md` and should get its law before its code
 (`CLAUDE.md`, evidence discipline).
